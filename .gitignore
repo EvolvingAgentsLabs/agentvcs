@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.DS_Store
+# never version the agentvcs metadata of the example sandboxes
+examples/**/.agentvcs/
+examples/**/crystal/

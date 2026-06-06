@@ -1,0 +1,14 @@
+{
+  "goal": "Resolve customer refund requests autonomously, escalating suspected fraud to a human.",
+  "models": [
+    {
+      "provider": "anthropic",
+      "model": "claude-opus-4-8",
+      "version": null,
+      "params": { "temperature": 1.0 }
+    }
+  ],
+  "trace": "traces/run.jsonl",
+  "state": "fluid",
+  "metrics": { "resolved": 0, "escalated": 0, "tokens": 0 }
+}

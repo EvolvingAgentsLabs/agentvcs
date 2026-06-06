@@ -1,0 +1,3 @@
+{"role": "planner", "content": "Classify the request, then decide refund vs escalate."}
+{"role": "classifier", "content": "amount=30, suspicious=false"}
+{"role": "worker", "content": "auto_refund issued"}

@@ -1,0 +1,39 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agentvcs"
+version = "0.1.0"
+description = "Multidimensional version control for evolving agent fleets — code, goals, models and traces, with fluid↔crystallized state."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [
+    { name = "EvolvingAgentsLabs" },
+]
+keywords = ["agents", "llm", "version-control", "vcs", "ai", "orchestration"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Topic :: Software Development :: Version Control",
+]
+dependencies = []  # zero runtime dependencies — stdlib only, auditable by anyone
+
+[project.urls]
+Homepage = "https://github.com/EvolvingAgentsLabs/agentvcs"
+Source = "https://github.com/EvolvingAgentsLabs/agentvcs"
+
+[project.scripts]
+agentvcs = "agentvcs.cli:main"
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agentvcs"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
