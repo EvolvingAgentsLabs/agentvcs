@@ -138,7 +138,9 @@ and `crystal`. Identical dimensions are stored once. See
 [`docs/SPEC.md`](docs/SPEC.md) for the on-disk format — that spec *is* the
 standard we're proposing.
 
-## Try the example
+## Try the examples
+
+A minimal first commit:
 
 ```bash
 cd examples/refund-agent
@@ -146,6 +148,16 @@ agentvcs init
 agentvcs commit -m "first run"
 agentvcs show
 ```
+
+Or run the **full agent loop** — a simulated agent that iterates, makes a
+mistake, rolls it back, and freezes the result, driving agentvcs entirely in
+`--json` mode:
+
+```bash
+bash examples/agent-loop-demo/run.sh
+```
+
+See [`examples/agent-loop-demo/`](examples/agent-loop-demo/) for the walkthrough.
 
 ## Scope
 
