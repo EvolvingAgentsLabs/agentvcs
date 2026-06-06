@@ -43,8 +43,15 @@ pip install -e .
 ## Quickstart
 
 ```bash
+agentvcs new my-agent               # scaffold a project already wired for agents (recommended)
+# ...or initialize an existing directory:
 agentvcs init                       # creates .agentvcs/ and a template agent.json
 ```
+
+`agentvcs new` materializes a project a coding agent can drive immediately — an
+`agent.json`, an `AGENTS.md` operating manual, the Claude Code skill, the MCP
+config, and a first commit. Then just open it with your agent and describe what
+to build.
 
 > `avcs` is a built-in shorthand for `agentvcs` — every command below works with either name.
 
@@ -90,6 +97,7 @@ text diff.
 
 | command | what it does |
 |---|---|
+| `agentvcs new DIR` | scaffold a new agent project pre-wired with agentvcs |
 | `agentvcs init` | create a repository |
 | `agentvcs commit -m MSG` | snapshot code + goal + models + trace |
 | `agentvcs log` | evolution history (state + goal per commit) |

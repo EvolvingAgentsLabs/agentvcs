@@ -5,6 +5,7 @@ accepts ``--json`` (or set ``AGENTVCS_JSON=1``) and then emits a single, parseab
 JSON object on stdout — no spinners, no colors, no prose. Errors carry a stable
 machine ``code`` (see docs/AGENT_MODE.md).
 
+    agentvcs new <dir>            scaffold a new agent project pre-wired with agentvcs
     agentvcs init                 create a repository (scaffolds agent.json + AGENTS.md)
     agentvcs commit -m "msg"      snapshot code + goal + models + trace
     agentvcs log                  show the evolution history
@@ -31,6 +32,7 @@ from .crystallize import crystallize
 from .diff import diff_commits
 from .replay import replay
 from .repository import Repository, RepoError
+from .scaffold import scaffold
 
 C_DIM, C_RST, C_B, C_Y, C_G, C_C, C_R = (
     "\033[2m", "\033[0m", "\033[1m", "\033[33m", "\033[32m", "\033[36m", "\033[31m")
@@ -60,6 +62,16 @@ def _out(args, data: dict, human: str) -> None:
 
 
 # ----------------------------------------------------------------- commands
+def cmd_new(args):
+    result = scaffold(args.path)
+    human = (f"Scaffolded an agentvcs-wired agent project in {_color(result['path'], C_B)}\n"
+             f"  files: {', '.join(result['files'])}\n"
+             f"  first commit: {_short(result['commit'])}\n"
+             f"Open it with a coding agent and just describe what to build — the\n"
+             f"project's AGENTS.md and the agentvcs skill take it from there.")
+    _out(args, result, human)
+
+
 def cmd_init(args):
     repo = Repository.init(args.path)
     data = {"repository": str(repo.dir), "manifest": "agent.json", "agents_md": "AGENTS.md"}
@@ -289,6 +301,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     def add(name, **kw):
         return sub.add_parser(name, parents=[common], **kw)
+
+    sp = add("new", help="scaffold a new agent project pre-wired with agentvcs")
+    sp.add_argument("path")
+    sp.set_defaults(func=cmd_new)
 
     sp = add("init", help="create a repository")
     sp.add_argument("path", nargs="?", default=".")

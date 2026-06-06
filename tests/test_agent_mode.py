@@ -46,6 +46,32 @@ def test_init_scaffolds_agents_md(tmp_path, monkeypatch, capsys):
     assert (tmp_path / "agent.json").exists()
 
 
+def test_new_scaffolds_prewired_project(tmp_path, monkeypatch, capsys):
+    monkeypatch.chdir(tmp_path)
+    proj = tmp_path / "proj"
+    code, out = run(capsys, "new", str(proj), "--json")
+    obj = json.loads(out)
+    assert code == 0 and obj["ok"] and len(obj["commit"]) == 64
+    # the project is already "using agentvcs" — the condition adoption needs
+    assert (proj / ".agentvcs").is_dir()
+    assert (proj / "agent.json").exists()
+    assert (proj / "AGENTS.md").exists()
+    assert (proj / ".mcp.json").exists()
+    assert (proj / ".claude" / "skills" / "agentvcs" / "SKILL.md").exists()
+    # first commit captured the real goal (not the placeholder)
+    code, out = run(capsys, "log", "-C", str(proj), "--json")
+    commits = json.loads(out)["commits"]
+    assert len(commits) == 1 and "Triage" in commits[0]["goal"]
+
+
+def test_new_refuses_existing_repo(tmp_path, monkeypatch, capsys):
+    monkeypatch.chdir(tmp_path)
+    proj = tmp_path / "proj"
+    run(capsys, "new", str(proj), "--json")
+    code, out = run(capsys, "new", str(proj), "--json")
+    assert code == 1 and json.loads(out)["error"]["code"] == "ALREADY_REPO"
+
+
 def test_dash_C_targets_repo_from_anywhere(tmp_path, monkeypatch, capsys):
     # an agent whose shell cwd is elsewhere can still drive a specific repo
     proj = tmp_path / "proj"
