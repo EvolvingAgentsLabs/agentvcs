@@ -15,6 +15,7 @@ machine ``code`` (see docs/AGENT_MODE.md).
     agentvcs checkout <ref>       restore the working tree from a branch/commit
     agentvcs rollback [<ref>]     undo: restore full prior state (the panic button)
     agentvcs freeze [<commit>]    crystallize a fluid commit into a deterministic recipe
+    agentvcs replay [<commit>]    re-execute a crystallized recipe deterministically
 """
 from __future__ import annotations
 
@@ -28,6 +29,7 @@ from pathlib import Path
 from . import __version__
 from .crystallize import crystallize
 from .diff import diff_commits
+from .replay import replay
 from .repository import Repository, RepoError
 
 C_DIM, C_RST, C_B, C_Y, C_G, C_C, C_R = (
@@ -236,6 +238,27 @@ def cmd_rollback(args):
     _out(args, result, human)
 
 
+def _step_label(step):
+    if isinstance(step, dict) and "role" in step and "content" in step:
+        return f"{step['role']}: {step['content']}"
+    return json.dumps(step, ensure_ascii=False)
+
+
+def cmd_replay(args):
+    repo = Repository.open()
+    result = replay(repo, args.commit, executor=args.exec)
+    lines = [f"replay {_short(result['commit'])} {_color('[crystallized]', C_G)}",
+             f"goal: {result['goal']}", _color("models", C_B) + ":"]
+    lines += [f"  - {m['provider']}/{m['model']} params={m['params']}" for m in result["models"]]
+    lines.append(_color(f"steps ({len(result['steps'])})", C_B) + ":")
+    for s in result["steps"]:
+        lines.append(f"  [{s['index']}] {_step_label(s['step'])}")
+        if result["executed"]:
+            tag = C_G if s.get("exit_code") == 0 else C_R
+            lines.append(f"      {_color('->', tag)} exit={s.get('exit_code')} {s.get('output','').strip()[:200]}")
+    _out(args, result, "\n".join(lines))
+
+
 def cmd_freeze(args):
     repo = Repository.open()
     new_oid, artifact = crystallize(repo, args.commit, message=args.message)
@@ -304,6 +327,12 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("commit", nargs="?")
     sp.add_argument("-m", "--message")
     sp.set_defaults(func=cmd_freeze)
+
+    sp = add("replay", help="deterministically re-execute a crystallized recipe")
+    sp.add_argument("commit", nargs="?")
+    sp.add_argument("--exec", metavar="CMD",
+                    help="pipe each step (JSON) to CMD and collect its output")
+    sp.set_defaults(func=cmd_replay)
 
     sp = add("crystallize", help=argparse.SUPPRESS)
     sp.add_argument("commit", nargs="?")

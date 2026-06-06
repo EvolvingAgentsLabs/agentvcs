@@ -59,6 +59,13 @@ This pins every model to temperature 0 and writes a replayable recipe to
 `crystal/<commit>.json`. Re-running a crystallized commit is reproducible and cheap.
 A crystallized commit cannot be re-crystallized (`ALREADY_CRYSTALLIZED`).
 
+Re-execute a frozen recipe deterministically:
+```bash
+agentvcs replay --json                    # emit the frozen goal/models/steps
+agentvcs replay --exec "my-runner" --json # pipe each step (JSON) to your executor
+```
+Replaying a fluid commit errors with `NOT_CRYSTALLIZED` — freeze it first.
+
 ## MCP alternative
 If the `agentvcs` MCP server is connected, the same operations are available as
 tools `avcs_log`, `avcs_show`, `avcs_diff`, `avcs_status`, `avcs_commit`,

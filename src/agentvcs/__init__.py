@@ -8,6 +8,7 @@ recipe.
 from .repository import Repository, RepoError, Snapshot
 from .crystallize import crystallize
 from .diff import diff_commits
+from .replay import replay
 
 __version__ = "0.1.0"
-__all__ = ["Repository", "RepoError", "Snapshot", "crystallize", "diff_commits"]
+__all__ = ["Repository", "RepoError", "Snapshot", "crystallize", "diff_commits", "replay"]

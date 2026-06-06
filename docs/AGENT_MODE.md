@@ -57,6 +57,7 @@ versions; messages may change.
 | `BRANCH_EXISTS` | `branch <name>` already exists | choose another name or `checkout` it |
 | `BAD_DIR` | `-C <dir>` points to a non-existent directory (non-`init` command) | create it or fix the path |
 | `ALREADY_CRYSTALLIZED` | `freeze` on a crystallized commit | already frozen; nothing to do |
+| `NOT_CRYSTALLIZED` | `replay` on a fluid commit | `freeze` it first, then replay |
 | `INTERNAL` | unexpected error (MCP tools only) | report; do not retry blindly |
 
 ## Command output fields (success)
@@ -71,6 +72,7 @@ versions; messages may change.
 - `checkout` → `ref`, `commit`
 - `rollback` → `restored_to`, `previous_head`, `goal`, `state`
 - `freeze` → `commit`, `source`, `state`, `recipe_path`
+- `replay` → `commit`, `source_commit`, `goal`, `models`, `executed`, `steps[]` (each `{index, step[, exit_code, output]}`)
 
 The `diff` object is `{code:{added,removed,modified}, goal, models, trace, state}`;
 every non-code dimension is `null` when unchanged, so an agent can cheaply detect

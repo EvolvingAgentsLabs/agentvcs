@@ -24,6 +24,7 @@ import sys
 from . import __version__
 from .crystallize import crystallize
 from .diff import diff_commits
+from .replay import replay
 from .repository import Repository, RepoError
 
 PROTOCOL_VERSION = "2025-06-18"
@@ -100,6 +101,10 @@ def tool_rollback(args):
     return _repo().rollback(args.get("ref"))
 
 
+def tool_replay(args):
+    return replay(_repo(), args.get("commit"), executor=args.get("exec"))
+
+
 def tool_branch(args):
     repo = _repo()
     if args.get("name"):
@@ -131,6 +136,10 @@ TOOLS = [
     {"name": "avcs_freeze", "description": "Crystallize a fluid commit into a deterministic recipe (temperature 0).",
      "inputSchema": {"type": "object", "properties": {"commit": _REF, "message": {"type": "string"}}},
      "_fn": tool_freeze},
+    {"name": "avcs_replay", "description": "Deterministically re-execute a crystallized recipe; optionally pipe each step to an executor command.",
+     "inputSchema": {"type": "object", "properties": {
+         "commit": _REF, "exec": {"type": "string", "description": "command to pipe each step JSON to"}}},
+     "_fn": tool_replay},
     {"name": "avcs_rollback", "description": "Undo: restore the full prior state. Defaults to HEAD's parent. Reversible.",
      "inputSchema": {"type": "object", "properties": {"ref": _REF}}, "_fn": tool_rollback},
     {"name": "avcs_branch", "description": "List branches, or create a live branch when 'name' is given.",

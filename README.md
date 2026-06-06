@@ -95,8 +95,10 @@ text diff.
 | `agentvcs checkout REF` | restore the working tree from a branch/commit |
 | `agentvcs rollback [REF]` | undo: restore the full prior state (the panic button) |
 | `agentvcs freeze [COMMIT]` | crystallize a fluid commit into a deterministic recipe |
+| `agentvcs replay [COMMIT]` | re-execute a crystallized recipe deterministically |
 
-Add `--json` to any command for machine-readable output (see below).
+Add `--json` to any command for machine-readable output (see below). Use
+`-C DIR` (like `git -C`) to run against a repo from any directory.
 
 ## Built for agents (B2A)
 
