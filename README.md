@@ -1,5 +1,10 @@
 # agentvcs
 
+[![CI](https://github.com/EvolvingAgentsLabs/agentvcs/actions/workflows/ci.yml/badge.svg)](https://github.com/EvolvingAgentsLabs/agentvcs/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/agentvcs.svg)](https://pypi.org/project/agentvcs/)
+[![Python](https://img.shields.io/pypi/pyversions/agentvcs.svg)](https://pypi.org/project/agentvcs/)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+
 **Version control for software that is *cultivated*, not written.**
 
 Git versions one thing: source code, frozen in time, changed by humans. But when
