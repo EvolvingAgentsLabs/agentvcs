@@ -157,7 +157,10 @@ mistake, rolls it back, and freezes the result, driving agentvcs entirely in
 bash examples/agent-loop-demo/run.sh
 ```
 
-See [`examples/agent-loop-demo/`](examples/agent-loop-demo/) for the walkthrough.
+See [`examples/agent-loop-demo/`](examples/agent-loop-demo/) for the walkthrough,
+or [`examples/recording/`](examples/recording/) for a ready-to-share screencast of
+it. To put a **real** agent in front of agentvcs and score whether it adopts the
+loop, use [`examples/claude-code-task/`](examples/claude-code-task/).
 
 ## Scope
 
