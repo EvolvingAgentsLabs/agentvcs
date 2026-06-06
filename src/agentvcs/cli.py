@@ -23,6 +23,7 @@ import json
 import os
 import sys
 from datetime import datetime, timezone
+from pathlib import Path
 
 from . import __version__
 from .crystallize import crystallize
@@ -251,10 +252,16 @@ def build_parser() -> argparse.ArgumentParser:
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--json", action="store_true",
                         help="machine-readable JSON output (for agents)")
+    common.add_argument("-C", "--repo", dest="repo", default=None, metavar="DIR",
+                        help="run as if started in DIR (robust for agents whose "
+                             "shell cwd is not sticky; created by init if absent)")
 
     p = argparse.ArgumentParser(prog="agentvcs", description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--version", action="version", version=f"agentvcs {__version__}")
+    # also accept `agentvcs -C DIR <cmd>` (git-style, before the subcommand)
+    p.add_argument("-C", "--repo", dest="repo_global", default=None,
+                   metavar="DIR", help=argparse.SUPPRESS)
     sub = p.add_subparsers(dest="command", required=True)
 
     def add(name, **kw):
@@ -306,11 +313,27 @@ def build_parser() -> argparse.ArgumentParser:
     return p
 
 
+def _apply_repo_dir(args):
+    """Honor -C/--repo: behave as if the CLI were started in that directory.
+    Mirrors `git -C`. For `init`, the directory is created if missing."""
+    target = getattr(args, "repo", None) or getattr(args, "repo_global", None)
+    if not target:
+        return
+    path = Path(target)
+    if not path.is_dir():
+        if args.command == "init":
+            path.mkdir(parents=True, exist_ok=True)
+        else:
+            raise RepoError(f"directory not found: {target}", code="BAD_DIR")
+    os.chdir(path)
+
+
 def main(argv=None):
     args = build_parser().parse_args(argv)
     if not getattr(args, "json", False) and os.environ.get("AGENTVCS_JSON"):
         args.json = True
     try:
+        _apply_repo_dir(args)
         args.func(args)
     except RepoError as e:
         if getattr(args, "json", False):

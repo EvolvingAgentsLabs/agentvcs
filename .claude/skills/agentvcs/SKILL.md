@@ -16,6 +16,10 @@ success, `{"ok": false, "error": {"code": "...", "message": "..."}}` on failure.
 `NO_COMMITS`, `NO_PARENT`, `BAD_REF`, `AMBIGUOUS_REF`, `BRANCH_EXISTS`,
 `ALREADY_CRYSTALLIZED`.
 
+## If your shell cwd is not sticky, use `-C`
+Pass `-C <project-dir>` (like `git -C`) to run against that repo from anywhere:
+`agentvcs -C /path/to/proj commit -m "..." --json`. `init` creates the dir if absent.
+
 ## The non-code state lives in `agent.json`
 ```json
 { "goal": "...", "models": [{"provider":"...","model":"...","params":{...}}],

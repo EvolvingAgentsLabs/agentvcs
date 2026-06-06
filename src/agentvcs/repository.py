@@ -350,6 +350,12 @@ Every command accepts `--json` and emits a single parseable object. Prefer it.
 Errors become `{"ok": false, "error": {"code": "...", "message": "..."}}` — branch
 on the stable `code`, never on the message text.
 
+## If your shell cwd is not sticky, use `-C`
+Pass `-C <project-dir>` (like `git -C`) so the command runs against that repo
+regardless of the current directory — e.g. `agentvcs -C /path/to/proj commit -m "..." --json`.
+`init` creates the directory if needed. This avoids accidentally writing into the
+wrong folder between commands.
+
 ## The loop you should follow
 1. Read `agent.json` — it declares this iteration's `goal`, `models`, and `trace`
    file. Keep it accurate; it IS the non-code state you are versioning.

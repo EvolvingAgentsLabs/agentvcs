@@ -46,6 +46,31 @@ def test_init_scaffolds_agents_md(tmp_path, monkeypatch, capsys):
     assert (tmp_path / "agent.json").exists()
 
 
+def test_dash_C_targets_repo_from_anywhere(tmp_path, monkeypatch, capsys):
+    # an agent whose shell cwd is elsewhere can still drive a specific repo
+    proj = tmp_path / "proj"
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    monkeypatch.chdir(elsewhere)
+
+    # init creates the target dir; flag works both before and after the subcommand
+    code, out = run(capsys, "-C", str(proj), "init", "--json")
+    assert code == 0 and json.loads(out)["ok"] and (proj / ".agentvcs").is_dir()
+
+    (proj / "f.txt").write_text("x")
+    code, out = run(capsys, "commit", "-m", "c1", "-C", str(proj), "--json")
+    assert code == 0 and json.loads(out)["ok"]
+    # cwd is unchanged from the test's perspective is irrelevant; the repo got it
+    code, out = run(capsys, "log", "-C", str(proj), "--json")
+    assert len(json.loads(out)["commits"]) == 1
+
+
+def test_dash_C_missing_dir_errors_for_non_init(tmp_path, monkeypatch, capsys):
+    monkeypatch.chdir(tmp_path)
+    code, out = run(capsys, "status", "-C", str(tmp_path / "nope"), "--json")
+    assert code == 1 and json.loads(out)["error"]["code"] == "BAD_DIR"
+
+
 # ------------------------------------------------------------- rollback
 def test_rollback_restores_and_is_reversible(tmp_path):
     repo = Repository.init(tmp_path)

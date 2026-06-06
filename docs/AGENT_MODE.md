@@ -9,6 +9,21 @@ Pass `--json` to any command (or set `AGENTVCS_JSON=1` in the environment). The
 command then prints exactly **one** JSON object to stdout and nothing else — no
 spinners, no ANSI color, no prose.
 
+## Working directory: `-C` / `--repo`
+
+Agents often run each shell command in a fresh process whose working directory is
+not sticky. Pass `-C <dir>` (like `git -C`) so the command runs against that repo
+regardless of the current directory — it works both before and after the
+subcommand:
+
+```
+agentvcs -C /path/to/proj commit -m "..." --json
+agentvcs commit -m "..." -C /path/to/proj --json
+```
+
+For `init`, the directory is created if it does not exist; for every other command
+a missing directory fails with `BAD_DIR`.
+
 Success:
 ```json
 { "ok": true, "command": "<name>", ...command-specific fields... }
@@ -40,6 +55,7 @@ versions; messages may change.
 | `BAD_REF` | ref/commit/prefix did not resolve | re-check with `agentvcs log --json` |
 | `AMBIGUOUS_REF` | short prefix matched multiple objects | use a longer prefix |
 | `BRANCH_EXISTS` | `branch <name>` already exists | choose another name or `checkout` it |
+| `BAD_DIR` | `-C <dir>` points to a non-existent directory (non-`init` command) | create it or fix the path |
 | `ALREADY_CRYSTALLIZED` | `freeze` on a crystallized commit | already frozen; nothing to do |
 | `INTERNAL` | unexpected error (MCP tools only) | report; do not retry blindly |
 
