@@ -28,6 +28,7 @@ Source = "https://github.com/EvolvingAgentsLabs/agentvcs"
 
 [project.scripts]
 agentvcs = "agentvcs.cli:main"
+avcs = "agentvcs.cli:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]

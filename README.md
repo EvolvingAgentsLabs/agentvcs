@@ -41,6 +41,8 @@ pip install -e .
 agentvcs init                       # creates .agentvcs/ and a template agent.json
 ```
 
+> `avcs` is a built-in shorthand for `agentvcs` — every command below works with either name.
+
 Declare the non-code dimensions in `agent.json`:
 
 ```json
