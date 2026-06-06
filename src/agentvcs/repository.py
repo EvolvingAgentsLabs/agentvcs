@@ -33,7 +33,12 @@ DEFAULT_IGNORE = [
 
 
 class RepoError(Exception):
-    pass
+    """A user-facing error. ``code`` is a stable machine identifier agents can
+    branch on (it never changes across versions, unlike the message)."""
+
+    def __init__(self, message: str, code: str = "ERROR"):
+        super().__init__(message)
+        self.code = code
 
 
 @dataclass
@@ -57,13 +62,17 @@ class Repository:
     def init(cls, workdir) -> "Repository":
         repo = cls(Path(workdir))
         if repo.dir.exists():
-            raise RepoError(f"{repo.workdir} is already an agentvcs repository")
+            raise RepoError(f"{repo.workdir} is already an agentvcs repository",
+                            code="ALREADY_REPO")
         (repo.dir / "objects").mkdir(parents=True)
         (repo.dir / "refs" / "heads").mkdir(parents=True)
         (repo.dir / "HEAD").write_text("ref: refs/heads/main\n")
         manifest_path = repo.workdir / MANIFEST
         if not manifest_path.exists():
             manifest_path.write_text(_TEMPLATE_MANIFEST)
+        agents_path = repo.workdir / "AGENTS.md"
+        if not agents_path.exists():
+            agents_path.write_text(_AGENTS_MD)
         return repo
 
     @classmethod
@@ -72,7 +81,8 @@ class Repository:
         for candidate in [path, *path.parents]:
             if (candidate / AGENTVCS_DIR).is_dir():
                 return cls(candidate)
-        raise RepoError("not an agentvcs repository (no .agentvcs found)")
+        raise RepoError("not an agentvcs repository (no .agentvcs found)",
+                        code="NOT_A_REPO")
 
     # ------------------------------------------------------------- references
     def _head_ref(self) -> tuple[str, str]:
@@ -108,10 +118,10 @@ class Repository:
     def branch(self, name: str) -> str:
         head = self.head_commit()
         if head is None:
-            raise RepoError("cannot branch before the first commit")
+            raise RepoError("cannot branch before the first commit", code="NO_COMMITS")
         ref = self.dir / "refs" / "heads" / name
         if ref.exists():
-            raise RepoError(f"branch '{name}' already exists")
+            raise RepoError(f"branch '{name}' already exists", code="BRANCH_EXISTS")
         ref.write_text(head + "\n")
         return head
 
@@ -120,13 +130,68 @@ class Repository:
         if ref.exists():
             commit_oid = ref.read_text().strip()
             (self.dir / "HEAD").write_text(f"ref: refs/heads/{target}\n")
-        elif self.objects.exists(target):
-            commit_oid = target
-            (self.dir / "HEAD").write_text(commit_oid + "\n")  # detached
         else:
-            raise RepoError(f"no branch or commit '{target}'")
+            commit_oid = self._resolve(target, expect="commit")
+            (self.dir / "HEAD").write_text(commit_oid + "\n")  # detached
         self._restore_tree(commit_oid)
         return commit_oid
+
+    # ----------------------------------------------------------- resolution
+    def _safe_type(self, oid: str) -> str | None:
+        try:
+            return self.objects.read_obj(oid).get("type")
+        except Exception:
+            return None
+
+    def _resolve(self, ref: str | None, expect: str | None = None) -> str | None:
+        """Resolve a branch name, full object id, or unambiguous short prefix."""
+        if ref is None:
+            return None
+        branch = self.dir / "refs" / "heads" / ref
+        if branch.exists():
+            return branch.read_text().strip()
+        candidates: list[str] = []
+        if self.objects.exists(ref):
+            candidates = [ref]
+        elif len(ref) >= 4:
+            bucket = self.objects.root / ref[:2]
+            if bucket.is_dir():
+                candidates = [ref[:2] + p.name for p in bucket.iterdir()
+                              if (ref[:2] + p.name).startswith(ref)]
+        if expect:
+            candidates = [c for c in candidates if self._safe_type(c) == expect]
+        if len(candidates) == 1:
+            return candidates[0]
+        if len(candidates) > 1:
+            raise RepoError(f"ambiguous ref '{ref}'", code="AMBIGUOUS_REF")
+        raise RepoError(f"cannot resolve '{ref}'", code="BAD_REF")
+
+    # -------------------------------------------------------------- rollback
+    def rollback(self, target: str | None = None) -> dict:
+        """The agent panic button. Restore the full multidimensional state
+        (code + goal + models + trace) to a prior commit and move the current
+        branch there. The previous head is saved to ROLLBACK_HEAD so the undo
+        is itself reversible — nothing is ever lost from the object store."""
+        head = self.head_commit()
+        if head is None:
+            raise RepoError("no commits to roll back", code="NO_COMMITS")
+        if target is None:
+            parents = self.objects.read_obj(head).get("parents") or []
+            if not parents:
+                raise RepoError("HEAD has no parent to roll back to", code="NO_PARENT")
+            target = parents[0]
+        else:
+            target = self._resolve(target, expect="commit")
+        self._restore_tree(target)
+        (self.dir / "ROLLBACK_HEAD").write_text(head + "\n")
+        self._set_head_commit(target)
+        commit = self.objects.read_obj(target)
+        return {
+            "restored_to": target,
+            "previous_head": head,
+            "goal": self.objects.read_obj(commit["goal"])["text"],
+            "state": commit["state"],
+        }
 
     # ------------------------------------------------------- ignore handling
     def _ignore_patterns(self) -> list[str]:
@@ -270,4 +335,36 @@ _TEMPLATE_MANIFEST = """{
   "state": "fluid",
   "metrics": {}
 }
+"""
+
+
+_AGENTS_MD = """# Working in this repository (for coding agents)
+
+This project is versioned with **agentvcs** — a multidimensional VCS that tracks
+not just code but the **goal**, the **models**, and the **message trace** of each
+iteration, plus a **state** (`fluid` = still evolving, `crystallized` = frozen &
+deterministic). Use it instead of (or alongside) git for the agent loop.
+
+## Always use `--json`
+Every command accepts `--json` and emits a single parseable object. Prefer it.
+Errors become `{"ok": false, "error": {"code": "...", "message": "..."}}` — branch
+on the stable `code`, never on the message text.
+
+## The loop you should follow
+1. Read `agent.json` — it declares this iteration's `goal`, `models`, and `trace`
+   file. Keep it accurate; it IS the non-code state you are versioning.
+2. Do your work (edit code, update the goal, append messages to the trace file).
+3. `agentvcs commit -m "what changed" --json` after each meaningful iteration.
+4. `agentvcs diff --json` to see *which dimension* moved (code vs goal vs models
+   vs trace). `agentvcs status --json` for uncommitted changes.
+5. Made it worse? `agentvcs rollback --json` restores the full prior state. The
+   undo is itself reversible (previous head saved to `.agentvcs/ROLLBACK_HEAD`).
+6. Solution is stable and trusted? `agentvcs freeze --json` crystallizes it into a
+   deterministic recipe under `crystal/` (models pinned to temperature 0).
+
+## Try alternatives without risk
+`agentvcs branch <name>` then `agentvcs checkout <name>` forks the *execution*,
+not just the text. Explore a strategy on a branch; keep the winner.
+
+Full contract and error codes: see `docs/AGENT_MODE.md` in the agentvcs project.
 """

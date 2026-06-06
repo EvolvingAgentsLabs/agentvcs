@@ -23,13 +23,14 @@ from .repository import Repository, RepoError
 
 def crystallize(repo: Repository, commit_oid: str | None = None,
                 message: str | None = None, timestamp: int | None = None):
-    commit_oid = commit_oid or repo.head_commit()
+    commit_oid = repo._resolve(commit_oid, expect="commit") if commit_oid else repo.head_commit()
     if not commit_oid:
-        raise RepoError("nothing to crystallize (no commits yet)")
+        raise RepoError("nothing to crystallize (no commits yet)", code="NO_COMMITS")
 
     commit = repo.objects.read_obj(commit_oid)
     if commit["state"] == "crystallized":
-        raise RepoError(f"{commit_oid[:12]} is already crystallized")
+        raise RepoError(f"{commit_oid[:12]} is already crystallized",
+                        code="ALREADY_CRYSTALLIZED")
 
     # 1. pin models to deterministic decoding
     frozen_models = []

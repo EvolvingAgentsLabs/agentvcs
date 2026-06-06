@@ -29,6 +29,7 @@ Source = "https://github.com/EvolvingAgentsLabs/agentvcs"
 [project.scripts]
 agentvcs = "agentvcs.cli:main"
 avcs = "agentvcs.cli:main"
+agentvcs-mcp = "agentvcs.mcp_server:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]

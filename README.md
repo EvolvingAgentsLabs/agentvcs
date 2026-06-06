@@ -93,7 +93,42 @@ text diff.
 | `agentvcs diff [A] [B]` | dimensional diff (default: parent..HEAD) |
 | `agentvcs branch [NAME]` | list, or create a live branch |
 | `agentvcs checkout REF` | restore the working tree from a branch/commit |
+| `agentvcs rollback [REF]` | undo: restore the full prior state (the panic button) |
 | `agentvcs freeze [COMMIT]` | crystallize a fluid commit into a deterministic recipe |
+
+Add `--json` to any command for machine-readable output (see below).
+
+## Built for agents (B2A)
+
+The primary user of a VCS for agent fleets *is an agent*. agentvcs is designed so
+a coding agent (Claude Code, Cursor, …) can drive it without guessing:
+
+- **`--json` on every command** (or `AGENTVCS_JSON=1`) → one parseable object,
+  no spinners, no color, no prose.
+- **Stable `error.code`s** (`NOT_A_REPO`, `BAD_REF`, `ALREADY_CRYSTALLIZED`, …) →
+  recover programmatically, not by parsing English. Full list in
+  [`docs/AGENT_MODE.md`](docs/AGENT_MODE.md).
+- **`agentvcs rollback`** → a real panic button: restores the *entire* prior state
+  (code + goal + models + trace) and is itself reversible.
+- **Auto-discovery** → `agentvcs init` scaffolds an `AGENTS.md` so the next agent
+  to open the repo learns the workflow on its own.
+- **A Claude Code skill** ships in [`.claude/skills/agentvcs/`](.claude/skills/agentvcs/SKILL.md).
+- **An MCP server** (zero-dependency, stdio JSON-RPC):
+
+  ```bash
+  claude mcp add agentvcs -- agentvcs-mcp
+  ```
+
+  Exposes `avcs_log`, `avcs_show`, `avcs_diff`, `avcs_status`, `avcs_commit`,
+  `avcs_freeze`, `avcs_rollback`, `avcs_branch`, `avcs_checkout`.
+
+```jsonc
+$ agentvcs diff --json
+{"ok": true, "command": "diff", "a": "705b2fb…", "b": "1d4bd90…",
+ "diff": {"code": {"added": [], "removed": [], "modified": ["app.py"]},
+          "goal": {"from": "…autonomously", "to": "…with fraud checks"},
+          "models": null, "trace": null, "state": null}}
+```
 
 ## How it stores things
 
