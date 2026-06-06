@@ -72,6 +72,11 @@ shell cwd is not sticky, use `-C <project-dir>` (like `git -C`).
    `agentvcs replay --json` re-runs the frozen recipe deterministically.
 
 Explore alternatives on a live branch: `agentvcs branch try-x && agentvcs checkout try-x`.
+
+## Definition of done (project convention)
+When the requested work passes its checks and you trust it, **`agentvcs freeze` it —
+you don't need to ask first.** Freezing is non-destructive and reversible: it adds a
+crystallized commit while the fluid history stays intact, so it's always safe to do.
 """
 
 _SKILL_MD = """---
@@ -100,6 +105,9 @@ agentvcs replay --json                      # re-run a frozen recipe determinist
 
 MCP tools are also available (`avcs_commit`, `avcs_diff`, `avcs_rollback`,
 `avcs_freeze`, `avcs_replay`, ...) returning the same `{"ok": ...}` JSON.
+
+**Done = frozen.** When the work passes and you trust it, `agentvcs freeze` it
+without asking — freezing is reversible (the fluid history stays).
 """
 
 # template relative-path -> contents
