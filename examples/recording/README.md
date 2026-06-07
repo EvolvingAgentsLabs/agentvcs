@@ -1,7 +1,19 @@
 # Recording assets for the landing page
 
-A ~20s screencast of an agent driving the full agentvcs loop (iterate → diff →
-rollback → freeze). Two ways to produce a shareable asset; pick one.
+Two screencasts live here:
+
+- **`cc-trace.gif`** — the **Claude Code trace provider** flow (`cat agent.json` →
+  `trace` → `commit` → `show --trace`). Regenerate it (zero deps, then `agg`):
+  ```bash
+  python3 examples/recording/make_cc_cast.py
+  agg --theme dracula --font-size 16 examples/recording/cc-trace.cast examples/recording/cc-trace.gif
+  ```
+  It seeds a throwaway toy project + a sample session transcript where the provider
+  looks for it, records the real (colored) CLI output through a pty, and cleans up
+  after itself. A VHS variant is in [`cc-trace.tape`](cc-trace.tape).
+
+- **`demo.gif`** — an agent driving the full loop (iterate → diff → rollback →
+  freeze). Two ways to produce it; pick one.
 
 ## Option A — asciinema cast (already generated, zero deps)
 

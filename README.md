@@ -32,6 +32,13 @@ Every commit is a snapshot across **all four dimensions** plus a **state**:
 This is the open-source core — the "git for agents". Zero runtime dependencies,
 pure Python stdlib, fully auditable. Apache-2.0.
 
+![agentvcs capturing a live Claude Code session](examples/recording/cc-trace.gif)
+
+*A real run: `commit` pulls the conversation straight from your live Claude Code
+session — the actual `thinking` / `tool_use` / `tool_result` — and `show --trace`
+puts it next to the code. You never write a trace file. Full walkthrough in
+[`docs/TUTORIAL.md`](docs/TUTORIAL.md).*
+
 ## Install
 
 ```bash
