@@ -1,0 +1,13 @@
+{
+  "goal": "Build a small support-triage queue, iterating with Claude Code.",
+  "models": [
+    { "provider": "anthropic", "auto": true }
+  ],
+  "trace": {
+    "provider": "claude-code",
+    "auto": true,
+    "redact": ["sk-[A-Za-z0-9_-]+", "(?i)(api[_-]?key|token|secret)\\s*[:=]\\s*\\S+"]
+  },
+  "state": "fluid",
+  "metrics": {}
+}

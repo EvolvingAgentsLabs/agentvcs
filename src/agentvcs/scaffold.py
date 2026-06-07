@@ -24,6 +24,19 @@ _AGENT_JSON = """{
 }
 """
 
+# Provider-wired variant: the trace is the live Claude Code session, so there is
+# no traces/run.jsonl to maintain and the model pin is detected from what ran.
+_AGENT_JSON_CC = """{
+  "goal": "Triage incoming support messages: classify them, route to a queue, and flag urgent ones.",
+  "models": [
+    { "provider": "anthropic", "auto": true }
+  ],
+  "trace": { "provider": "claude-code", "auto": true },
+  "state": "fluid",
+  "metrics": {}
+}
+"""
+
 _AGENT_PY = '''"""Starter agent — the deterministic skin around the fluid, evolving logic.
 
 As you develop the fleet's behavior, version each iteration with agentvcs and
@@ -122,16 +135,22 @@ _FILES = {
 }
 
 
-def scaffold(path) -> dict:
+def scaffold(path, claude_code: bool = False) -> dict:
     root = Path(path)
     if (root / ".agentvcs").exists():
         raise RepoError(f"{root} is already an agentvcs repository", code="ALREADY_REPO")
     root.mkdir(parents=True, exist_ok=True)
-    for rel, content in _FILES.items():
+    files = dict(_FILES)
+    if claude_code:
+        # the live session is the trace: swap the manifest, drop the trace file
+        files["agent.json"] = _AGENT_JSON_CC
+        files.pop("traces/run.jsonl", None)
+    for rel, content in files.items():
         dest = root / rel
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_text(content)
     # init sees our richer agent.json/AGENTS.md already present and keeps them
     repo = Repository.init(root)
     oid = repo.commit("scaffold agent project")
-    return {"path": str(root), "files": sorted(_FILES), "commit": oid}
+    return {"path": str(root), "files": sorted(files), "commit": oid,
+            "trace_provider": "claude-code" if claude_code else None}

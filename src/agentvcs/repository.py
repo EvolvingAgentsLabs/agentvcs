@@ -59,7 +59,7 @@ class Repository:
 
     # ------------------------------------------------------------------ setup
     @classmethod
-    def init(cls, workdir) -> "Repository":
+    def init(cls, workdir, manifest: str | None = None) -> "Repository":
         repo = cls(Path(workdir))
         if repo.dir.exists():
             raise RepoError(f"{repo.workdir} is already an agentvcs repository",
@@ -69,7 +69,7 @@ class Repository:
         (repo.dir / "HEAD").write_text("ref: refs/heads/main\n")
         manifest_path = repo.workdir / MANIFEST
         if not manifest_path.exists():
-            manifest_path.write_text(_TEMPLATE_MANIFEST)
+            manifest_path.write_text(manifest or _TEMPLATE_MANIFEST)
         agents_path = repo.workdir / "AGENTS.md"
         if not agents_path.exists():
             agents_path.write_text(_AGENTS_MD)
@@ -226,6 +226,52 @@ class Repository:
         data = json.loads(path.read_text())
         return data if isinstance(data, list) else data.get("messages", [])
 
+    def _resolve_trace(self, decl) -> list:
+        """Materialize the trace dimension. ``decl`` is either a relative path
+        (classic — ``"traces/run.jsonl"``) or a provider object
+        (``{"provider": "claude-code", ...}``) that auto-discovers the agent's
+        native session log. Returns the ordered message list (maybe empty)."""
+        if not decl:
+            return []
+        if isinstance(decl, str):
+            return self._read_trace(self.workdir / decl)
+        if isinstance(decl, dict):
+            from .traces import pull_trace
+            return pull_trace(decl, self.workdir)
+        raise RepoError(f"invalid 'trace' in agent.json: {type(decl).__name__}",
+                        code="BAD_TRACE")
+
+    def trace_info(self) -> dict:
+        """Describe the current trace source without committing — which file or
+        native transcript will be captured, and how many messages it holds. Lets
+        an agent (or a human) confirm auto-discovery hooked the right session."""
+        decl = self.read_manifest().get("trace")
+        if not decl:
+            return {"kind": "none", "messages": 0}
+        if isinstance(decl, str):
+            path = self.workdir / decl
+            return {"kind": "path", "path": str(path), "exists": path.exists(),
+                    "messages": len(self._read_trace(path))}
+        if isinstance(decl, dict):
+            from .traces import describe_trace
+            return {"kind": "provider", **describe_trace(decl, self.workdir)}
+        return {"kind": "invalid"}
+
+    def _resolve_models(self, declared: list, messages: list) -> list:
+        """Fill any model pin marked ``"auto": true`` from the model that
+        actually produced the trace, so the pin can't drift from reality."""
+        if not any(isinstance(m, dict) and m.get("auto") for m in declared):
+            return declared
+        detected = next((m.get("model") for m in reversed(messages)
+                         if isinstance(m, dict) and m.get("model")), None)
+        out = []
+        for m in declared:
+            if isinstance(m, dict) and m.get("auto"):
+                m = {**m, "model": m.get("model") or detected or ""}
+                m.setdefault("provider", "anthropic")
+            out.append(m)
+        return out
+
     # ------------------------------------------------------------- snapshots
     def snapshot(self, write: bool = True) -> Snapshot:
         put = self.objects.write_obj if write else self.objects.hash_obj
@@ -243,24 +289,26 @@ class Repository:
             entries[str(rel)] = put_blob(path.read_bytes())
         tree = put({"type": "tree", "entries": entries})
 
-        # goal / models / trace dimensions
+        # goal / trace / models dimensions
         manifest = self.read_manifest()
         goal = put({"type": "goal", "text": manifest.get("goal", ""),
                     "parent": manifest.get("parent_goal")})
+
+        # trace may be a relative path (classic) or a provider declaration that
+        # auto-discovers the agent's native session log (e.g. Claude Code).
+        messages = self._resolve_trace(manifest.get("trace"))
+        trace = put({"type": "trace", "messages": messages}) if messages else None
+
+        # models may be declared explicitly, or marked "auto" to be detected from
+        # the trace — pinning the model that actually ran, not a hand-typed guess.
         models = [
             put({"type": "modelpin",
                  "provider": m.get("provider", ""),
                  "model": m.get("model", ""),
                  "version": m.get("version"),
                  "params": m.get("params", {})})
-            for m in manifest.get("models", [])
+            for m in self._resolve_models(manifest.get("models", []), messages)
         ]
-        trace = None
-        trace_rel = manifest.get("trace")
-        if trace_rel:
-            messages = self._read_trace(self.workdir / trace_rel)
-            if messages:
-                trace = put({"type": "trace", "messages": messages})
 
         state = manifest.get("state", "fluid")
         return Snapshot(tree, goal, models, trace, state, manifest)

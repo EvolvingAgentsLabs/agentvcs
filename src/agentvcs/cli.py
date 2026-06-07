@@ -10,7 +10,8 @@ machine ``code`` (see docs/AGENT_MODE.md).
     agentvcs commit -m "msg"      snapshot code + goal + models + trace
     agentvcs log                  show the evolution history
     agentvcs status               show working-tree changes per dimension
-    agentvcs show [<commit>]      show one commit across all dimensions
+    agentvcs show [<commit>]      show one commit across all dimensions (--trace renders the conversation)
+    agentvcs trace                show the current trace source (file or auto-discovered session)
     agentvcs diff [<a>] [<b>]     dimensional diff (defaults: parent..HEAD)
     agentvcs branch [<name>]      list branches, or create a live branch
     agentvcs checkout <ref>       restore the working tree from a branch/commit
@@ -52,6 +53,55 @@ def _iso(ts: int) -> str:
     return datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%dT%H:%MZ")
 
 
+_CLAUDE_CODE_MANIFEST = """{
+  "goal": "Describe the high-level objective this agent fleet is pursuing.",
+  "models": [
+    { "provider": "anthropic", "auto": true }
+  ],
+  "trace": { "provider": "claude-code", "auto": true },
+  "state": "fluid",
+  "metrics": {}
+}
+"""
+
+
+def _render_content(content) -> list:
+    """Flatten a message's content (string or Anthropic block list) to lines."""
+    if isinstance(content, str):
+        return content.splitlines() or [""]
+    if not isinstance(content, list):
+        return [json.dumps(content, ensure_ascii=False)]
+    lines = []
+    for b in content:
+        if not isinstance(b, dict):
+            lines.append(str(b)); continue
+        t = b.get("type")
+        if t == "text":
+            lines += (b.get("text") or "").splitlines()
+        elif t == "thinking":
+            lines.append(_color("[thinking] ", C_DIM) + (b.get("thinking") or b.get("text") or "").strip()[:300])
+        elif t == "tool_use":
+            lines.append(_color(f"[tool_use {b.get('name', '?')}] ", C_C)
+                         + json.dumps(b.get("input", {}), ensure_ascii=False)[:300])
+        elif t == "tool_result":
+            inner = b.get("content")
+            text = inner if isinstance(inner, str) else " ".join(
+                x.get("text", "") for x in inner if isinstance(x, dict)) if isinstance(inner, list) else json.dumps(inner)
+            lines.append(_color("[tool_result] ", C_G) + (text or "").strip()[:300])
+        else:
+            lines.append(f"[{t}]")
+    return lines or [""]
+
+
+def _render_trace(messages: list) -> str:
+    out = []
+    for m in messages:
+        out.append(_color(f"  {m.get('role', '?')}:", C_B)
+                   + (_color(f"  ({m['model']})", C_DIM) if m.get("model") else ""))
+        out += ["    " + l for l in _render_content(m.get("content"))]
+    return "\n".join(out) if out else _color("  (empty trace)", C_DIM)
+
+
 def _out(args, data: dict, human: str) -> None:
     """Emit a result as JSON (agent mode) or human text."""
     if args.json:
@@ -63,7 +113,7 @@ def _out(args, data: dict, human: str) -> None:
 
 # ----------------------------------------------------------------- commands
 def cmd_new(args):
-    result = scaffold(args.path)
+    result = scaffold(args.path, claude_code=args.claude_code)
     human = (f"Scaffolded an agentvcs-wired agent project in {_color(result['path'], C_B)}\n"
              f"  files: {', '.join(result['files'])}\n"
              f"  first commit: {_short(result['commit'])}\n"
@@ -73,12 +123,35 @@ def cmd_new(args):
 
 
 def cmd_init(args):
-    repo = Repository.init(args.path)
-    data = {"repository": str(repo.dir), "manifest": "agent.json", "agents_md": "AGENTS.md"}
+    manifest = _CLAUDE_CODE_MANIFEST if args.claude_code else None
+    repo = Repository.init(args.path, manifest=manifest)
+    data = {"repository": str(repo.dir), "manifest": "agent.json", "agents_md": "AGENTS.md",
+            "trace_provider": "claude-code" if args.claude_code else None}
+    extra = ("\nWired the trace to the live Claude Code session (provider "
+             f"{_color('claude-code', C_C)}) — just commit; no trace file to maintain."
+             if args.claude_code else "")
     human = (f"Initialized empty agentvcs repository in {repo.dir}\n"
              f"Scaffolded {_color('agent.json', C_B)} (your goal/models/trace) and "
-             f"{_color('AGENTS.md', C_B)} (agent operating manual).")
+             f"{_color('AGENTS.md', C_B)} (agent operating manual)." + extra)
     _out(args, data, human)
+
+
+def cmd_trace(args):
+    repo = Repository.open()
+    info = repo.trace_info()
+    if info["kind"] == "none":
+        _out(args, info, "no trace declared in agent.json")
+        return
+    if info["kind"] == "path":
+        human = (f"trace source: {_color('file', C_B)} {info['path']}\n"
+                 f"  exists: {info['exists']}  messages: {info['messages']}")
+    else:  # provider
+        tr = info.get("transcript") or "(not found yet)"
+        human = (f"trace source: {_color('provider', C_B)} {info.get('provider')}\n"
+                 f"  transcript: {tr}\n"
+                 f"  messages:   {info.get('messages', 0)}"
+                 + (f"   model: {info['model']}" if info.get("model") else ""))
+    _out(args, info, human)
 
 
 def cmd_commit(args):
@@ -170,7 +243,8 @@ def cmd_show(args):
         return
     commit = repo.objects.read_obj(oid)
     models = [repo.objects.read_obj(m) for m in commit["models"]]
-    n_trace = len(repo.objects.read_obj(commit["trace"])["messages"]) if commit.get("trace") else 0
+    messages = repo.objects.read_obj(commit["trace"])["messages"] if commit.get("trace") else []
+    n_trace = len(messages)
     data = {
         **_commit_summary(repo, oid, commit),
         "author": commit["author"],
@@ -180,6 +254,8 @@ def cmd_show(args):
         "metrics": commit.get("metrics", {}),
         "crystal": commit.get("crystal"),
     }
+    if args.trace:
+        data["trace"] = messages
     lines = [
         _color(f"commit {oid}", C_Y),
         f"state:   {commit['state']}",
@@ -192,6 +268,8 @@ def cmd_show(args):
     ]
     lines += [f"  - {m['provider']}/{m['model']} params={m['params']}" for m in models]
     lines.append(f"{_color('trace', C_B)}: {n_trace} messages")
+    if args.trace and messages:
+        lines.append(_render_trace(messages))
     if commit.get("crystal"):
         lines.append(f"{_color('crystal', C_B)}: {_short(commit['crystal'])} (deterministic recipe)")
     _out(args, data, "\n".join(lines))
@@ -304,11 +382,17 @@ def build_parser() -> argparse.ArgumentParser:
 
     sp = add("new", help="scaffold a new agent project pre-wired with agentvcs")
     sp.add_argument("path")
+    sp.add_argument("--claude-code", action="store_true", dest="claude_code",
+                    help="wire the trace to the live Claude Code session (no trace file)")
     sp.set_defaults(func=cmd_new)
 
     sp = add("init", help="create a repository")
     sp.add_argument("path", nargs="?", default=".")
+    sp.add_argument("--claude-code", action="store_true", dest="claude_code",
+                    help="wire agent.json's trace to the live Claude Code session")
     sp.set_defaults(func=cmd_init)
+
+    add("trace", help="show the current trace source (file or auto-discovered session)").set_defaults(func=cmd_trace)
 
     sp = add("commit", help="snapshot all dimensions")
     sp.add_argument("-m", "--message", required=True)
@@ -320,6 +404,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     sp = add("show", help="show one commit across all dimensions")
     sp.add_argument("commit", nargs="?")
+    sp.add_argument("--trace", action="store_true",
+                    help="also render the captured conversation (trace messages)")
     sp.set_defaults(func=cmd_show)
 
     sp = add("diff", help="dimensional diff (default parent..HEAD)")

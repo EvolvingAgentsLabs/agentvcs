@@ -58,15 +58,18 @@ versions; messages may change.
 | `BAD_DIR` | `-C <dir>` points to a non-existent directory (non-`init` command) | create it or fix the path |
 | `ALREADY_CRYSTALLIZED` | `freeze` on a crystallized commit | already frozen; nothing to do |
 | `NOT_CRYSTALLIZED` | `replay` on a fluid commit | `freeze` it first, then replay |
+| `UNKNOWN_TRACE_PROVIDER` | `agent.json`'s `trace.provider` is not registered | fix the provider name (known: `claude-code`) |
+| `BAD_TRACE` | `agent.json`'s `trace` is neither a path nor a provider object | set it to a path string or `{ "provider": ... }` |
 | `INTERNAL` | unexpected error (MCP tools only) | report; do not retry blindly |
 
 ## Command output fields (success)
 
-- `init` → `repository`, `manifest`, `agents_md`
+- `init` → `repository`, `manifest`, `agents_md`, `trace_provider` (`--claude-code` wires the live session)
 - `commit` → `commit`, `branch`, `state`, `message`
 - `log` → `commits[]` of `{commit, state, timestamp, message, goal, parents}`
 - `status` → `branch`, `head`, `diff`
-- `show` → commit summary + `models[]`, `trace_messages`, `metrics`, `crystal`
+- `show` → commit summary + `models[]`, `trace_messages`, `metrics`, `crystal`; with `--trace` (CLI) or `trace:true` (MCP) also a full `trace[]` of messages
+- `trace` → the current trace source: `{kind:"path"|"provider"|"none", ...}` — for a provider, `transcript`, `messages`, and the detected `model`
 - `diff` → `a`, `b`, `diff` (per-dimension; `null` where unchanged)
 - `branch` → list `{current, branches[]}` or `{branch, commit}` when creating
 - `checkout` → `ref`, `commit`
@@ -94,8 +97,27 @@ claude mcp add agentvcs -- agentvcs-mcp
 ```
 
 It exposes one tool per operation: `avcs_log`, `avcs_show`, `avcs_diff`,
-`avcs_status`, `avcs_commit`, `avcs_freeze`, `avcs_rollback`, `avcs_branch`,
-`avcs_checkout`. Each tool result is a single text-content item whose text is the
-same `{"ok": ...}` JSON described above; tool failures set `isError: true`.
+`avcs_status`, `avcs_commit`, `avcs_freeze`, `avcs_replay`, `avcs_rollback`,
+`avcs_branch`, `avcs_checkout`, `avcs_trace`. Each tool result is a single
+text-content item whose text is the same `{"ok": ...}` JSON described above; tool
+failures set `isError: true`.
 
 The server operates on the repository discovered from its working directory.
+
+## Trace providers (high-fidelity, zero-friction capture)
+
+`agent.json`'s `trace` is either a **path** (you maintain the file) or a
+**provider** object that agentvcs reads automatically at commit time:
+
+```json
+"trace": { "provider": "claude-code", "auto": true },
+"models": [{ "provider": "anthropic", "auto": true }]
+```
+
+With the `claude-code` provider you maintain **no** trace file: `commit` vacuums
+Claude Code's native session transcript (`~/.claude/projects/<cwd "/"→"-">/<uuid>.jsonl`)
+— the real `tool_use` / `tool_result` / `thinking` blocks — and `"auto": true`
+model pins are filled from the model that actually ran. Run `agentvcs trace` to
+confirm which transcript is hooked before committing. Known secrets are scrubbed
+by default; add `"redact": ["sk-[A-Za-z0-9-]+", ...]` for more, or `"redact": false`
+to disable. Pin a specific transcript with `"session"` / `"project_dir"` / `"path"`.
