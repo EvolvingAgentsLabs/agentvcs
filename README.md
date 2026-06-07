@@ -68,6 +68,10 @@ Declare the non-code dimensions in `agent.json`:
 }
 ```
 
+The `trace` can be a file you maintain (above) **or** a *provider* that captures
+the agent's native session automatically — see
+[Zero-friction trace capture](#zero-friction-trace-capture-claude-code) below.
+
 Then version the whole evolving system:
 
 ```bash
@@ -102,7 +106,8 @@ text diff.
 | `agentvcs commit -m MSG` | snapshot code + goal + models + trace |
 | `agentvcs log` | evolution history (state + goal per commit) |
 | `agentvcs status` | working-tree changes, per dimension |
-| `agentvcs show [COMMIT]` | one commit across all dimensions |
+| `agentvcs show [COMMIT]` | one commit across all dimensions (`--trace` renders the conversation) |
+| `agentvcs trace` | show the current trace source (file or auto-discovered session) |
 | `agentvcs diff [A] [B]` | dimensional diff (default: parent..HEAD) |
 | `agentvcs branch [NAME]` | list, or create a live branch |
 | `agentvcs checkout REF` | restore the working tree from a branch/commit |
@@ -135,7 +140,41 @@ a coding agent (Claude Code, Cursor, …) can drive it without guessing:
   ```
 
   Exposes `avcs_log`, `avcs_show`, `avcs_diff`, `avcs_status`, `avcs_commit`,
-  `avcs_freeze`, `avcs_rollback`, `avcs_branch`, `avcs_checkout`.
+  `avcs_freeze`, `avcs_replay`, `avcs_rollback`, `avcs_branch`, `avcs_checkout`,
+  `avcs_trace`.
+
+### Zero-friction trace capture (Claude Code)
+
+Asking an agent to write its own trace file is fragile — it costs tokens and the
+agent can simply forget. Instead, let agentvcs **vacuum the agent's native session
+log** at commit time. Wire it once:
+
+```bash
+agentvcs init --claude-code     # or: agentvcs new my-agent --claude-code
+```
+
+which sets, in `agent.json`:
+
+```json
+"trace": { "provider": "claude-code", "auto": true },
+"models": [{ "provider": "anthropic", "auto": true }]
+```
+
+Now you maintain **no** trace file. Each `agentvcs commit` reads Claude Code's
+own session transcript — the real `tool_use` / `tool_result` / `thinking` blocks,
+not a summary — and the model pin is detected from the model that actually ran.
+
+```bash
+agentvcs trace                  # confirm which session is hooked (+ message count, model)
+agentvcs commit -m "v1"         # captures the live conversation, zero extra work
+agentvcs show --trace           # the commit + the exact conversation that produced it
+agentvcs freeze                 # crystallize that real, high-fidelity trace
+```
+
+Known secrets are scrubbed by default (`redact` / `redact_defaults` to tune). The
+`trace` dimension is **pluggable** — `claude-code` is the first provider; any tool
+that records a session (e.g. one backed by SQLite) can add another without changing
+the on-disk format. See [`docs/SPEC.md`](docs/SPEC.md).
 
 ```jsonc
 $ agentvcs diff --json
@@ -175,7 +214,9 @@ bash examples/agent-loop-demo/run.sh
 See [`examples/agent-loop-demo/`](examples/agent-loop-demo/) for the walkthrough,
 or [`examples/recording/`](examples/recording/) for a ready-to-share screencast of
 it. To put a **real** agent in front of agentvcs and score whether it adopts the
-loop, use [`examples/claude-code-task/`](examples/claude-code-task/).
+loop, use [`examples/claude-code-task/`](examples/claude-code-task/). To see the
+**zero-friction trace provider** (commit captures the live Claude Code session,
+no trace file), see [`examples/claude-code-trace/`](examples/claude-code-trace/).
 
 ## Scope
 

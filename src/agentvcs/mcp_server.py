@@ -56,9 +56,16 @@ def tool_show(args):
         return {"commit": None}
     c = repo.objects.read_obj(oid)
     models = [repo.objects.read_obj(m) for m in c["models"]]
-    n = len(repo.objects.read_obj(c["trace"])["messages"]) if c.get("trace") else 0
-    return {**_commit_brief(repo, oid), "models": models, "trace_messages": n,
-            "metrics": c.get("metrics", {}), "crystal": c.get("crystal")}
+    messages = repo.objects.read_obj(c["trace"])["messages"] if c.get("trace") else []
+    out = {**_commit_brief(repo, oid), "models": models, "trace_messages": len(messages),
+           "metrics": c.get("metrics", {}), "crystal": c.get("crystal")}
+    if args.get("trace"):
+        out["trace"] = messages
+    return out
+
+
+def tool_trace(args):
+    return _repo().trace_info()
 
 
 def tool_diff(args):
@@ -123,8 +130,11 @@ _REF = {"type": "string", "description": "branch name, full id, or short prefix"
 TOOLS = [
     {"name": "avcs_log", "description": "List the evolution history (commits with state, goal, message).",
      "inputSchema": {"type": "object", "properties": {}}, "_fn": tool_log},
-    {"name": "avcs_show", "description": "Show one commit across all dimensions (code/goal/models/trace).",
-     "inputSchema": {"type": "object", "properties": {"commit": _REF}}, "_fn": tool_show},
+    {"name": "avcs_show", "description": "Show one commit across all dimensions (code/goal/models/trace). Set trace=true to include the captured conversation.",
+     "inputSchema": {"type": "object", "properties": {"commit": _REF,
+         "trace": {"type": "boolean", "description": "include the full trace messages"}}}, "_fn": tool_show},
+    {"name": "avcs_trace", "description": "Show the current trace source — which file or auto-discovered native session (e.g. Claude Code) will be captured, and how many messages it holds.",
+     "inputSchema": {"type": "object", "properties": {}}, "_fn": tool_trace},
     {"name": "avcs_diff", "description": "Dimensional diff between two commits (defaults to parent..HEAD).",
      "inputSchema": {"type": "object", "properties": {"a": _REF, "b": _REF}}, "_fn": tool_diff},
     {"name": "avcs_status", "description": "Show uncommitted working-tree changes, per dimension.",

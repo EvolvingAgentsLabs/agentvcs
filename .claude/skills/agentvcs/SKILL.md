@@ -25,8 +25,19 @@ Pass `-C <project-dir>` (like `git -C`) to run against that repo from anywhere:
 { "goal": "...", "models": [{"provider":"...","model":"...","params":{...}}],
   "trace": "traces/run.jsonl", "state": "fluid", "metrics": {} }
 ```
-Keep `goal` current and append agent messages to the `trace` file as you work — that
-is the state you are versioning beyond code.
+Keep `goal` current. The `trace` is the message history you are versioning beyond
+code; you can supply it two ways:
+
+- **Path (manual):** `"trace": "traces/run.jsonl"` — append agent messages as you work.
+- **Provider (automatic, preferred in Claude Code):**
+  ```json
+  "trace": { "provider": "claude-code", "auto": true },
+  "models": [{ "provider": "anthropic", "auto": true }]
+  ```
+  You then maintain **no** trace file: `commit` auto-vacuums Claude Code's native
+  session transcript (real `tool_use`/`tool_result`/`thinking`), and the model pin
+  is detected from what actually ran. Add `"redact": ["sk-[A-Za-z0-9-]+", ...]` to
+  scrub secrets, or `"session"` / `"project_dir"` to pin a specific transcript.
 
 ## Core loop
 ```bash
@@ -66,8 +77,15 @@ agentvcs replay --exec "my-runner" --json # pipe each step (JSON) to your execut
 ```
 Replaying a fluid commit errors with `NOT_CRYSTALLIZED` — freeze it first.
 
+## Inspect the captured conversation
+```bash
+agentvcs trace --json                     # which session/file is hooked (+ message count, model)
+agentvcs show --trace --json              # the commit + the full conversation that produced it
+```
+
 ## MCP alternative
 If the `agentvcs` MCP server is connected, the same operations are available as
-tools `avcs_log`, `avcs_show`, `avcs_diff`, `avcs_status`, `avcs_commit`,
-`avcs_freeze`, `avcs_rollback`, `avcs_branch`, `avcs_checkout`. Each returns the
-same `{"ok": ...}` JSON. Register with: `claude mcp add agentvcs -- agentvcs-mcp`.
+tools `avcs_log`, `avcs_show` (pass `trace:true` for the conversation), `avcs_diff`,
+`avcs_status`, `avcs_commit`, `avcs_freeze`, `avcs_replay`, `avcs_rollback`,
+`avcs_branch`, `avcs_checkout`, `avcs_trace`. Each returns the same `{"ok": ...}`
+JSON. Register with: `claude mcp add agentvcs -- agentvcs-mcp`.

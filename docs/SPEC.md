@@ -39,8 +39,26 @@ tree. `agentvcs commit` reads it together with a snapshot of the files.
 }
 ```
 
-The trace file is either `.jsonl` (one JSON message per line) or `.json` (a JSON
-array, or an object with a `messages` array).
+`trace` is either a **path** to a file (`.jsonl` — one JSON message per line, or
+`.json` — a JSON array / an object with a `messages` array), or a **provider**
+object that auto-discovers the agent's native session log at commit time:
+
+```json
+"trace": { "provider": "claude-code", "auto": true }
+```
+
+A provider lets agentvcs *vacuum* the high-fidelity trace the agent already
+produced instead of asking it to write one. The built-in `claude-code` provider
+reads the session transcript Claude Code records under
+`~/.claude/projects/<cwd "/"→"-">/<session-uuid>.jsonl`, keeping the real
+`tool_use` / `tool_result` / `thinking` blocks. Optional keys: `session`,
+`project_dir`, `projects_dir`, `path` (bypass discovery), and `redact` (a list
+of regexes scrubbed before storage). Either way, the result is normalized to the
+`trace` object below — the on-disk format is provider-agnostic.
+
+A `models` entry may also carry `"auto": true`, in which case the `model` is
+filled from the model that actually produced the trace (so the pin can't drift
+from reality).
 
 ## 3. Objects
 
