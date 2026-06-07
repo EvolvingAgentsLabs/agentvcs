@@ -176,6 +176,10 @@ Known secrets are scrubbed by default (`redact` / `redact_defaults` to tune). Th
 that records a session (e.g. one backed by SQLite) can add another without changing
 the on-disk format. See [`docs/SPEC.md`](docs/SPEC.md).
 
+**New here?** Walk through it end-to-end in
+[`docs/TUTORIAL.md`](docs/TUTORIAL.md) — build a tiny bot with Claude Code and
+version every iteration, from first commit to a frozen recipe.
+
 ```jsonc
 $ agentvcs diff --json
 {"ok": true, "command": "diff", "a": "705b2fb…", "b": "1d4bd90…",

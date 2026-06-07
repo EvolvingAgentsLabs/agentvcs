@@ -9,6 +9,9 @@ model pin is detected from the model that actually ran.
 > Unlike the other examples, this one is driven by a **real** Claude Code session,
 > so its trace dimension is only populated when you run it inside Claude Code (the
 > provider reads `~/.claude/projects/<cwd>/…jsonl`).
+>
+> For a full step-by-step walkthrough (build a bot, diff, rollback, freeze), see
+> [`docs/TUTORIAL.md`](../../docs/TUTORIAL.md).
 
 ## The manifest
 
