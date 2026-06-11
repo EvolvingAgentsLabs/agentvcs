@@ -37,5 +37,10 @@ dev = ["pytest>=8"]
 [tool.hatch.build.targets.wheel]
 packages = ["src/agentvcs"]
 
+# The dashboard's single-page app is a data file inside the package; force-include
+# it so a packaging change can never ship `agentvcs ui` without its frontend.
+[tool.hatch.build.targets.wheel.force-include]
+"src/agentvcs/ui/index.html" = "agentvcs/ui/index.html"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

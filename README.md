@@ -121,9 +121,29 @@ text diff.
 | `agentvcs rollback [REF]` | undo: restore the full prior state (the panic button) |
 | `agentvcs freeze [COMMIT]` | crystallize a fluid commit into a deterministic recipe |
 | `agentvcs replay [COMMIT]` | re-execute a crystallized recipe deterministically |
+| `agentvcs ui` | serve a local web dashboard to *see* the evolution |
 
 Add `--json` to any command for machine-readable output (see below). Use
 `-C DIR` (like `git -C`) to run against a repo from any directory.
+
+## See it: the local dashboard
+
+The terminal shows you the history; `agentvcs ui` lets you *watch a mind move*.
+
+```bash
+agentvcs ui                 # opens http://127.0.0.1:8080 in your browser
+```
+
+A split view: the commit graph on the left, and for the selected commit, its
+**dimensional diff** plus the agent's **inner monologue rendered as a chat** — the
+exact `thinking` / `tool_use` / `tool_result` blocks that produced those lines of
+code, with the goal and model that were in force. It polls, so as your agent keeps
+committing in another terminal, new commits appear live.
+
+Read-only, loopback-only, and (like the rest of agentvcs) **zero dependencies** —
+just `http.server` and one self-contained HTML page. `--no-open` serves headless
+and prints the URL; `--json` makes it machine-readable. The same data is available
+as a small read-only JSON API under `/api/*` (see `docs/AGENT_MODE.md`).
 
 ## Built for agents (B2A)
 

@@ -60,7 +60,8 @@ versions; messages may change.
 | `NOT_CRYSTALLIZED` | `replay` on a fluid commit | `freeze` it first, then replay |
 | `UNKNOWN_TRACE_PROVIDER` | `agent.json`'s `trace.provider` is not registered | fix the provider name (known: `claude-code`) |
 | `BAD_TRACE` | `agent.json`'s `trace` is neither a path nor a provider object | set it to a path string or `{ "provider": ... }` |
-| `INTERNAL` | unexpected error (MCP tools only) | report; do not retry blindly |
+| `PORT_IN_USE` | `ui` could not bind any port in the probed range | pass a free `--port`, or stop the other server |
+| `INTERNAL` | unexpected error (MCP tools / UI API only) | report; do not retry blindly |
 
 ## Command output fields (success)
 
@@ -76,6 +77,7 @@ versions; messages may change.
 - `rollback` → `restored_to`, `previous_head`, `goal`, `state`
 - `freeze` → `commit`, `source`, `state`, `recipe_path`
 - `replay` → `commit`, `source_commit`, `goal`, `models`, `executed`, `steps[]` (each `{index, step[, exit_code, output]}`)
+- `ui` → `url`, `host`, `port` (printed once when the dashboard binds, then it keeps serving until interrupted)
 
 The `diff` object is `{code:{added,removed,modified}, goal, models, trace, state}`;
 every non-code dimension is `null` when unchanged, so an agent can cheaply detect
@@ -103,6 +105,34 @@ text-content item whose text is the same `{"ok": ...}` JSON described above; too
 failures set `isError: true`.
 
 The server operates on the repository discovered from its working directory.
+
+## Local dashboard (`agentvcs ui`)
+
+`agentvcs ui` serves a read-only web dashboard (standard library only, loopback by
+default) for *seeing* the evolution: a commit graph on the left, and per commit its
+dimensional diff plus a chat-style render of the captured trace (`thinking` /
+`tool_use` / `tool_result` blocks), goal, and model pins. It polls so new commits
+appear live while an agent keeps working.
+
+```bash
+agentvcs ui                       # open a browser on http://127.0.0.1:8080
+agentvcs ui --no-open --json      # headless: print {url,host,port}, keep serving
+agentvcs ui --port 9000 --host 0.0.0.0
+```
+
+It also exposes the same data as a tiny read-only JSON API (same `{"ok":...}`
+envelope; errors carry the stable `error.code`), useful to agents that want the
+history programmatically over HTTP:
+
+| Route | Returns |
+|-------|---------|
+| `GET /api/repo` | `{current, head, branches[], goal}` |
+| `GET /api/log` | `{commits[]}` (same rows as `log`) |
+| `GET /api/commit/<ref>` | `{commit}` (same as `show`) |
+| `GET /api/commit/<ref>/trace` | `{trace[]}` (raw message blocks) |
+| `GET /api/diff?a=&b=` | `{a, b, diff}` (defaults parent..`b`) |
+
+`<ref>` accepts the same branch name / full id / short prefix as the CLI.
 
 ## Trace providers (high-fidelity, zero-friction capture)
 
