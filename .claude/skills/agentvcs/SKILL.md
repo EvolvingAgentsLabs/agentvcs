@@ -83,6 +83,15 @@ agentvcs trace --json                     # which session/file is hooked (+ mess
 agentvcs show --trace --json              # the commit + the full conversation that produced it
 ```
 
+## Show a human the evolution (local dashboard)
+```bash
+agentvcs ui --json                        # serve http://127.0.0.1:8080; prints {url,host,port}
+agentvcs ui --no-open --json              # headless (no browser); keeps serving until stopped
+```
+A read-only split view: commit graph on the left; per commit, its dimensional diff
+plus the trace rendered as a chat (`thinking`/`tool_use`/`tool_result`). Polls, so
+commits appear live. Read-only, loopback-only, zero dependencies.
+
 ## MCP alternative
 If the `agentvcs` MCP server is connected, the same operations are available as
 tools `avcs_log`, `avcs_show` (pass `trace:true` for the conversation), `avcs_diff`,

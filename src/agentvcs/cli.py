@@ -18,6 +18,7 @@ machine ``code`` (see docs/AGENT_MODE.md).
     agentvcs rollback [<ref>]     undo: restore full prior state (the panic button)
     agentvcs freeze [<commit>]    crystallize a fluid commit into a deterministic recipe
     agentvcs replay [<commit>]    re-execute a crystallized recipe deterministically
+    agentvcs ui                   serve a local web dashboard to visualize the evolution
 """
 from __future__ import annotations
 
@@ -25,10 +26,9 @@ import argparse
 import json
 import os
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 
-from . import __version__
+from . import __version__, views
 from .crystallize import crystallize
 from .diff import diff_commits
 from .replay import replay
@@ -49,8 +49,7 @@ def _short(oid: str | None) -> str:
     return oid[:12] if oid else "-"
 
 
-def _iso(ts: int) -> str:
-    return datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%dT%H:%MZ")
+_iso = views.iso
 
 
 _CLAUDE_CODE_MANIFEST = """{
@@ -166,14 +165,7 @@ def cmd_commit(args):
 
 
 def _commit_summary(repo, oid, commit):
-    return {
-        "commit": oid,
-        "state": commit["state"],
-        "timestamp": _iso(commit["timestamp"]),
-        "message": commit["message"],
-        "goal": repo.objects.read_obj(commit["goal"])["text"],
-        "parents": commit.get("parents", []),
-    }
+    return views.commit_summary(repo, oid, commit)
 
 
 def cmd_log(args):
@@ -245,17 +237,7 @@ def cmd_show(args):
     models = [repo.objects.read_obj(m) for m in commit["models"]]
     messages = repo.objects.read_obj(commit["trace"])["messages"] if commit.get("trace") else []
     n_trace = len(messages)
-    data = {
-        **_commit_summary(repo, oid, commit),
-        "author": commit["author"],
-        "models": [{"provider": m["provider"], "model": m["model"],
-                    "version": m["version"], "params": m["params"]} for m in models],
-        "trace_messages": n_trace,
-        "metrics": commit.get("metrics", {}),
-        "crystal": commit.get("crystal"),
-    }
-    if args.trace:
-        data["trace"] = messages
+    data = views.commit_view(repo, oid, include_trace=args.trace)
     lines = [
         _color(f"commit {oid}", C_Y),
         f"state:   {commit['state']}",
@@ -349,6 +331,25 @@ def cmd_replay(args):
     _out(args, result, "\n".join(lines))
 
 
+def cmd_ui(args):
+    from .ui import serve
+    repo = Repository.open()
+
+    def announce(url: str):
+        port = int(url.rsplit(":", 1)[1])
+        host = url.split("://", 1)[1].rsplit(":", 1)[0]
+        if args.json:
+            print(json.dumps({"ok": True, "command": "ui", "url": url,
+                              "host": host, "port": port}, ensure_ascii=False),
+                  flush=True)
+        else:
+            print(f"agentvcs dashboard serving {_color(url, C_B)}  "
+                  f"{_color('(Ctrl-C to stop)', C_DIM)}", flush=True)
+
+    serve(repo, host=args.host, port=args.port,
+          open_browser=not args.no_open, on_ready=announce)
+
+
 def cmd_freeze(args):
     repo = Repository.open()
     new_oid, artifact = crystallize(repo, args.commit, message=args.message)
@@ -440,6 +441,15 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("commit", nargs="?")
     sp.add_argument("-m", "--message")
     sp.set_defaults(func=cmd_freeze)
+
+    sp = add("ui", help="serve a local web dashboard to visualize the evolution")
+    sp.add_argument("--host", default="127.0.0.1",
+                    help="interface to bind (default loopback-only)")
+    sp.add_argument("--port", type=int, default=8080,
+                    help="port to bind; the next free one is used if taken")
+    sp.add_argument("--no-open", action="store_true", dest="no_open",
+                    help="do not open a browser; just serve and report the URL")
+    sp.set_defaults(func=cmd_ui)
 
     return p
 
