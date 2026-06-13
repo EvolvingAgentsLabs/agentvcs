@@ -65,14 +65,14 @@ _CLAUDE_CODE_MANIFEST = """{
 
 # A SkillOS-driven agent: the trace is captured from the SkillOS agent-runtime
 # session (the ingress→routing→planning→execution→memory→egress pipeline), and
-# the model pin auto-fills from whatever actually ran — Gemma 4 31b (local via
-# Ollama, the primary engine), with Gemini as an optional hosted alternative.
-# See examples/skillos-gemma-meta-agent/.
+# the model pin auto-fills from whatever actually ran — Gemma 4 31b via Google AI
+# Studio (the Gemini API, gemma-4-31b-it) as option 1, with a local Gemma 4 31b
+# via Ollama as the fallback. See examples/skillos-gemma-meta-agent/.
 _SKILLOS_MANIFEST = """{
   "goal": "Describe the high-level objective this agent fleet is pursuing.",
   "models": [
-    { "provider": "ollama", "model": "gemma4:31b", "auto": true },
-    { "provider": "google", "model": "gemini-2.0-flash", "note": "optional hosted alternative" }
+    { "provider": "google", "model": "gemma-4-31b-it", "auto": true, "note": "Gemma 4 31b via Google AI Studio (Gemini API)" },
+    { "provider": "ollama", "model": "gemma4:31b", "note": "local fallback via Ollama" }
   ],
   "trace": { "provider": "skillos", "auto": true },
   "state": "fluid",
@@ -418,7 +418,7 @@ def build_parser() -> argparse.ArgumentParser:
                     help="wire agent.json's trace to the live Claude Code session")
     sp.add_argument("--skillos", action="store_true", dest="skillos",
                     help="wire agent.json's trace to the SkillOS agent-runtime session "
-                         "(Gemma 4 31b via Ollama, with Gemini as a hosted alternative)")
+                         "(Gemma 4 31b via Google AI Studio, local Ollama fallback)")
     sp.set_defaults(func=cmd_init)
 
     add("trace", help="show the current trace source (file or auto-discovered session)").set_defaults(func=cmd_trace)

@@ -2,22 +2,23 @@
 #
 # SkillOS × Gemma × agentvcs — the full meta-agent demo.
 #
-# A meta-agent (meta_agent.py) runs a SkillOS cognitive pipeline on Gemma 4 31b
-# (local via Ollama, the primary engine) / Gemini (optional hosted alternative) /
-# an offline deterministic backend (so this always runs, even in CI). Each
-# iteration it PLANS → GENERATES → EXECUTES → EVALUATES a sub-agent, and we
-# version every iteration with agentvcs across all four dimensions — code + goal
-# + models + trace — rolling back a regression and freezing the trusted result
-# into a deterministic recipe.
+# A meta-agent (meta_agent.py) runs a SkillOS cognitive pipeline on Gemma 4 31b.
+# Option 1 is Gemma 4 31b via the Google AI Studio Gemini API (GEMINI_API_KEY,
+# model gemma-4-31b-it); the fallback is a local Gemma 4 31b via Ollama; and an
+# offline deterministic backend runs when neither is configured (so this always
+# runs, even in CI). Each iteration it PLANS → GENERATES → EXECUTES → EVALUATES a
+# sub-agent, and we version every iteration with agentvcs across all four
+# dimensions — code + goal + models + trace — rolling back a regression and
+# freezing the trusted result into a deterministic recipe.
 #
 # The trace is captured automatically: agent.json declares the `skillos` trace
 # provider, so each `agentvcs commit` vacuums .skillos/sessions/*.jsonl. You
 # maintain no trace file.
 #
 #   bash run.sh                                        # offline, fully reproducible
+#   GEMINI_API_KEY=AI...        bash run.sh            # Gemma 4 31b via AI Studio (option 1)
 #   OLLAMA_BASE_URL=http://localhost:11434/v1 \
-#   GEMMA_MODEL=gemma4:31b      bash run.sh            # Gemma 4 31b (primary engine)
-#   GEMINI_API_KEY=AI...        bash run.sh            # Gemini (hosted alternative)
+#   GEMMA_MODEL=gemma4:31b      bash run.sh            # Gemma 4 31b via local Ollama (fallback)
 #
 set -euo pipefail
 
@@ -47,15 +48,15 @@ cd "$WORK"
 echo ".skillos" > .agentvcsignore
 
 # Write agent.json for this iteration: the goal moves, the trace is the SkillOS
-# provider, the model is Gemma 4 31b (local via Ollama) with Gemini as a hosted
-# alternative (auto-pinned to whatever actually ran).
+# provider, the model is Gemma 4 31b — via Google AI Studio (Gemini API) first,
+# local Ollama as fallback (auto-pinned to whatever actually ran).
 manifest() { # manifest "<goal>"
   cat > agent.json <<EOF
 {
   "goal": "$1",
   "models": [
-    { "provider": "ollama", "model": "gemma4:31b", "params": { "temperature": 0.9 }, "auto": true },
-    { "provider": "google", "model": "gemini-2.0-flash", "note": "optional hosted alternative" }
+    { "provider": "google", "model": "gemma-4-31b-it", "params": { "temperature": 0.9 }, "auto": true, "note": "Gemma 4 31b via Google AI Studio (Gemini API)" },
+    { "provider": "ollama", "model": "gemma4:31b", "note": "local fallback via Ollama" }
   ],
   "trace": { "provider": "skillos", "auto": true,
              "redact": ["sk-[A-Za-z0-9_-]+", "(?i)(api[_-]?key|token|secret)\\\\s*[:=]\\\\s*\\\\S+"] },

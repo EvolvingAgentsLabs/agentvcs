@@ -114,10 +114,10 @@ def test_cli_init_skillos_writes_provider_manifest(tmp_path, capsys):
     assert out["ok"] and out["trace_provider"] == "skillos"
     manifest = json.loads((tmp_path / "agent.json").read_text())
     assert manifest["trace"] == {"provider": "skillos", "auto": True}
-    # Gemma 4 31b (Ollama) is the primary engine; Gemini is the hosted alternative
-    assert manifest["models"][0]["provider"] == "ollama"
-    assert manifest["models"][0]["model"] == "gemma4:31b"
-    assert manifest["models"][1]["provider"] == "google"
+    # option 1: Gemma 4 31b via Google AI Studio; fallback: local Gemma via Ollama
+    assert manifest["models"][0]["provider"] == "google"
+    assert manifest["models"][0]["model"] == "gemma-4-31b-it"
+    assert manifest["models"][1]["model"] == "gemma4:31b"
 
 
 def test_cli_init_rejects_both_providers(tmp_path, capsys):

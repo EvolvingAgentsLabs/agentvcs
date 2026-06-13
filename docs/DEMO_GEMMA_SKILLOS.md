@@ -1,8 +1,9 @@
 # Demo: a SkillOS × Gemma meta-agent, versioned with agentvcs
 
 > A complete, runnable demo where **SkillOS** plans/generates/executes agent
-> projects, **Gemma 4 31b** (local via Ollama) is the engine, and **agentvcs**
-> versions the whole evolving system and freezes the trusted result.
+> projects, **Gemma 4 31b** (via the Google AI Studio Gemini API, local Ollama
+> fallback) is the engine, and **agentvcs** versions the whole evolving system
+> and freezes the trusted result.
 >
 > Runnable code: [`examples/skillos-gemma-meta-agent/`](../examples/skillos-gemma-meta-agent/).
 
@@ -14,7 +15,7 @@ agents":
 | Layer | Piece | Role |
 |---|---|---|
 | Brain / OS | **[SkillOS](https://github.com/EvolvingAgentsLabs/skillos)** | Skills/agents/tools in *pure markdown*. Runs the cognitive pipeline ingress → routing → planning (HWM) → execution → memory → egress. Gives hierarchical planning and multi-agent execution. |
-| Engine | **Gemma 4 31b via Ollama** (primary, local) → **Gemini** (optional hosted alternative) | The reasoning model. SkillOS's Recursive Context Isolation gives a mid-tier model frontier-like executive function at 50–100× lower cost. |
+| Engine | **Gemma 4 31b** via Google AI Studio (Gemini API, `gemma-4-31b-it`) → local Ollama (fallback) | The reasoning model. SkillOS's Recursive Context Isolation gives a mid-tier model frontier-like executive function at 50–100× lower cost. |
 | VCS | **agentvcs** | Versions the meta-agent across **code + goal + models + trace**, rolls back mistakes, and **freezes** the trusted result into a deterministic recipe. |
 
 The conceptual fit is exact: **SkillOS provides the *fluid* side** (high-temperature
@@ -57,10 +58,10 @@ was the first). This demo adds **`skillos`**:
   so **you maintain no trace file**: each `agentvcs commit` vacuums the newest
   session — the real `planning` / `execution` events — exactly like the Claude
   Code provider does for a live Claude session.
-* **Model pin auto-detection**: with `"models": [{ "provider": "ollama", "model":
-  "gemma4:31b", "auto": true }]` the pin is filled from the model that actually ran
-  (`gemma4:31b`, or `gemini-2.0-flash` if the hosted alternative is used) — agentvcs
-  versions *the model that ran*, not a hand-typed guess.
+* **Model pin auto-detection**: with `"models": [{ "provider": "google", "model":
+  "gemma-4-31b-it", "auto": true }]` the pin is filled from the model that actually
+  ran (`gemma-4-31b-it` via AI Studio, or `gemma4:31b` if the local Ollama fallback
+  is used) — agentvcs versions *the model that ran*, not a hand-typed guess.
 * **`agentvcs init --skillos`** scaffolds this manifest in one command.
 
 ### The fluid → crystallized payoff
@@ -73,15 +74,15 @@ deterministic production agent.
 
 ## 4. Configuring the engine
 
-The demo's backend selection is **Gemma 4 31b (Ollama) → Gemini → deterministic
-offline**:
+The demo's backend selection is **Gemma 4 31b via AI Studio → Gemma 4 31b via
+Ollama → deterministic offline**:
 
 ```bash
-# Primary engine — Gemma 4 31b, local via Ollama
-OLLAMA_BASE_URL=http://localhost:11434/v1   GEMMA_MODEL=gemma4:31b   bash run.sh
+# Option 1 — Gemma 4 31b via Google AI Studio (the Gemini API)
+GEMINI_API_KEY=AI...   GEMMA_API_MODEL=gemma-4-31b-it   bash run.sh
 
-# Optional hosted alternative — Gemini (Google AI)
-GEMINI_API_KEY=AI...   GEMINI_MODEL=gemini-2.0-flash   bash run.sh
+# Fallback — local Gemma 4 31b via Ollama
+OLLAMA_BASE_URL=http://localhost:11434/v1   GEMMA_MODEL=gemma4:31b   bash run.sh
 
 # No credentials — offline deterministic backend (CI-reproducible)
 bash run.sh
@@ -121,7 +122,7 @@ SkillOS install:
   phases) and is tolerant of field-name variants. When SkillOS's persistence is
   confirmed, point `trace.dir`/`trace.path` at it — no provider change needed.
 * **Zero-dependency invariant.** The provider and `meta_agent.py` are stdlib-only
-  (Gemini/Ollama are called via `urllib`, no SDKs), preserving agentvcs's core
+  (AI Studio / Ollama are called via `urllib`, no SDKs), preserving agentvcs's core
   selling point.
 * **Determinism at temp 0.** Gemma via Ollama is generally reproducible at
   `temperature: 0`; via a hosted API, also fix a `seed` for byte-stable replays.

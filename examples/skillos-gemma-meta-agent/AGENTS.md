@@ -6,13 +6,13 @@ execute and version other agents*. It is built on three layers:
 | Layer | Tech | Role |
 |---|---|---|
 | Brain / OS | **[SkillOS](https://github.com/EvolvingAgentsLabs/skillos)** | Skills/agents defined in markdown. Runs the cognitive pipeline: ingress → routing → planning (HWM) → execution → memory → egress. |
-| Engine | **Gemma 4 31b via Ollama** (primary, local) → **Gemini** (optional hosted alternative) | The model that does the reasoning. Mid-tier + SkillOS's context isolation ≈ frontier behaviour, 50–100× cheaper. |
+| Engine | **Gemma 4 31b via Google AI Studio** (Gemini API, `gemma-4-31b-it`) → **local Gemma 4 31b via Ollama** (fallback) | The model that does the reasoning. Mid-tier + SkillOS's context isolation ≈ frontier behaviour, 50–100× cheaper. |
 | VCS | **agentvcs** (this repo) | Versions the evolving meta-agent across **code + goal + models + trace**, rolls back mistakes, and **freezes** the trusted result into a deterministic recipe. |
 
 ## The four dimensions live in `agent.json`
 - **goal** — what the meta-agent is currently trying to build.
-- **models** — Gemma 4 31b (Ollama) primary, Gemini as a hosted alternative.
-  Marked `auto`, so each commit pins *whatever model actually ran*.
+- **models** — Gemma 4 31b via Google AI Studio (option 1), local Ollama Gemma as
+  fallback. Marked `auto`, so each commit pins *whatever model actually ran*.
 - **trace** — `{ "provider": "skillos", "auto": true }`. You maintain **no** trace
   file: `agentvcs commit` vacuums the SkillOS session log written to
   `.skillos/sessions/*.jsonl` (the real pipeline phases).
@@ -36,8 +36,8 @@ Branch on `error.code`, never on prose. See `docs/AGENT_MODE.md` in the repo roo
 ## Run it
 ```bash
 bash run.sh                 # full end-to-end demo (offline-safe; uses a model if configured)
-OLLAMA_BASE_URL=http://localhost:11434/v1 GEMMA_MODEL=gemma4:31b bash run.sh  # Gemma 4 31b (primary)
-GEMINI_API_KEY=AI... bash run.sh                                              # Gemini (hosted alternative)
+GEMINI_API_KEY=AI... bash run.sh                                              # Gemma 4 31b via AI Studio (option 1)
+OLLAMA_BASE_URL=http://localhost:11434/v1 GEMMA_MODEL=gemma4:31b bash run.sh  # Gemma 4 31b via local Ollama (fallback)
 ```
 With no credentials it still runs end-to-end on a deterministic offline backend,
 so the version-control story (commit / diff / rollback / freeze) is fully

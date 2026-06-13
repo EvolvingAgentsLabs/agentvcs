@@ -252,8 +252,8 @@ loop, use [`examples/claude-code-task/`](examples/claude-code-task/). To see the
 **zero-friction trace provider** (commit captures the live Claude Code session,
 no trace file), see [`examples/claude-code-trace/`](examples/claude-code-trace/).
 For a **meta-agent that builds *other* agents** — SkillOS planning/codegen/exec
-on Gemma 4 31b (local via Ollama; Gemini optional), versioned and frozen with
-agentvcs — run
+on Gemma 4 31b (Google AI Studio Gemini API, local Ollama fallback), versioned
+and frozen with agentvcs — run
 [`examples/skillos-gemma-meta-agent/run.sh`](examples/skillos-gemma-meta-agent/)
 (works offline, no API key needed).
 

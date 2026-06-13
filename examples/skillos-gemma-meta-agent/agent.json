@@ -1,8 +1,8 @@
 {
-  "goal": "Meta-agent: plan, generate, execute and version sub-agent projects, driven by SkillOS on Gemma 4 31b (local via Ollama).",
+  "goal": "Meta-agent: plan, generate, execute and version sub-agent projects, driven by SkillOS on Gemma 4 31b (Google AI Studio Gemini API).",
   "models": [
-    { "provider": "ollama", "model": "gemma4:31b", "params": { "temperature": 0.9 }, "auto": true },
-    { "provider": "google", "model": "gemini-2.0-flash", "params": { "temperature": 0.9 }, "note": "optional hosted alternative" }
+    { "provider": "google", "model": "gemma-4-31b-it", "params": { "temperature": 0.9 }, "auto": true, "note": "Gemma 4 31b via Google AI Studio (Gemini API)" },
+    { "provider": "ollama", "model": "gemma4:31b", "params": { "temperature": 0.9 }, "note": "local fallback via Ollama" }
   ],
   "trace": {
     "provider": "skillos",

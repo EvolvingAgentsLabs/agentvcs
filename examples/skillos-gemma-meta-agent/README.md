@@ -5,7 +5,7 @@ other agents*. It is the full marriage of three layers:
 
 ```
    SkillOS runs the cognitive pipeline (ingress→routing→planning→execution→memory→egress)
-            on Gemma 4 31b (local via Ollama) → Gemini (hosted alternative)
+            on Gemma 4 31b — Google AI Studio (Gemini API) → local Ollama (fallback)
                               │  each iteration builds + evals a sub-agent
                               ▼
    agentvcs commit  →  snapshot { code, goal, models(=the model that ran), trace(=SkillOS session) }
@@ -21,9 +21,10 @@ other agents*. It is the full marriage of three layers:
 * **[SkillOS](https://github.com/EvolvingAgentsLabs/skillos)** is the "markdown OS":
   agents/tools/skills are markdown (`skills/**.md` here). Its cognitive pipeline +
   context isolation let a mid-tier model behave like a frontier one.
-* **Gemma 4 31b** is the engine — local via **Ollama** (`gemma4:31b`), the primary
-  model. **Gemini** is an optional hosted alternative (`GEMINI_API_KEY`); an
-  offline deterministic backend runs when neither is configured, so the demo is
+* **Gemma 4 31b** is the engine. Option 1 is Gemma 4 31b served via **Google AI
+  Studio's Gemini API** (`gemma-4-31b-it`, using a `GEMINI_API_KEY` from AI
+  Studio); the fallback is a local **Gemma 4 31b via Ollama** (`gemma4:31b`); and
+  an offline deterministic backend runs when neither is configured, so the demo is
   reproducible anywhere.
 * **agentvcs** versions the *evolving* meta-agent across all four dimensions and
   freezes the trusted result.
@@ -32,14 +33,14 @@ other agents*. It is the full marriage of three layers:
 
 ```bash
 bash run.sh                                               # offline, fully reproducible
+GEMINI_API_KEY=AI...               bash run.sh            # Gemma 4 31b via Google AI Studio (option 1)
 OLLAMA_BASE_URL=http://localhost:11434/v1 \
-GEMMA_MODEL=gemma4:31b             bash run.sh            # Gemma 4 31b — the primary engine
-GEMINI_API_KEY=AI...               bash run.sh            # Gemini — optional hosted alternative
+GEMMA_MODEL=gemma4:31b             bash run.sh            # Gemma 4 31b via local Ollama (fallback)
 ```
 
 With no credentials the planning rationale comes from a deterministic offline
 backend (you'll see a `[meta-agent] ... using offline deterministic backend`
-line — that's the Gemma→Gemini→offline fallback chain working). The generated
+line — that's the AI-Studio→Ollama→offline fallback chain working). The generated
 code, the eval, and the captured SkillOS trace are produced either way, so the
 version-control story is identical.
 
@@ -86,7 +87,7 @@ model from it. You maintain no trace file by hand. `.skillos/` is kept out of th
 | File | Role |
 |---|---|
 | `agent.json` | the four dimensions (goal, models, trace, state) |
-| `meta_agent.py` | the SkillOS pipeline: backends (Gemma/Ollama → Gemini → offline) → plan → generate → execute → eval → session log |
+| `meta_agent.py` | the SkillOS pipeline: backends (Gemma via AI Studio → Gemma via Ollama → offline) → plan → generate → execute → eval → session log |
 | `skills/**.md` | the meta-agent's own skills, defined in markdown (SkillOS style) |
 | `run.sh` | the end-to-end driver (commit / diff / rollback / freeze) |
 | `AGENTS.md` | operating manual for the next agent that opens this project |
