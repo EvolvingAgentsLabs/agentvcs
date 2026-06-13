@@ -16,7 +16,7 @@ several shapes a SkillOS run can emit::
      "content":"Decompose into subgoals: ...","model":"gemini-2.0-flash",
      "provider":"google","ts":"2026-06-13T18:10:00Z"}
     {"phase":"execution","role":"tool","agent":"sandbox-runner",
-     "text":"ran tool.py -> top keywords: ...","model":"gemma4"}
+     "text":"ran tool.py -> top keywords: ...","model":"gemma4:31b"}
 
 Content is taken from ``content`` → ``text`` → ``message`` (first present). The
 phase (ingress/routing/planning/execution/memory/egress) and agent name are kept

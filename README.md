@@ -201,7 +201,7 @@ agentvcs freeze                 # crystallize that real, high-fidelity trace
 Known secrets are scrubbed by default (`redact` / `redact_defaults` to tune). The
 `trace` dimension is **pluggable** — `claude-code` was the first provider, and
 `skillos` (capture a [SkillOS](https://github.com/EvolvingAgentsLabs/skillos)
-agent-runtime session, e.g. one driven by Gemma 4) is the second; any tool that
+agent-runtime session, e.g. one driven by Gemma 4 31b) is the second; any tool that
 records a session can add another without changing the on-disk format. Wire it with
 `agentvcs init --skillos`. See [`docs/SPEC.md`](docs/SPEC.md) and the worked
 [SkillOS × Gemma meta-agent demo](docs/DEMO_GEMMA_SKILLOS.md).
@@ -252,7 +252,8 @@ loop, use [`examples/claude-code-task/`](examples/claude-code-task/). To see the
 **zero-friction trace provider** (commit captures the live Claude Code session,
 no trace file), see [`examples/claude-code-trace/`](examples/claude-code-trace/).
 For a **meta-agent that builds *other* agents** — SkillOS planning/codegen/exec
-on Gemma 4 (Gemini fallback), versioned and frozen with agentvcs — run
+on Gemma 4 31b (local via Ollama; Gemini optional), versioned and frozen with
+agentvcs — run
 [`examples/skillos-gemma-meta-agent/run.sh`](examples/skillos-gemma-meta-agent/)
 (works offline, no API key needed).
 

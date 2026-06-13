@@ -5,8 +5,9 @@ One invocation runs ONE iteration of a SkillOS-style cognitive pipeline
 (ingress → routing → planning → execution → memory → egress) that builds a small
 *sub-agent* and evaluates it. It:
 
-  * calls a model for the planning rationale — **Gemini** if ``GEMINI_API_KEY`` is
-    set, else a **local Gemma via Ollama** if reachable, else a deterministic
+  * calls a model for the planning rationale — **Gemma 4 31b via Ollama**
+    (``gemma4:31b``, the primary engine) if reachable, else **Gemini** if
+    ``GEMINI_API_KEY`` is set (optional hosted alternative), else a deterministic
     offline backend so the demo always runs (and CI stays reproducible);
   * generates the sub-agent (`subagent/skill.md` + `subagent/tool.py`);
   * runs it in an isolated subprocess against eval cases;
@@ -81,7 +82,7 @@ class GeminiBackend(Backend):
 
 
 class OllamaBackend(Backend):
-    """Local Gemma 4 via Ollama's OpenAI-compatible endpoint."""
+    """Local Gemma 4 31b via Ollama's OpenAI-compatible endpoint."""
     name = "ollama"
 
     def __init__(self, base_url: str, model: str):
@@ -115,23 +116,26 @@ class MockBackend(Backend):
 
 
 def select_backend() -> Backend:
-    """Gemini (option 1) → local Gemma/Ollama (fallback) → deterministic mock."""
+    """Gemma 4 31b via Ollama (primary engine) → Gemini (optional hosted
+    alternative) → deterministic offline mock."""
+    base = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434/v1")
+    model = os.environ.get("GEMMA_MODEL", "gemma4:31b")
+    try:
+        b = OllamaBackend(base, model)
+        b.complete("ping", "ping", 0.0)            # cheap reachability probe
+        return b
+    except Exception as e:                          # noqa: BLE001 — fall through
+        _warn(f"Gemma 4 31b (Ollama) unavailable ({e}); trying Gemini.")
     key = os.environ.get("GEMINI_API_KEY")
     if key:
         try:
             b = GeminiBackend(key, os.environ.get("GEMINI_MODEL", "gemini-2.0-flash"))
-            b.complete("ping", "ping", 0.0)        # cheap reachability probe
+            b.complete("ping", "ping", 0.0)
             return b
         except Exception as e:                      # noqa: BLE001 — fall through
-            _warn(f"Gemini unavailable ({e}); trying local Gemma/Ollama.")
-    base = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434/v1")
-    model = os.environ.get("GEMMA_MODEL", "gemma4")
-    try:
-        b = OllamaBackend(base, model)
-        b.complete("ping", "ping", 0.0)
-        return b
-    except Exception as e:                          # noqa: BLE001 — fall through
-        _warn(f"Ollama/Gemma unavailable ({e}); using offline deterministic backend.")
+            _warn(f"Gemini unavailable ({e}); using offline deterministic backend.")
+    else:
+        _warn("no GEMINI_API_KEY set; using offline deterministic backend.")
     return MockBackend()
 
 

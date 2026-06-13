@@ -89,21 +89,21 @@ def test_describe_reports_model_and_count(tmp_path):
 # --------------------------------------------------------- end-to-end commit
 def test_commit_captures_skillos_trace_and_autodetects_gemma_model(tmp_path):
     repo = Repository.init(tmp_path)
-    # a Gemma (Ollama-local fallback) run this time — the pin must reflect it
+    # the primary engine — Gemma 4 31b via Ollama — actually ran; pin must reflect it
     sess_dir = tmp_path / ".skillos" / "sessions"
     sess_dir.mkdir(parents=True)
     (sess_dir / "s.jsonl").write_text(
         json.dumps({"phase": "planning", "role": "planner",
-                    "content": "plan", "model": "gemma4"}) + "\n")
+                    "content": "plan", "model": "gemma4:31b"}) + "\n")
     write_manifest(tmp_path,
                    trace={"provider": "skillos", "auto": True},
                    models=[{"provider": "ollama", "auto": True}])
 
-    oid = repo.commit("fluid run on Gemma")
+    oid = repo.commit("fluid run on Gemma 4 31b")
     commit = repo.objects.read_obj(oid)
     assert len(repo.objects.read_obj(commit["trace"])["messages"]) == 1
     pin = repo.objects.read_obj(commit["models"][0])
-    assert pin["provider"] == "ollama" and pin["model"] == "gemma4"
+    assert pin["provider"] == "ollama" and pin["model"] == "gemma4:31b"
 
 
 # ----------------------------------------------------------------- cli surface
@@ -114,9 +114,10 @@ def test_cli_init_skillos_writes_provider_manifest(tmp_path, capsys):
     assert out["ok"] and out["trace_provider"] == "skillos"
     manifest = json.loads((tmp_path / "agent.json").read_text())
     assert manifest["trace"] == {"provider": "skillos", "auto": True}
-    # Gemini first, local Gemma/Ollama as the documented fallback
-    assert manifest["models"][0]["provider"] == "google"
-    assert manifest["models"][1]["model"] == "gemma4"
+    # Gemma 4 31b (Ollama) is the primary engine; Gemini is the hosted alternative
+    assert manifest["models"][0]["provider"] == "ollama"
+    assert manifest["models"][0]["model"] == "gemma4:31b"
+    assert manifest["models"][1]["provider"] == "google"
 
 
 def test_cli_init_rejects_both_providers(tmp_path, capsys):
