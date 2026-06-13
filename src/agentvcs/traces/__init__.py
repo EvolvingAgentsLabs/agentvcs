@@ -19,11 +19,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from . import claude_code
+from . import claude_code, skillos
 
 # provider name (as written in agent.json) -> provider module
 _PROVIDERS = {
     "claude-code": claude_code,
+    "skillos": skillos,
 }
 
 

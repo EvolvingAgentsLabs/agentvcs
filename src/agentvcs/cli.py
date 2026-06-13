@@ -63,6 +63,22 @@ _CLAUDE_CODE_MANIFEST = """{
 }
 """
 
+# A SkillOS-driven agent: the trace is captured from the SkillOS agent-runtime
+# session (the ingress→routing→planning→execution→memory→egress pipeline), and
+# the model pin auto-fills from whatever actually ran — Gemini first, with a
+# local Gemma (Ollama) fallback. See examples/skillos-gemma-meta-agent/.
+_SKILLOS_MANIFEST = """{
+  "goal": "Describe the high-level objective this agent fleet is pursuing.",
+  "models": [
+    { "provider": "google", "auto": true },
+    { "provider": "ollama", "model": "gemma4", "note": "local fallback" }
+  ],
+  "trace": { "provider": "skillos", "auto": true },
+  "state": "fluid",
+  "metrics": {}
+}
+"""
+
 
 def _render_content(content) -> list:
     """Flatten a message's content (string or Anthropic block list) to lines."""
@@ -122,13 +138,21 @@ def cmd_new(args):
 
 
 def cmd_init(args):
-    manifest = _CLAUDE_CODE_MANIFEST if args.claude_code else None
+    if args.claude_code and args.skillos:
+        raise RepoError("choose only one of --claude-code / --skillos",
+                        code="BAD_USAGE")
+    manifest = (_CLAUDE_CODE_MANIFEST if args.claude_code
+                else _SKILLOS_MANIFEST if args.skillos else None)
+    provider = ("claude-code" if args.claude_code
+                else "skillos" if args.skillos else None)
     repo = Repository.init(args.path, manifest=manifest)
     data = {"repository": str(repo.dir), "manifest": "agent.json", "agents_md": "AGENTS.md",
-            "trace_provider": "claude-code" if args.claude_code else None}
-    extra = ("\nWired the trace to the live Claude Code session (provider "
-             f"{_color('claude-code', C_C)}) — just commit; no trace file to maintain."
-             if args.claude_code else "")
+            "trace_provider": provider}
+    _src = ("the live Claude Code session" if args.claude_code
+            else "the SkillOS agent-runtime session" if args.skillos else None)
+    extra = (f"\nWired the trace to {_src} (provider "
+             f"{_color(provider, C_C)}) — just commit; no trace file to maintain."
+             if provider else "")
     human = (f"Initialized empty agentvcs repository in {repo.dir}\n"
              f"Scaffolded {_color('agent.json', C_B)} (your goal/models/trace) and "
              f"{_color('AGENTS.md', C_B)} (agent operating manual)." + extra)
@@ -391,6 +415,9 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("path", nargs="?", default=".")
     sp.add_argument("--claude-code", action="store_true", dest="claude_code",
                     help="wire agent.json's trace to the live Claude Code session")
+    sp.add_argument("--skillos", action="store_true", dest="skillos",
+                    help="wire agent.json's trace to the SkillOS agent-runtime session "
+                         "(Gemini, with local Gemma/Ollama fallback)")
     sp.set_defaults(func=cmd_init)
 
     add("trace", help="show the current trace source (file or auto-discovered session)").set_defaults(func=cmd_trace)

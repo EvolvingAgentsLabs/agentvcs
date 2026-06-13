@@ -58,8 +58,9 @@ versions; messages may change.
 | `BAD_DIR` | `-C <dir>` points to a non-existent directory (non-`init` command) | create it or fix the path |
 | `ALREADY_CRYSTALLIZED` | `freeze` on a crystallized commit | already frozen; nothing to do |
 | `NOT_CRYSTALLIZED` | `replay` on a fluid commit | `freeze` it first, then replay |
-| `UNKNOWN_TRACE_PROVIDER` | `agent.json`'s `trace.provider` is not registered | fix the provider name (known: `claude-code`) |
+| `UNKNOWN_TRACE_PROVIDER` | `agent.json`'s `trace.provider` is not registered | fix the provider name (known: `claude-code`, `skillos`) |
 | `BAD_TRACE` | `agent.json`'s `trace` is neither a path nor a provider object | set it to a path string or `{ "provider": ... }` |
+| `BAD_USAGE` | mutually exclusive flags combined (e.g. `init --claude-code --skillos`) | pass only one |
 | `PORT_IN_USE` | `ui` could not bind any port in the probed range | pass a free `--port`, or stop the other server |
 | `INTERNAL` | unexpected error (MCP tools / UI API only) | report; do not retry blindly |
 
