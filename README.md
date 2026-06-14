@@ -34,11 +34,12 @@ pure Python stdlib, fully auditable. Apache-2.0.
 
 ![agentvcs surfacing the runtime frame, then gating freeze on a passing eval](examples/recording/runtime-trust.gif)
 
-*A real run: `agentvcs runtime` reconstructs the operational frame your runtime
-hides — dollar cost, context pressure, model routing, real tool usage — from your
-own session log. Then the trust loop: `freeze` refuses a buggy `add()`
-(`EVAL_FAILED`), and once the eval passes it crystallizes a recipe stamped
-`verified` that `recall` can replay for ~$0. Numbers are reconstructed, not staged.*
+*The frame is **real**: `agentvcs runtime` reconstructs it from an actual captured
+Claude Code session (the very session that built this tool — bundled as a
+content-stripped fixture, so the `$17.13`, `17.6%` context, and tool counts are
+its genuine numbers, not typed in). The `add()` below is a **worked example** of
+the trust gate: `freeze` refuses the buggy version (`EVAL_FAILED`), and once the
+eval passes it crystallizes a `verified` recipe that `recall` replays for ~$0.*
 
 ## The runtime your agent can't see
 
