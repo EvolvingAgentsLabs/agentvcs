@@ -92,6 +92,22 @@ A read-only split view: commit graph on the left; per commit, its dimensional di
 plus the trace rendered as a chat (`thinking`/`tool_use`/`tool_result`). Polls, so
 commits appear live. Read-only, loopback-only, zero dependencies.
 
+## Run it continuously inside Claude Code
+Wire it once and the frame is always-on, no per-turn work:
+```bash
+agentvcs init --claude-code --runtime     # in the dir you launch Claude Code from
+```
+```jsonc
+// ~/.claude/settings.json — live budget/$/context in the status bar, every render
+"statusLine": { "type": "command", "command": "agentvcs statusline" }
+// .claude/settings.json — auto-commit the frame each turn (a versioned session)
+"hooks": { "Stop": [ { "hooks": [
+  { "type": "command", "command": "agentvcs commit -m 'cc checkpoint'" } ] } ] }
+```
+The `statusLine` command must run where the runtime repo lives (cwd-based, or pass
+`-C <repo>`); `statusline` drains and ignores the session JSON Claude Code pipes it,
+so it can't hang the bar. `agentvcs log` then reads as the session's frame history.
+
 ## MCP alternative
 If the `agentvcs` MCP server is connected, the same operations are available as
 tools `avcs_log`, `avcs_show` (pass `trace:true` for the conversation), `avcs_diff`,
