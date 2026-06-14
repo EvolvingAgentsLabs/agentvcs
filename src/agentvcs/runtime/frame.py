@@ -29,7 +29,7 @@ from __future__ import annotations
 from collections import Counter
 
 # USD per *million* tokens, (input, output). Substring-matched against the model
-# id; first hit wins. Override in agent.json — these are only sane defaults.
+# id; most-specific key wins, and agent.json overrides beat these defaults.
 DEFAULT_PRICING = {
     "claude-opus":   (15.0, 75.0),
     "claude-sonnet": (3.0, 15.0),
@@ -52,23 +52,35 @@ DEFAULT_WINDOWS = {
 
 
 def _match(table: dict, model: str):
+    """Return the value whose key is the *most specific* (longest) substring of the
+    model id — so a precise key like ``claude-opus`` wins over a broad one like
+    ``claude`` regardless of dict order. ``None`` if nothing matches."""
     if not model:
         return None
     m = model.lower()
+    best, best_len = None, -1
     for key, val in table.items():
-        if key in m:
-            return val
-    return None
+        if key.lower() in m and len(key) > best_len:
+            best, best_len = val, len(key)
+    return best
 
 
-def _window_for(model: str, windows: dict) -> int | None:
+def _tiered(model: str, user: dict, default: dict):
+    """User overrides win over built-in defaults: a value declared in ``user``
+    always takes precedence, even when a broad default key would also match (e.g.
+    overriding just ``opus`` must beat the default ``claude`` window)."""
+    hit = _match(user or {}, model)
+    return hit if hit is not None else _match(default, model)
+
+
+def _window_for(model: str, user_windows: dict) -> int | None:
     if model and ("[1m]" in model.lower() or "-1m" in model.lower()):
         return 1_000_000
-    return _match(windows, model)
+    return _tiered(model, user_windows, DEFAULT_WINDOWS)
 
 
-def _cost(model: str, inp: int, out: int, pricing: dict) -> float | None:
-    rate = _match(pricing, model)
+def _cost(model: str, inp: int, out: int, user_pricing: dict) -> float | None:
+    rate = _tiered(model, user_pricing, DEFAULT_PRICING)
     if rate is None:
         return None
     return round(inp / 1e6 * rate[0] + out / 1e6 * rate[1], 6)
@@ -108,8 +120,10 @@ def build_frame(
     ``budget`` — manifest config: ``ceiling_usd``, ``pricing``, ``windows``.
     """
     budget = budget or {}
-    pricing = {**DEFAULT_PRICING, **(budget.get("pricing") or {})}
-    windows = {**DEFAULT_WINDOWS, **(budget.get("windows") or {})}
+    # Keep user overrides separate from defaults so _tiered() can give them
+    # precedence (a narrow override must beat a broad default — see _match/_tiered).
+    user_pricing = budget.get("pricing") or {}
+    user_windows = budget.get("windows") or {}
     usages = usages or []
 
     # ---- model routing + budget, from real usage when we have it -------------
@@ -131,7 +145,7 @@ def build_frame(
         r["tokens_out"] += out
         tok_in += inp
         tok_out += out
-        c = _cost(model, inp, out, pricing)
+        c = _cost(model, inp, out, user_pricing)
         if c is not None:
             r["cost_usd"] = round(r["cost_usd"] + c, 6)
             cost_total += c
@@ -153,7 +167,7 @@ def build_frame(
     # ---- context-window pressure --------------------------------------------
     window = None
     for model in routing:
-        w = _window_for(model, windows)
+        w = _window_for(model, user_windows)
         if w is not None:
             window = max(window or 0, w)
     pct = round(used_ctx / window * 100, 1) if (window and used_ctx) else None

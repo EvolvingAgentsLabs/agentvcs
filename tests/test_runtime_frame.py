@@ -1,7 +1,7 @@
 """The runtime-visibility layer: reconstruct what the closed runtime hides."""
 import json
 
-from agentvcs.runtime.frame import build_frame
+from agentvcs.runtime.frame import build_frame, _match
 from agentvcs.traces import claude_code
 
 
@@ -70,6 +70,26 @@ def test_unknown_model_cost_is_none_but_tokens_count():
     frame = build_frame([], usages=[{"model": "totally-unknown", "input": 500, "output": 100}])
     assert frame["budget"]["tokens_total"] == 600
     assert frame["budget"]["cost_usd"] is None  # no price -> honest about not knowing
+
+
+def test_narrow_window_override_beats_broad_default():
+    # regression: a user override for `opus` must win over the broad default
+    # `claude` window (200k), regardless of dict iteration order.
+    usages = [{"model": "claude-opus-4-8", "input": 400_000, "output": 0}]
+    frame = build_frame([], usages=usages, budget={"windows": {"opus": 1_000_000}})
+    assert frame["context"]["window"] == 1_000_000
+    assert frame["context"]["pct"] == 40.0  # 400k / 1M, not 200% against 200k
+    # with no override the default still resolves
+    assert build_frame([], usages=usages)["context"]["window"] == 200_000
+
+
+def test_most_specific_key_wins():
+    # `claude-opus` (specific) should win over a broad `claude` entry in the same
+    # table even though `claude` is the longer English word is irrelevant — key
+    # length is the specificity proxy, and `claude-opus` is longer.
+    table = {"claude": 1, "claude-opus": 2}
+    assert _match(table, "claude-opus-4-8") == 2
+    assert _match(table, "claude-sonnet-4-6") == 1
 
 
 def test_claude_provider_reconstructs_frame(tmp_path):
