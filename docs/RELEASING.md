@@ -1,22 +1,31 @@
 # Releasing agentvcs to PyPI
 
 Publishing is automated by [`.github/workflows/release.yml`](../.github/workflows/release.yml):
-push a `vX.Y.Z` tag and it builds, `twine check`s, and publishes to PyPI using a
-PyPI **API token** stored as the repo secret `PYPI_API_TOKEN`.
+push a `vX.Y.Z` tag and it builds, `twine check`s, and publishes to PyPI via
+**trusted publishing (OIDC)** — no stored secret to manage or rotate.
 
-## One-time setup (required before the first release)
+## One-time setup (required before the first publish)
 
-Do this once; it takes ~2 minutes and needs your PyPI login.
+Do this once; it takes ~2 minutes and needs your PyPI login. PyPI must already
+know to trust this workflow, or the publish job fails with `invalid-publisher`.
 
-1. Sign in at https://pypi.org → **Account settings → API tokens → Add API token**.
-   For the *first* publish the project doesn't exist yet, so scope the token to
-   **Entire account**. (After the first release you can replace it with a token
-   scoped to just the `agentvcs` project.)
-2. In the GitHub repo: **Settings → Secrets and variables → Actions → New
-   repository secret**, named `PYPI_API_TOKEN`, value = the `pypi-...` token.
+1. Sign in at https://pypi.org → **Account → Publishing → Add a new pending
+   publisher** (the project doesn't exist yet, so it's a *pending* publisher).
+2. Enter claims that match this repo **exactly** — any mismatch is rejected:
+   - **PyPI Project Name:** `agentvcs`
+   - **Owner:** `EvolvingAgentsLabs`
+   - **Repository name:** `agentvcs`
+   - **Workflow name:** `release.yml`
+   - **Environment name:** `pypi`
 
-That's it. The `pypi` GitHub environment in the workflow's `environment:` just
-groups the deployment (add reviewers there if you want a manual approval gate).
+The workflow already grants the publish job `permissions: id-token: write` and
+runs in the `pypi` environment, which is what the OIDC exchange needs. (Add
+reviewers to that environment in GitHub if you want a manual approval gate.)
+
+> Prefer an API token instead? Add a `PYPI_API_TOKEN` repo secret and put
+> `password: ${{ secrets.PYPI_API_TOKEN }}` back on the publish step (and drop
+> the `id-token: write` permission). Trusted publishing is preferred because
+> there's no long-lived credential to leak or rotate.
 
 ## Cut a release
 
@@ -30,15 +39,6 @@ git push origin main --tags
 Watch the run under the repo's **Actions → Release to PyPI**. On success the
 version appears at https://pypi.org/project/agentvcs/ and `pip install agentvcs`
 works.
-
-## Alternative: trusted publishing (OIDC) instead of a token
-
-If you'd rather store no secret, PyPI supports trusted publishing via OIDC. Add a
-publisher at https://pypi.org/manage/account/publishing/ whose claims match this
-repo exactly — **Owner** `EvolvingAgentsLabs`, **Repository** `agentvcs`,
-**Workflow name** `release.yml`, **Environment** `pypi` — then drop the `password:`
-line and add `permissions: { id-token: write }` to the publish job. The claim
-fields must match precisely or PyPI rejects with `invalid-publisher`.
 
 ## Test it first (optional)
 
