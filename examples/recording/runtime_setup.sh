@@ -34,57 +34,14 @@ rm -rf "$DEMO"; mkdir -p "$DEMO"
 agentvcs() { PYTHONPATH="$ROOT/src" "$PY" -m agentvcs.cli "$@"; }
 export -f agentvcs 2>/dev/null || true
 
-# seed a realistic Claude Code transcript where the provider will look for it.
-# 4 assistant turns carry real usage (input/output/cache) and tool_use blocks, so
-# the reconstructed frame shows: $0.5822 spent, ~20.7% context, opus routing,
-# and Write/Bash/Read tool usage — all derived, none typed.
+# Install the REAL session frame. fixtures/runtime-session.jsonl is a genuine
+# Claude Code transcript reduced to frame-only fields (real model/usage/tool names,
+# all conversation content stripped — see make_runtime_fixture.py). The provider
+# keys transcripts by directory, so we drop it where it looks for THIS demo's cwd.
+# Nothing about the frame is typed or invented: `agentvcs runtime` reconstructs it.
 ENC="$("$PY" -c "import os;print(os.path.realpath('$DEMO').replace('/','-'))")"
 mkdir -p "$PROJECTS/$ENC"
-"$PY" - "$PROJECTS/$ENC/session.jsonl" "$DEMO" <<'PY'
-import json, sys
-out, cwd = sys.argv[1], sys.argv[2]
-
-def U(model, inp, output, cache):  # assistant usage block
-    return {"input_tokens": inp, "output_tokens": output,
-            "cache_read_input_tokens": cache, "cache_creation_input_tokens": 0}
-
-lines = [
- {"type": "user", "cwd": cwd, "uuid": "u1", "timestamp": "2026-06-14T01:00:00Z",
-  "message": {"role": "user",
-              "content": "Implement a correct add(a, b) in app.py and test it."}},
- {"type": "assistant", "cwd": cwd, "uuid": "a1", "timestamp": "2026-06-14T01:00:04Z",
-  "message": {"role": "assistant", "model": "claude-opus-4-8",
-   "usage": U("claude-opus-4-8", 8000, 600, 0),
-   "content": [
-     {"type": "thinking", "thinking": "Start with the obvious implementation, then test."},
-     {"type": "text", "text": "I'll write add() and a quick check."},
-     {"type": "tool_use", "name": "Write", "input": {"file_path": "app.py"}}]}},
- {"type": "user", "cwd": cwd, "uuid": "u2", "timestamp": "2026-06-14T01:00:06Z",
-  "message": {"role": "user", "content": [{"type": "tool_result", "content": "wrote app.py"}]}},
- {"type": "assistant", "cwd": cwd, "uuid": "a2", "timestamp": "2026-06-14T01:00:10Z",
-  "message": {"role": "assistant", "model": "claude-opus-4-8",
-   "usage": U("claude-opus-4-8", 7000, 900, 18000),
-   "content": [
-     {"type": "text", "text": "Running the check."},
-     {"type": "tool_use", "name": "Bash", "input": {"command": "python3 -c 'import app'"}}]}},
- {"type": "user", "cwd": cwd, "uuid": "u3", "timestamp": "2026-06-14T01:00:12Z",
-  "message": {"role": "user", "content": [{"type": "tool_result", "content": "ok"}]}},
- {"type": "assistant", "cwd": cwd, "uuid": "a3", "timestamp": "2026-06-14T01:00:16Z",
-  "message": {"role": "assistant", "model": "claude-opus-4-8",
-   "usage": U("claude-opus-4-8", 6000, 800, 30000),
-   "content": [
-     {"type": "text", "text": "Re-reading the spec for the edge cases."},
-     {"type": "tool_use", "name": "Read", "input": {"file_path": "app.py"}}]}},
- {"type": "user", "cwd": cwd, "uuid": "u4", "timestamp": "2026-06-14T01:00:18Z",
-  "message": {"role": "user", "content": [{"type": "tool_result", "content": "def add..."}]}},
- {"type": "assistant", "cwd": cwd, "uuid": "a4", "timestamp": "2026-06-14T01:00:22Z",
-  "message": {"role": "assistant", "model": "claude-opus-4-8",
-   "usage": U("claude-opus-4-8", 3306, 602, 38000),
-   "content": [
-     {"type": "text", "text": "Done — add(a, b) is in app.py."}]}},
-]
-open(out, "w").write("\n".join(json.dumps(l) for l in lines) + "\n")
-PY
+cp "$ROOT/examples/recording/fixtures/runtime-session.jsonl" "$PROJECTS/$ENC/session.jsonl"
 
 # the app the agent "produced" — deliberately WRONG, so the eval gate has teeth
 cat > "$DEMO/app.py" <<'PY'
@@ -100,7 +57,10 @@ agentvcs init --claude-code --runtime >/dev/null
 import json, pathlib
 p = pathlib.Path("agent.json"); m = json.loads(p.read_text())
 m["goal"] = "implement a correct add(a, b)"
-m["budget"] = {"ceiling_usd": 2.0}
+# ceiling above the real spend; window=1M because the captured turns are the Opus
+# 1M-context model (the transcript records the id without the [1m] suffix, so the
+# default 200k table would otherwise overstate context pressure).
+m["budget"] = {"ceiling_usd": 25.0, "windows": {"opus": 1000000}}
 m["eval"] = {"command": "python3 -c 'import app; assert app.add(2,2)==4'"}
 p.write_text(json.dumps(m, indent=2) + "\n")
 PY

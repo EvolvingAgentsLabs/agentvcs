@@ -17,7 +17,9 @@ Set MarginFill "#16161e"
 Set WindowBar Colorful
 Set BorderRadius 10
 
-# --- silent setup: seeds a real session transcript + a buggy add(), inits, commits ---
+# --- silent setup: installs the REAL captured session frame (fixture) + a buggy
+#     add() for the eval gate, inits, commits. The frame is genuine — 264 turns,
+#     $17.13, 17.6% ctx, real tool counts — reconstructed, not typed. ---
 Hide
 Type "source examples/recording/runtime_setup.sh"
 Enter
