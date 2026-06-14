@@ -10,10 +10,21 @@ Three screencasts live here:
   ```bash
   vhs examples/recording/runtime-trust.tape    # writes runtime-trust.gif
   ```
-  Its setup ([`runtime_setup.sh`](runtime_setup.sh)) seeds a real session
-  transcript — genuine per-turn token usage + `tool_use` blocks — so the frame's
-  numbers ($0.5822, 20.7% context, opus routing) are *reconstructed*, not typed.
-  It cleans up the throwaway project + seeded transcript at the end.
+  Its setup ([`runtime_setup.sh`](runtime_setup.sh)) installs a **real** captured
+  session as the frame source: [`fixtures/runtime-session.jsonl`](fixtures/) is an
+  actual Claude Code transcript reduced to frame-only fields — genuine model/usage/
+  tool names, every byte of conversation content stripped — by
+  [`make_runtime_fixture.py`](make_runtime_fixture.py). So the frame's numbers
+  ($17.13, 17.6% context, real tool counts) are *reconstructed from a real session*,
+  not typed. The `add()` trust-loop half is a constructed worked example (the eval/
+  freeze/recall calls genuinely execute). Self-cleaning at the end.
+
+  Regenerate the fixture from your own session:
+  ```bash
+  python3 examples/recording/make_runtime_fixture.py \
+      ~/.claude/projects/<encoded-cwd>/<session>.jsonl \
+      examples/recording/fixtures/runtime-session.jsonl
+  ```
 
 - **`cc-trace.gif`** — the **Claude Code trace provider** flow (`cat agent.json` →
   `trace` → `commit` → `show --trace`). Regenerate it (zero deps, then `agg`):
