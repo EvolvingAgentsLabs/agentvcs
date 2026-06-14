@@ -60,7 +60,7 @@ m["goal"] = "implement a correct add(a, b)"
 # ceiling above the real spend; window=1M because the captured turns are the Opus
 # 1M-context model (the transcript records the id without the [1m] suffix, so the
 # default 200k table would otherwise overstate context pressure).
-m["budget"] = {"ceiling_usd": 25.0, "windows": {"claude": 1000000}}
+m["budget"] = {"ceiling_usd": 25.0, "windows": {"opus": 1000000}}
 m["eval"] = {"command": "python3 -c 'import app; assert app.add(2,2)==4'"}
 p.write_text(json.dumps(m, indent=2) + "\n")
 PY
