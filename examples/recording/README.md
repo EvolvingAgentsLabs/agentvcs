@@ -1,6 +1,19 @@
 # Recording assets for the landing page
 
-Two screencasts live here:
+Three screencasts live here:
+
+- **`runtime-trust.gif`** — the README hero: the **runtime frame** (`agentvcs
+  runtime` → dollar cost, context %, routing, real tool usage) followed by the
+  **eval → freeze → recall** trust loop (`freeze` refuses a buggy `add()` with
+  `EVAL_FAILED`, then crystallizes a `verified` recipe once the eval passes).
+  Regenerate with VHS:
+  ```bash
+  vhs examples/recording/runtime-trust.tape    # writes runtime-trust.gif
+  ```
+  Its setup ([`runtime_setup.sh`](runtime_setup.sh)) seeds a real session
+  transcript — genuine per-turn token usage + `tool_use` blocks — so the frame's
+  numbers ($0.5822, 20.7% context, opus routing) are *reconstructed*, not typed.
+  It cleans up the throwaway project + seeded transcript at the end.
 
 - **`cc-trace.gif`** — the **Claude Code trace provider** flow (`cat agent.json` →
   `trace` → `commit` → `show --trace`). Regenerate it (zero deps, then `agg`):
