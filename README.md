@@ -86,6 +86,39 @@ and the window for your model in `agent.json`:
 This is **cross-runtime**: the same frame reconstructs from a `qwen-code` session
 (`agentvcs init --qwen-code`), so it isn't tied to Claude Code.
 
+## Use it continuously in Claude Code
+
+Wire it once and the frame is **always on** — agentvcs becomes your Claude Code
+status line (every render) and versions your session (every turn), with no extra
+work from you.
+
+![agentvcs running continuously inside a Claude Code session: live status line, frame, and a commit per turn](examples/recording/cc-continuous.gif)
+
+```bash
+pipx install agentvcs          # or: pip install agentvcs  (a real binary on PATH)
+cd your-project
+agentvcs init --claude-code --runtime
+```
+
+Then add two lines to your Claude Code settings:
+
+```jsonc
+// ~/.claude/settings.json — live budget/$/context in your status bar, every render
+"statusLine": { "type": "command", "command": "agentvcs statusline" }
+
+// .claude/settings.json — auto-commit the frame each turn (a versioned session)
+"hooks": { "Stop": [ { "hooks": [
+  { "type": "command", "command": "agentvcs commit -m 'cc checkpoint'" }
+] } ] }
+```
+
+Now every turn your status bar shows the live frame
+(`⬡ goal · 260.3k tok $17.13/$50.00 · ctx 18%`), and `agentvcs log` is your
+session as a history of frames — context pressure and cost over time, per turn.
+`statusline` drains and ignores the session JSON Claude Code pipes it, so it can
+never hang the bar. The numbers in the recording above are reconstructed from a
+real captured session — see [`examples/recording/`](examples/recording/).
+
 ## Install
 
 ```bash

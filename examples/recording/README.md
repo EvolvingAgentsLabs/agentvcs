@@ -1,6 +1,18 @@
 # Recording assets for the landing page
 
-Three screencasts live here:
+Four screencasts live here:
+
+- **`cc-continuous.gif`** — agentvcs running **continuously inside Claude Code**:
+  the status line it paints every render, the full frame behind it, and the
+  Stop-hook `commit` that versions the session each turn (`log` then shows the
+  session as a history of frames). Regenerate with VHS:
+  ```bash
+  vhs examples/recording/cc-continuous.tape    # writes cc-continuous.gif
+  ```
+  Setup ([`cc_continuous_setup.sh`](cc_continuous_setup.sh)) installs the same real
+  captured-session fixture, so every number is reconstructed, not typed. It shows
+  the two commands Claude Code actually runs once wired (`statusline`, `commit`),
+  not a mock of the TUI chrome.
 
 - **`runtime-trust.gif`** — the README hero: the **runtime frame** (`agentvcs
   runtime` → dollar cost, context %, routing, real tool usage) followed by the
