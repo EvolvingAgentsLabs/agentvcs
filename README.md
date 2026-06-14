@@ -32,12 +32,13 @@ Every commit is a snapshot across **all four dimensions** plus a **state**:
 This is the open-source core — the "git for agents". Zero runtime dependencies,
 pure Python stdlib, fully auditable. Apache-2.0.
 
-![agentvcs capturing a live Claude Code session](examples/recording/cc-trace.gif)
+![agentvcs surfacing the runtime frame, then gating freeze on a passing eval](examples/recording/runtime-trust.gif)
 
-*A real run: `commit` pulls the conversation straight from your live Claude Code
-session — the actual `thinking` / `tool_use` / `tool_result` — and `show --trace`
-puts it next to the code. You never write a trace file. Full walkthrough in
-[`docs/TUTORIAL.md`](docs/TUTORIAL.md).*
+*A real run: `agentvcs runtime` reconstructs the operational frame your runtime
+hides — dollar cost, context pressure, model routing, real tool usage — from your
+own session log. Then the trust loop: `freeze` refuses a buggy `add()`
+(`EVAL_FAILED`), and once the eval passes it crystallizes a recipe stamped
+`verified` that `recall` can replay for ~$0. Numbers are reconstructed, not staged.*
 
 ## The runtime your agent can't see
 
@@ -282,6 +283,12 @@ agentvcs commit -m "v1"         # captures the live conversation, zero extra wor
 agentvcs show --trace           # the commit + the exact conversation that produced it
 agentvcs freeze                 # crystallize that real, high-fidelity trace
 ```
+
+![agentvcs capturing a live Claude Code session](examples/recording/cc-trace.gif)
+
+*`commit` pulls the conversation straight from your live session — the actual
+`thinking` / `tool_use` / `tool_result` — and `show --trace` puts it next to the
+code. You never write a trace file.*
 
 Known secrets are scrubbed by default (`redact` / `redact_defaults` to tune). The
 `trace` dimension is **pluggable** — `claude-code` and `qwen-code` ship today
