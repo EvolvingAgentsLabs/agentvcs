@@ -53,10 +53,37 @@ def commit_view(repo: Repository, oid: str, include_trace: bool = False) -> dict
         "trace_messages": len(messages),
         "metrics": commit.get("metrics", {}),
         "crystal": commit.get("crystal"),
+        "runtime": _runtime_obj(repo, commit),
+        "eval": _eval_summary(repo.read_eval(oid)),
     }
     if include_trace:
         data["trace"] = messages
     return data
+
+
+def _eval_summary(result: dict | None) -> dict | None:
+    """The compact eval verdict for a commit (the side-table entry, minus the
+    verbose per-run stdout)."""
+    if not result:
+        return None
+    return {"ok": result.get("ok"), "passed": result.get("passed"),
+            "total": result.get("total"), "score": result.get("score"),
+            "command": result.get("command")}
+
+
+def _runtime_obj(repo: Repository, commit: dict) -> dict | None:
+    """The operational frame attached to a commit (runtime mode), or None."""
+    oid = commit.get("runtime")
+    if not oid:
+        return None
+    obj = repo.objects.read_obj(oid)
+    return {k: v for k, v in obj.items() if k != "type"}
+
+
+def runtime_view(repo: Repository, frame: dict) -> dict:
+    """Pass-through projection for a freshly computed live frame (budget/context/
+    routing/tools/subagents). Kept here so CLI, MCP and UI share one shape."""
+    return frame
 
 
 def diff_view(repo: Repository, a: str | None, b: str) -> dict:

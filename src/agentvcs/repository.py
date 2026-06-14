@@ -49,6 +49,7 @@ class Snapshot:
     trace: str | None
     state: str
     manifest: dict
+    runtime: str | None = None  # the operational frame, only captured in runtime mode
 
 
 class Repository:
@@ -218,6 +219,55 @@ class Repository:
             return {}
         return json.loads(path.read_text())
 
+    # -------------------------------------------------------------- mode/runtime
+    def mode(self) -> str:
+        """``vcs`` (version code+goal+models+trace — the original proposal) or
+        ``runtime`` (additionally capture the operational frame the agent's
+        closed runtime hides). A ``-C``-level override beats the manifest."""
+        return getattr(self, "_mode_override", None) or self.read_manifest().get("mode", "vcs")
+
+    def _build_runtime_frame(self, manifest: dict, messages: list) -> dict:
+        """Reconstruct the operational frame. A provider that knows its native
+        log's token/usage fields (claude-code, qwen-code) gives the high-fidelity
+        version; otherwise we derive what we can from the normalized messages."""
+        from .runtime.frame import build_frame
+        budget = manifest.get("budget", {})
+        decl = manifest.get("trace")
+        if isinstance(decl, dict):
+            from .traces import pull_runtime
+            frame = pull_runtime(decl, self.workdir, budget=budget)
+            if frame is not None:
+                return frame
+        return build_frame(messages, budget=budget)
+
+    def runtime_frame(self) -> dict:
+        """The live operational frame for the *current* working state — what an
+        agent gets back from ``agentvcs budget`` / ``context`` / ``runtime``
+        before it even commits. This is the visibility the runtime denies it."""
+        manifest = self.read_manifest()
+        messages = self._resolve_trace(manifest.get("trace"))
+        return self._build_runtime_frame(manifest, messages)
+
+    # -------------------------------------------------------------- eval gate
+    # Eval results live in a side-table keyed by commit id, NOT in the commit
+    # object: a measurement about a commit, not part of its content identity.
+    def write_eval(self, oid: str, result: dict) -> None:
+        d = self.dir / "evals"
+        d.mkdir(parents=True, exist_ok=True)
+        (d / f"{oid}.json").write_text(
+            json.dumps(result, ensure_ascii=False, indent=2) + "\n")
+
+    def read_eval(self, oid: str | None) -> dict | None:
+        if not oid:
+            return None
+        path = self.dir / "evals" / f"{oid}.json"
+        if not path.exists():
+            return None
+        try:
+            return json.loads(path.read_text())
+        except (json.JSONDecodeError, OSError):
+            return None
+
     def _read_trace(self, path: Path) -> list:
         if not path.exists():
             return []
@@ -311,7 +361,16 @@ class Repository:
         ]
 
         state = manifest.get("state", "fluid")
-        return Snapshot(tree, goal, models, trace, state, manifest)
+
+        # runtime dimension: only in runtime mode, capture the operational frame
+        # (budget, context pressure, model routing, tool & subagent usage) the
+        # closed runtime never exposes — reconstructed from the same session log.
+        runtime_oid = None
+        if self.mode() == "runtime":
+            frame = self._build_runtime_frame(manifest, messages)
+            runtime_oid = put({"type": "runtime", **frame})
+
+        return Snapshot(tree, goal, models, trace, state, manifest, runtime_oid)
 
     # --------------------------------------------------------------- commits
     def commit(self, message: str, author: str = "agent", timestamp: int | None = None) -> str:
@@ -330,6 +389,10 @@ class Repository:
             "author": author,
             "timestamp": timestamp if timestamp is not None else int(time.time()),
         }
+        # keep vcs-mode commits byte-identical to before: only add the pointer
+        # when a runtime frame was actually captured.
+        if snap.runtime:
+            commit["runtime"] = snap.runtime
         oid = self.objects.write_obj(commit)
         self._set_head_commit(oid)
         return oid
@@ -413,12 +476,34 @@ wrong folder between commands.
    vs trace). `agentvcs status --json` for uncommitted changes.
 5. Made it worse? `agentvcs rollback --json` restores the full prior state. The
    undo is itself reversible (previous head saved to `.agentvcs/ROLLBACK_HEAD`).
-6. Solution is stable and trusted? `agentvcs freeze --json` crystallizes it into a
-   deterministic recipe under `crystal/` (models pinned to temperature 0).
+6. Prove it works: if `agent.json` declares an `eval`, run `agentvcs eval --json`
+   (it runs your check, e.g. `pytest -q`, and records the pass/score for HEAD).
+7. Solution is stable and *verified*? `agentvcs freeze --json` crystallizes it into a
+   deterministic recipe under `crystal/` (models pinned to temperature 0). When an
+   `eval` is declared, freeze refuses unless it passed — so a frozen recipe is a
+   proven one. `--force` overrides the gate.
 
 ## Try alternatives without risk
 `agentvcs branch <name>` then `agentvcs checkout <name>` forks the *execution*,
 not just the text. Explore a strategy on a branch; keep the winner.
+
+## Runtime mode — see what your runtime hides, and don't repeat work
+If this repo is in **runtime mode** (`"mode": "runtime"` in agent.json), agentvcs
+reconstructs the operational state your closed runtime never shows you — from the
+same native session log it already keeps. Use it to work within your means:
+- `agentvcs recall "<goal>" --json` — **do this first.** If a crystallized recipe
+  already solves this goal, `agentvcs replay <commit>` re-runs it deterministically
+  for ~$0 instead of you re-deriving it.
+- `agentvcs budget --json` — tokens + dollars spent, and how much of the ceiling
+  remains. Check before launching expensive work; stop if you're over budget.
+- `agentvcs context --json` — how full your context window is and how many times
+  it was silently compacted (context you can no longer see).
+- `agentvcs runtime --json` — the full frame: budget, context, model routing,
+  tool usage, subagent fan-out. Every `commit` in runtime mode versions it, so
+  `agentvcs diff` shows whether a change spiked cost or context pressure.
+
+This works the same whether you are Claude Code, qwen-code, or anything else —
+agentvcs is the neutral substrate, not your runtime.
 
 Full contract and error codes: see `docs/AGENT_MODE.md` in the agentvcs project.
 """

@@ -9,6 +9,10 @@ from .repository import Repository, RepoError, Snapshot
 from .crystallize import crystallize
 from .diff import diff_commits
 from .replay import replay
+from .recall import recall
+from .runtime import build_frame
+from .eval import run_eval
 
 __version__ = "0.2.0"
-__all__ = ["Repository", "RepoError", "Snapshot", "crystallize", "diff_commits", "replay"]
+__all__ = ["Repository", "RepoError", "Snapshot", "crystallize", "diff_commits",
+           "replay", "recall", "build_frame", "run_eval"]

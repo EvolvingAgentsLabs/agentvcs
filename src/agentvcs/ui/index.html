@@ -101,6 +101,25 @@
 
   .empty { color:var(--dim); padding:40px 22px; font-style:italic; }
   .placeholder { color:var(--dim); padding:60px 22px; text-align:center; }
+
+  /* runtime frame — what the closed runtime hides */
+  .gauge { display:flex; align-items:center; gap:12px; font-size:11px; color:var(--dim);
+    border-left:1px solid var(--border); padding-left:14px; }
+  .gauge .seg { white-space:nowrap; }
+  .gauge .seg.ok { color:var(--crystal); } .gauge .seg.warn { color:var(--mod); }
+  .gauge .seg.bad { color:var(--del); font-weight:600; }
+  .rt .row { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+  .rt .row:last-child { margin-bottom:0; }
+  .rt .lbl { color:var(--dim); width:60px; flex:0 0 60px; text-transform:uppercase;
+    font-size:10px; letter-spacing:.5px; }
+  .bar { flex:0 1 240px; height:8px; border-radius:5px; background:#0a0e13;
+    border:1px solid var(--border); overflow:hidden; }
+  .bar > span { display:block; height:100%; transition:width .4s ease; }
+  .bar.ok>span{background:var(--crystal);} .bar.warn>span{background:var(--mod);}
+  .bar.bad>span{background:var(--del);} .bar.dim>span{background:var(--border);}
+  .rt .val { color:var(--fg); font-size:12px; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .chip { font-size:11px; padding:1px 7px; border-radius:10px; border:1px solid var(--border); color:var(--fg); }
 </style>
 </head>
 <body>
@@ -108,6 +127,7 @@
   <span class="logo">agent<b>vcs</b></span>
   <select id="branchSel" title="branch"></select>
   <span class="goal" id="repoGoal"></span>
+  <span class="gauge" id="rtGauge" title="live runtime frame — budget &amp; context the runtime hides"></span>
   <span class="live"><span class="dot"></span><span id="liveLabel">live</span></span>
 </header>
 <main>
@@ -161,11 +181,20 @@ async function select(oid){
   renderDetail(commit, diff);
 }
 
+function evalBadge(ev){
+  if(!ev) return "";
+  const ok = ev.ok;
+  const col = ok ? "var(--crystal)" : "var(--del)";
+  return `<span class="badge" style="color:${col};border-color:${col}"
+    title="${esc(ev.command||"")}">${ok?"✓":"✗"} eval ${ev.passed}/${ev.total}${ev.score!=null?(" · "+ev.score):""}</span>`;
+}
+
 function renderDetail(c, diff){
   const model = c.models[0] ? `${c.models[0].provider}/${c.models[0].model}` : "—";
   $("#detail").innerHTML = `
     <div class="detail">
       <h2>${short(c.commit)} <span class="badge ${c.state}">${c.state}</span>
+        ${evalBadge(c.eval)}
         <span style="color:var(--dim);font-weight:400;font-size:12px">${esc(model)}</span></h2>
       <div class="sub">${esc(c.message)} · ${esc(c.timestamp)} · ${esc(c.author)}</div>
       <div class="goal"><span class="k">goal</span><br>${esc(c.goal) || '<i>—</i>'}</div>
@@ -200,7 +229,52 @@ params=${esc(JSON.stringify(m.params||{}))}</pre></div>`).join("") ||
   const crystal = c.crystal ? `<div class="card"><div class="k">crystal</div>
     <pre>${short(c.crystal)}\n(deterministic recipe)</pre></div>` : "";
   return `<div class="grid">${models}${metrics}${crystal}</div>
+    ${runtimeCardHTML(c.runtime)}
     <div class="card diffbox"><div class="k">change vs parent</div>${diffHTML(diff)}</div>`;
+}
+
+// ----------------------------------------------- runtime frame (what's hidden)
+const pct = f => Math.max(0, Math.min(100, Math.round((f||0)*100)));
+const toneCls = (f, warn=0.7, bad=0.9) => f==null ? "dim" : f>=bad ? "bad" : f>=warn ? "warn" : "ok";
+const human = n => typeof n!=="number" ? "?" : n>=1e6 ? (n/1e6).toFixed(1)+"M" : n>=1e3 ? (n/1e3).toFixed(1)+"k" : ""+Math.round(n);
+const usd = v => typeof v==="number" ? "$"+v.toFixed(4) : "—";
+const barHTML = (f, cls) => `<span class="bar ${cls}"><span style="width:${pct(f)}%"></span></span>`;
+
+function runtimeCardHTML(rt){
+  if(!rt) return "";
+  const b = rt.budget, ctx = rt.context;
+  const bfrac = (b.ceiling_usd && b.cost_usd!=null) ? b.cost_usd/b.ceiling_usd : null;
+  const btone = b.over_budget ? "bad" : toneCls(bfrac);
+  const cfrac = (ctx.window && ctx.used) ? ctx.used/ctx.window : null;
+  const ctone = toneCls(cfrac, 0.7, 0.85);
+  const chips = arr => arr.map(x => `<span class="chip">${esc(x)}</span>`).join("");
+  const routing = (rt.models||[]).map(m => `${m.model}×${m.turns}`);
+  const tools = (rt.tools||[]).map(t => `${t.name}×${t.count}`);
+  const agents = (rt.subagents||[]).map(s => `${s.type}×${s.count}`);
+  const row = (lbl, bar, val) => `<div class="row"><span class="lbl">${lbl}</span>${bar}<span class="val">${val}</span></div>`;
+  const chipRow = (lbl, arr) => arr.length ? `<div class="row"><span class="lbl">${lbl}</span><div class="chips">${chips(arr)}</div></div>` : "";
+  return `<div class="card rt"><div class="k">runtime — what your runtime hides</div>
+    ${row("budget", b.ceiling_usd!=null ? barHTML(bfrac, btone) : "",
+        `${human(b.tokens_total)} tok · ${usd(b.cost_usd)}${b.ceiling_usd!=null?(" / "+usd(b.ceiling_usd)):""}${b.over_budget?' · <span style="color:var(--del)">OVER</span>':""}`)}
+    ${row("context", barHTML(cfrac, ctone),
+        `${human(ctx.used)}/${human(ctx.window)}${ctx.pct!=null?(" ("+ctx.pct+"%)"):""} · ${ctx.compactions} compactions`)}
+    ${chipRow("routing", routing)}${chipRow("tools", tools)}${chipRow("agents", agents)}
+  </div>`;
+}
+
+function updateGauge(rt){
+  const el = $("#rtGauge");
+  if(!rt){ el.innerHTML = ""; return; }
+  const b = rt.budget, ctx = rt.context;
+  const bfrac = (b.ceiling_usd && b.cost_usd!=null) ? b.cost_usd/b.ceiling_usd : null;
+  const btone = b.over_budget ? "bad" : toneCls(bfrac);
+  let s = `<span class="seg ${btone}">${human(b.tokens_total)} tok ${usd(b.cost_usd)}${b.ceiling_usd!=null?("/"+usd(b.ceiling_usd)):""}</span>`;
+  if(ctx.pct!=null) s += `<span class="seg ${ctx.pct>=85?"warn":""}">ctx ${ctx.pct}%</span>`;
+  el.innerHTML = s;
+}
+
+async function pollRuntime(){
+  try { updateGauge((await api("/runtime")).runtime); } catch(e){ updateGauge(null); }
 }
 
 function diffHTML(d){
@@ -289,10 +363,12 @@ async function boot(){
       `<option ${b.name===repo.current?"selected":""}>${esc(b.name)}</option>`).join("")
       || '<option>main</option>';
     await refresh();
+    await pollRuntime();
   } catch(e){
     $("#detail").innerHTML = '<div class="placeholder">Could not reach the repository.<br>' + esc(e.message) + '</div>';
   }
-  setInterval(() => refresh().catch(()=>{}), 2000); // live: grow as the agent commits
+  // live: grow as the agent commits, and keep the runtime gauge ticking
+  setInterval(() => { refresh().catch(()=>{}); pollRuntime(); }, 2000);
 }
 boot();
 </script>
