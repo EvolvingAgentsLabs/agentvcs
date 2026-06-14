@@ -39,6 +39,51 @@ session — the actual `thinking` / `tool_use` / `tool_result` — and `show --t
 puts it next to the code. You never write a trace file. Full walkthrough in
 [`docs/TUTORIAL.md`](docs/TUTORIAL.md).*
 
+## The runtime your agent can't see
+
+Because agentvcs already vacuums your session log, it can reconstruct the
+**operational frame your closed runtime keeps to itself** — and put a number on
+it. Run it against your *own* live session:
+
+```bash
+agentvcs runtime           # the whole frame, reconstructed from your session log
+```
+
+```
+runtime frame  (what your runtime hides)
+  turns:     11
+  budget:    27208 tok  (in 24306 / out 2902)  $0.5822 / ceiling $2.0000
+  context:   41293/200000 tok  (20.6%)  compactions=0
+  model routing:
+    claude-opus-4-8: 11 turns, 24306+2902 tok, $0.5822
+  tools:     Read×3, Bash×2
+```
+
+The **dollar cost** of this session, how **full your context window** is, how many
+times it was silently **compacted** (history dropped), which **models** actually
+ran, your real **tool usage**, and any **subagent fan-out** — none of which your
+runtime shows you. It's reconstructed from the log you already have, not estimated.
+
+```bash
+agentvcs budget            # token + dollar accounting vs a ceiling you set
+agentvcs context           # context-window pressure + compaction count
+agentvcs statusline        # one compact line for ~/.claude/settings.json statusLine
+agentvcs watch             # live, redraws like top
+```
+
+Turn it on with `agentvcs init --runtime` (or `--claude-code`), and set a ceiling
+and the window for your model in `agent.json`:
+
+```json
+"budget": { "ceiling_usd": 2.0, "windows": { "opus": 1000000 } }
+```
+
+> The window table defaults to 200k; if `context` reads **>100%** your model's real
+> window just isn't in the table yet (e.g. Opus's 1M variant). Set it as above.
+
+This is **cross-runtime**: the same frame reconstructs from a `qwen-code` session
+(`agentvcs init --qwen-code`), so it isn't tied to Claude Code.
+
 ## Install
 
 ```bash
@@ -104,6 +149,40 @@ agentvcs freeze                     # crystallize HEAD → deterministic recipe 
 A goal redirect and a code change are now distinguishable events, not one opaque
 text diff.
 
+## Trust what you freeze: eval → freeze → recall
+
+`fluid → crystallized` is only worth something if "frozen" means "proven". So
+`freeze` is **gated by an eval**. Declare the check in `agent.json`:
+
+```json
+"eval": { "command": "python3 -c 'import app; assert app.add(2,2)==4'", "runs": 1 }
+```
+
+```bash
+agentvcs eval              # run the check, record the score on this commit
+agentvcs freeze            # crystallize — but ONLY if the eval passes
+```
+
+If the code is wrong, `freeze` refuses (`EVAL_FAILED`) instead of minting a
+recipe you can't trust. Pass it, and the recipe is stamped `verified: true`. The
+gate is honest under pressure: a flaky check (`"runs": 5`) must pass **all** runs,
+and `freeze --force` past a failure marks the recipe `verified: false` — never a
+silent lie. Secrets in the captured trace are `[REDACTED]` by default before they
+ever hit the object store.
+
+Then close the loop — *don't re-derive what you've already proven*:
+
+```bash
+agentvcs recall "implement an add function"   # have I solved this before?
+#   45922c00d97d  score 0.33  ✓verified  implement a correct add(a,b)
+#   -> replay the top hit:  agentvcs replay 45922c00d97d
+agentvcs recall "..." --verified-only         # only recipes that passed their gate
+agentvcs replay 45922c00d97d                  # re-run the frozen recipe for ~$0
+```
+
+A frozen, verified recipe is a cache hit: deterministic, cheap, and trustworthy
+because it carries the proof that it worked.
+
 ## Commands
 
 | command | what it does |
@@ -119,8 +198,14 @@ text diff.
 | `agentvcs branch [NAME]` | list, or create a live branch |
 | `agentvcs checkout REF` | restore the working tree from a branch/commit |
 | `agentvcs rollback [REF]` | undo: restore the full prior state (the panic button) |
-| `agentvcs freeze [COMMIT]` | crystallize a fluid commit into a deterministic recipe |
+| `agentvcs eval [COMMIT]` | run `agent.json`'s eval and record the score |
+| `agentvcs freeze [COMMIT]` | crystallize a fluid commit into a deterministic recipe (eval-gated) |
 | `agentvcs replay [COMMIT]` | re-execute a crystallized recipe deterministically |
+| `agentvcs recall GOAL` | rank frozen recipes matching a goal — replay instead of re-deriving |
+| `agentvcs runtime` | the operational frame your runtime hides (budget/context/routing/tools/subagents) |
+| `agentvcs budget` | token + dollar accounting vs a ceiling |
+| `agentvcs context` | context-window pressure + compaction count |
+| `agentvcs statusline` / `watch` | one compact status line / live `top`-style readout |
 | `agentvcs ui` | serve a local web dashboard to *see* the evolution |
 
 Add `--json` to any command for machine-readable output (see below). Use
@@ -199,9 +284,11 @@ agentvcs freeze                 # crystallize that real, high-fidelity trace
 ```
 
 Known secrets are scrubbed by default (`redact` / `redact_defaults` to tune). The
-`trace` dimension is **pluggable** — `claude-code` is the first provider; any tool
-that records a session (e.g. one backed by SQLite) can add another without changing
-the on-disk format. See [`docs/SPEC.md`](docs/SPEC.md).
+`trace` dimension is **pluggable** — `claude-code` and `qwen-code` ship today
+(`agentvcs init --qwen-code` wires the latter), and any tool that records a session
+(e.g. one backed by SQLite) can add another without changing the on-disk format.
+The same trace and the same runtime frame reconstruct identically across providers,
+so nothing here is tied to one runtime. See [`docs/SPEC.md`](docs/SPEC.md).
 
 **New here?** Walk through it end-to-end in
 [`docs/TUTORIAL.md`](docs/TUTORIAL.md) — build a tiny bot with Claude Code and
