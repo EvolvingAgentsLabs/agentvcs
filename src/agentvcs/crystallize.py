@@ -22,7 +22,8 @@ from .repository import Repository, RepoError
 
 
 def crystallize(repo: Repository, commit_oid: str | None = None,
-                message: str | None = None, timestamp: int | None = None):
+                message: str | None = None, timestamp: int | None = None,
+                force: bool = False):
     commit_oid = repo._resolve(commit_oid, expect="commit") if commit_oid else repo.head_commit()
     if not commit_oid:
         raise RepoError("nothing to crystallize (no commits yet)", code="NO_COMMITS")
@@ -31,6 +32,14 @@ def crystallize(repo: Repository, commit_oid: str | None = None,
     if commit["state"] == "crystallized":
         raise RepoError(f"{commit_oid[:12]} is already crystallized",
                         code="ALREADY_CRYSTALLIZED")
+
+    # the eval gate: if agent.json declares an eval, a commit must pass it before
+    # it can be frozen — so a "deterministic recipe" is also a *verified* one.
+    # No eval declared => no gate (freeze stays exactly as it was). --force skips.
+    eval_result = repo.read_eval(commit_oid)
+    if repo.read_manifest().get("eval") and not force:
+        from .eval import ensure_passing
+        eval_result = ensure_passing(repo, commit_oid)
 
     # 1. pin models to deterministic decoding
     frozen_models = []
@@ -52,6 +61,11 @@ def crystallize(repo: Repository, commit_oid: str | None = None,
         "goal": goal.get("text", ""),
         "models": [repo.objects.read_obj(o) for o in frozen_models],
         "steps": steps,
+        # the recipe carries its own proof: how it was verified, and the score.
+        "verified": bool(eval_result and eval_result.get("ok")),
+        "eval": ({"command": eval_result["command"], "score": eval_result["score"],
+                  "passed": eval_result["passed"], "total": eval_result["total"]}
+                 if eval_result else None),
     }
     recipe_oid = repo.objects.write_obj(recipe)
 
@@ -73,4 +87,8 @@ def crystallize(repo: Repository, commit_oid: str | None = None,
     }
     new_oid = repo.objects.write_obj(new_commit)
     repo._set_head_commit(new_oid)
+    # carry the verification forward so the crystallized commit reads as verified
+    # too (this is the oid recall ranks on).
+    if eval_result:
+        repo.write_eval(new_oid, eval_result)
     return new_oid, artifact

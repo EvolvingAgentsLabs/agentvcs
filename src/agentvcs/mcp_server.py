@@ -24,6 +24,7 @@ import sys
 from . import __version__
 from .crystallize import crystallize
 from .diff import diff_commits
+from .recall import recall
 from .replay import replay
 from .repository import Repository, RepoError
 
@@ -126,6 +127,33 @@ def tool_checkout(args):
     return {"ref": args["ref"], "commit": repo.checkout(args["ref"])}
 
 
+# --- runtime-visibility tools: the state a closed runtime never exposes -------
+def tool_runtime(args):
+    return {"runtime": _repo().runtime_frame()}
+
+
+def tool_budget(args):
+    return {"budget": _repo().runtime_frame()["budget"]}
+
+
+def tool_context(args):
+    return {"context": _repo().runtime_frame()["context"]}
+
+
+def tool_recall(args):
+    repo = _repo()
+    query = args.get("goal") or repo.read_manifest().get("goal", "")
+    return {"query": query, "hits": recall(repo, query, limit=args.get("limit", 5),
+                                           verified_only=args.get("verified_only", False))}
+
+
+def tool_eval(args):
+    from .eval import run_eval
+    r = run_eval(_repo(), args.get("commit"))
+    return {"commit": r["commit"], "passing": r["ok"], "passed": r["passed"],
+            "total": r["total"], "score": r["score"], "command": r["command"]}
+
+
 _REF = {"type": "string", "description": "branch name, full id, or short prefix"}
 TOOLS = [
     {"name": "avcs_log", "description": "List the evolution history (commits with state, goal, message).",
@@ -156,6 +184,19 @@ TOOLS = [
      "inputSchema": {"type": "object", "properties": {"name": {"type": "string"}}}, "_fn": tool_branch},
     {"name": "avcs_checkout", "description": "Restore the working tree from a branch or commit.",
      "inputSchema": {"type": "object", "properties": {"ref": _REF}, "required": ["ref"]}, "_fn": tool_checkout},
+    {"name": "avcs_runtime", "description": "Show your operational frame your runtime hides: token budget, dollar cost, context-window pressure, model routing, tool usage and subagent fan-out — reconstructed from the native session log.",
+     "inputSchema": {"type": "object", "properties": {}}, "_fn": tool_runtime},
+    {"name": "avcs_budget", "description": "How many tokens and dollars you have spent, and how much of your ceiling remains. Check before doing expensive work.",
+     "inputSchema": {"type": "object", "properties": {}}, "_fn": tool_budget},
+    {"name": "avcs_context", "description": "How full your context window is and how many times it was silently compacted (context you can no longer see).",
+     "inputSchema": {"type": "object", "properties": {}}, "_fn": tool_context},
+    {"name": "avcs_recall", "description": "Have I solved this before? Rank crystallized (frozen, deterministic) recipes whose goal matches — verified recipes (passed their eval) rank first. Replay a proven solution for ~$0 instead of re-deriving it. Check this FIRST.",
+     "inputSchema": {"type": "object", "properties": {
+         "goal": {"type": "string", "description": "goal to match (defaults to agent.json's goal)"},
+         "limit": {"type": "integer"},
+         "verified_only": {"type": "boolean", "description": "only recipes that passed their eval gate"}}}, "_fn": tool_recall},
+    {"name": "avcs_eval", "description": "Run the eval declared in agent.json and record the pass/score for a commit. freeze requires a passing eval (the trust gate), so run this before freezing.",
+     "inputSchema": {"type": "object", "properties": {"commit": _REF}}, "_fn": tool_eval},
 ]
 _TOOL_FNS = {t["name"]: t["_fn"] for t in TOOLS}
 _PUBLIC_TOOLS = [{k: v for k, v in t.items() if not k.startswith("_")} for t in TOOLS]

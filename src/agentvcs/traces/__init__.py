@@ -20,10 +20,12 @@ from __future__ import annotations
 from pathlib import Path
 
 from . import claude_code
+from . import qwen_code
 
 # provider name (as written in agent.json) -> provider module
 _PROVIDERS = {
     "claude-code": claude_code,
+    "qwen-code": qwen_code,
 }
 
 
@@ -52,3 +54,13 @@ def describe_trace(decl: dict, workdir) -> dict:
     if hasattr(mod, "describe"):
         return mod.describe(decl, Path(workdir))
     return {"provider": decl.get("provider")}
+
+
+def pull_runtime(decl: dict, workdir, budget: dict | None = None) -> dict | None:
+    """Reconstruct the operational frame (budget/context/routing/tools/subagents)
+    the runtime hides. Returns ``None`` if the provider can't (so the caller can
+    fall back to deriving a frame from the normalized messages instead)."""
+    mod = _provider(decl)
+    if hasattr(mod, "runtime"):
+        return mod.runtime(decl, Path(workdir), budget=budget)
+    return None

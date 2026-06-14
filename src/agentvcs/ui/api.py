@@ -47,6 +47,11 @@ def _dispatch(repo: Repository, route: list[str], query: dict) -> tuple[int, dic
     if route == ["log"]:
         return _ok(views.log_view(repo))
 
+    if route == ["runtime"]:
+        # the live operational frame for the working tree — what powers the
+        # header gauge so the dashboard feels like a session monitor.
+        return _ok({"runtime": repo.runtime_frame()})
+
     if route == ["diff"]:
         b = repo._resolve(query["b"], expect="commit") if query.get("b") else repo.head_commit()
         if not b:

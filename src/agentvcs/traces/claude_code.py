@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import json
 import re
+from collections import Counter
 from pathlib import Path
 
 _DEFAULT_PROJECTS = Path.home() / ".claude" / "projects"
@@ -65,6 +66,59 @@ def describe(decl: dict, workdir: Path) -> dict:
     model = next((m.get("model") for m in reversed(messages) if m.get("model")), None)
     return {"provider": "claude-code", "transcript": str(path), "exists": True,
             "messages": len(messages), "model": model}
+
+
+def runtime(decl: dict, workdir: Path, budget: dict | None = None) -> dict:
+    """Reconstruct the operational frame Claude Code keeps to itself.
+
+    Every assistant line in the transcript carries ``message.usage`` (the exact
+    input/output/cache token counts) and ``message.model`` (the model that
+    actually ran — routing the agent never sees). Subagent fan-out shows up as
+    ``Task``/``Agent`` tool calls and ``isSidechain`` lines; context compaction
+    as ``isCompactSummary`` summaries. We surface all of it.
+    """
+    from ..runtime.frame import build_frame
+    path = _resolve_transcript(decl, Path(workdir))
+    if path is None or not path.exists():
+        return build_frame([], budget=budget)
+
+    messages = _redact(_parse(path), _patterns(decl))
+    usages, compactions, subagents = [], 0, Counter()
+    for o in _raw_objects(path):
+        if o.get("isCompactSummary") or o.get("type") == "summary":
+            compactions += 1
+        msg = o.get("message") or {}
+        if o.get("type") == "assistant" and isinstance(msg.get("usage"), dict):
+            u = msg["usage"]
+            usages.append({
+                "model": msg.get("model") or "",
+                "input": u.get("input_tokens", 0),
+                "output": u.get("output_tokens", 0),
+                "cache_read": u.get("cache_read_input_tokens", 0),
+                "cache_creation": u.get("cache_creation_input_tokens", 0),
+            })
+        for b in msg.get("content") or []:
+            if isinstance(b, dict) and b.get("type") == "tool_use" \
+                    and b.get("name") in ("Task", "Agent"):
+                kind = (b.get("input") or {}).get("subagent_type") or "subagent"
+                subagents[kind] += 1
+    return build_frame(
+        messages, usages=usages, compactions=compactions,
+        subagents=[{"type": k, "count": c} for k, c in subagents.most_common()],
+        budget=budget)
+
+
+def _raw_objects(path: Path):
+    """Yield every parsed JSONL record (not just conversation turns) so runtime
+    reconstruction can see usage/sidechain/compaction housekeeping lines."""
+    for line in path.read_text(errors="replace").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            yield json.loads(line)
+        except json.JSONDecodeError:
+            continue
 
 
 def _patterns(decl: dict) -> list:

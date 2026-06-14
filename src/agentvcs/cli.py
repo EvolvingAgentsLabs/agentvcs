@@ -31,6 +31,7 @@ from pathlib import Path
 from . import __version__, views
 from .crystallize import crystallize
 from .diff import diff_commits
+from .recall import recall
 from .replay import replay
 from .repository import Repository, RepoError
 from .scaffold import scaffold
@@ -52,16 +53,44 @@ def _short(oid: str | None) -> str:
 _iso = views.iso
 
 
-_CLAUDE_CODE_MANIFEST = """{
-  "goal": "Describe the high-level objective this agent fleet is pursuing.",
-  "models": [
-    { "provider": "anthropic", "auto": true }
-  ],
-  "trace": { "provider": "claude-code", "auto": true },
-  "state": "fluid",
-  "metrics": {}
-}
-"""
+def _build_manifest(args) -> str | None:
+    """Assemble agent.json for the requested runtime + mode. Returns None to let
+    the repository scaffold its default file-trace template."""
+    runtime_mode = getattr(args, "runtime", False)
+    if not (args.claude_code or args.qwen_code or runtime_mode):
+        return None
+    m: dict = {"goal": "Describe the high-level objective this agent fleet is pursuing.",
+               "models": [], "state": "fluid", "metrics": {}}
+    if args.claude_code:
+        m["models"] = [{"provider": "anthropic", "auto": True}]
+        m["trace"] = {"provider": "claude-code", "auto": True}
+    elif args.qwen_code:
+        m["models"] = [{"provider": "qwen", "model": "qwen3-coder-plus"}]
+        m["trace"] = {"provider": "qwen-code", "auto": True, "model": "qwen3-coder-plus"}
+    else:
+        m["models"] = [{"provider": "anthropic", "model": "claude-opus-4-8",
+                        "params": {"temperature": 1.0}}]
+        m["trace"] = "traces/run.jsonl"
+    if runtime_mode:
+        m["mode"] = "runtime"
+        m["budget"] = {"ceiling_usd": None}
+    return json.dumps(m, indent=2) + "\n"
+
+
+def _trace_provider(args) -> str | None:
+    if args.claude_code:
+        return "claude-code"
+    if args.qwen_code:
+        return "qwen-code"
+    return None
+
+
+def _open(args) -> Repository:
+    """Open the repo, honoring a ``--mode`` override for this invocation."""
+    repo = Repository.open()
+    if getattr(args, "mode", None):
+        repo._mode_override = args.mode
+    return repo
 
 
 def _render_content(content) -> list:
@@ -122,13 +151,19 @@ def cmd_new(args):
 
 
 def cmd_init(args):
-    manifest = _CLAUDE_CODE_MANIFEST if args.claude_code else None
-    repo = Repository.init(args.path, manifest=manifest)
+    repo = Repository.init(args.path, manifest=_build_manifest(args))
+    provider = _trace_provider(args)
+    mode = "runtime" if getattr(args, "runtime", False) else "vcs"
     data = {"repository": str(repo.dir), "manifest": "agent.json", "agents_md": "AGENTS.md",
-            "trace_provider": "claude-code" if args.claude_code else None}
-    extra = ("\nWired the trace to the live Claude Code session (provider "
-             f"{_color('claude-code', C_C)}) — just commit; no trace file to maintain."
-             if args.claude_code else "")
+            "trace_provider": provider, "mode": mode}
+    extra = ""
+    if provider:
+        extra += (f"\nWired the trace to the live {_color(provider, C_C)} session "
+                  "— just commit; no trace file to maintain.")
+    if mode == "runtime":
+        extra += (f"\nMode {_color('runtime', C_C)}: every commit also captures the "
+                  "operational frame your runtime hides — budget, context pressure, "
+                  "model routing, tools, subagents. See `agentvcs budget`/`context`/`runtime`.")
     human = (f"Initialized empty agentvcs repository in {repo.dir}\n"
              f"Scaffolded {_color('agent.json', C_B)} (your goal/models/trace) and "
              f"{_color('AGENTS.md', C_B)} (agent operating manual)." + extra)
@@ -154,13 +189,18 @@ def cmd_trace(args):
 
 
 def cmd_commit(args):
-    repo = Repository.open()
+    repo = _open(args)
     oid = repo.commit(args.message, author=args.author)
     commit = repo.objects.read_obj(oid)
     branch = repo.current_branch() or "detached"
     data = {"commit": oid, "branch": branch, "state": commit["state"],
             "message": args.message}
-    human = (f"[{branch} {_short(oid)}] {_color(commit['state'], C_C)} {args.message}")
+    human = f"[{branch} {_short(oid)}] {_color(commit['state'], C_C)} {args.message}"
+    if commit.get("runtime"):
+        b = views._runtime_obj(repo, commit)["budget"]
+        cost = f"${b['cost_usd']:.4f}" if b["cost_usd"] is not None else "?"
+        human += (f"\n  runtime: {b['tokens_total']} tok / {cost}"
+                  + (f"  ({_color('OVER BUDGET', C_R)})" if b["over_budget"] else ""))
     _out(args, data, human)
 
 
@@ -254,6 +294,11 @@ def cmd_show(args):
         lines.append(_render_trace(messages))
     if commit.get("crystal"):
         lines.append(f"{_color('crystal', C_B)}: {_short(commit['crystal'])} (deterministic recipe)")
+    if data.get("eval"):
+        ev = data["eval"]
+        verdict = _color("✓ passed", C_G) if ev["ok"] else _color("✗ failed", C_R)
+        lines.append(f"{_color('eval', C_B)}: {verdict} {ev['passed']}/{ev['total']} "
+                     f"score {ev['score']} ($ {ev['command']})")
     _out(args, data, "\n".join(lines))
 
 
@@ -331,6 +376,124 @@ def cmd_replay(args):
     _out(args, result, "\n".join(lines))
 
 
+def _fmt_usd(v) -> str:
+    return f"${v:.4f}" if isinstance(v, (int, float)) else "—"
+
+
+def cmd_runtime(args):
+    """The full operational frame your closed runtime never shows you."""
+    repo = _open(args)
+    frame = repo.runtime_frame()
+    b, c = frame["budget"], frame["context"]
+    lines = [_color("runtime frame", C_B) + _color("  (what your runtime hides)", C_DIM),
+             f"  turns:     {frame['turns']}",
+             f"  budget:    {b['tokens_total']} tok  "
+             f"(in {b['tokens_in']} / out {b['tokens_out']})  {_fmt_usd(b['cost_usd'])}"
+             + (f" / ceiling {_fmt_usd(b['ceiling_usd'])}" if b['ceiling_usd'] is not None else ""),
+             f"  context:   {c['used'] or '?'}/{c['window'] or '?'} tok"
+             + (f"  ({c['pct']}%)" if c['pct'] is not None else "")
+             + f"  compactions={c['compactions']}"]
+    if frame["models"]:
+        lines.append(_color("  model routing:", C_B))
+        for m in frame["models"]:
+            lines.append(f"    {m['model']}: {m['turns']} turns, "
+                         f"{m['tokens_in']}+{m['tokens_out']} tok, {_fmt_usd(m['cost_usd'])}")
+    if frame["tools"]:
+        lines.append("  tools:     " + ", ".join(f"{t['name']}×{t['count']}" for t in frame["tools"]))
+    if frame["subagents"]:
+        lines.append("  subagents: " + ", ".join(f"{s['type']}×{s['count']}" for s in frame["subagents"]))
+    _out(args, {"runtime": frame}, "\n".join(lines))
+
+
+def cmd_budget(args):
+    """Token + dollar accounting — the number the runtime keeps to itself."""
+    repo = _open(args)
+    b = repo.runtime_frame()["budget"]
+    data = {"budget": b}
+    over = _color("  OVER BUDGET", C_R) if b["over_budget"] else ""
+    human = (f"{_color('budget', C_B)}\n"
+             f"  tokens:    {b['tokens_total']} (in {b['tokens_in']} / out {b['tokens_out']})\n"
+             f"  cost:      {_fmt_usd(b['cost_usd'])}\n"
+             f"  ceiling:   {_fmt_usd(b['ceiling_usd']) if b['ceiling_usd'] is not None else 'none set'}\n"
+             f"  remaining: {_fmt_usd(b['remaining_usd']) if b['remaining_usd'] is not None else '—'}{over}")
+    _out(args, data, human)
+
+
+def cmd_context(args):
+    """Context-window pressure + how often the runtime silently compacted."""
+    repo = _open(args)
+    c = repo.runtime_frame()["context"]
+    data = {"context": c}
+    bar = ""
+    if c["pct"] is not None:
+        filled = int(c["pct"] / 5)
+        bar = "  [" + "█" * filled + "·" * (20 - filled) + f"] {c['pct']}%"
+    human = (f"{_color('context window', C_B)}\n"
+             f"  used:        {c['used'] or '?'} / {c['window'] or '?'} tok{bar}\n"
+             f"  compactions: {c['compactions']}  "
+             + _color("(context the runtime silently dropped)", C_DIM))
+    _out(args, data, human)
+
+
+def cmd_recall(args):
+    """Have I solved this before? Rank frozen recipes to replay for ~$0."""
+    repo = _open(args)
+    query = args.goal or repo.read_manifest().get("goal", "")
+    hits = recall(repo, query, limit=args.limit, min_score=0.01,
+                  verified_only=getattr(args, "verified_only", False))
+    data = {"query": query, "hits": hits}
+    if not hits:
+        _out(args, data, f"no crystallized recipe matches {_color(query[:60], C_B)} "
+                         "— this is new work, no cache hit")
+        return
+    lines = [f"{_color('recall', C_B)} for: {query[:70]}"]
+    for h in hits:
+        sid = _color(_short(h["commit"]), C_Y)
+        score = _color("score %.2f" % h["score"], C_G)
+        trust = (_color("✓verified", C_G) if h.get("verified")
+                 else _color("unverified", C_DIM))
+        lines.append(f"  {sid} {score} {trust}  {h['goal'][:60]}")
+    lines.append(_color("  -> replay the top hit: agentvcs replay "
+                        + _short(hits[0]["commit"]), C_DIM))
+    _out(args, data, "\n".join(lines))
+
+
+def cmd_watch(args):
+    """Live, in-terminal runtime feedback (like a runtime status panel, plus the
+    budget/context/recall feedback agentvcs adds)."""
+    from . import monitor
+    repo = _open(args)
+    if args.once:
+        frame = repo.runtime_frame()
+        if args.json:
+            from .recall import recall as _recall
+            goal = repo.read_manifest().get("goal", "")
+            _out(args, {"runtime": frame,
+                        "recall": _recall(repo, goal, min_score=0.1) if goal else []},
+                 monitor.render_panel(repo, color=sys.stdout.isatty(), width=args.width))
+        else:
+            print(monitor.render_panel(repo, color=sys.stdout.isatty(), width=args.width), end="")
+        return
+    monitor.watch(repo, interval=args.interval,
+                  color=sys.stdout.isatty(), width=args.width)
+
+
+def cmd_statusline(args):
+    """Emit a single compact line for your runtime's own status line. Drains (and
+    ignores) any session JSON your runtime pipes in on stdin — non-blocking, so a
+    status line can never hang waiting on it."""
+    from . import monitor
+    if not sys.stdin.isatty():
+        try:
+            import select
+            if select.select([sys.stdin], [], [], 0.25)[0]:
+                sys.stdin.read()
+        except Exception:
+            pass  # no select (e.g. Windows) — just skip the drain
+    repo = _open(args)
+    print(monitor.statusline(repo, color=not args.no_color and sys.stdout.isatty()))
+
+
 def cmd_ui(args):
     from .ui import serve
     repo = Repository.open()
@@ -350,13 +513,33 @@ def cmd_ui(args):
           open_browser=not args.no_open, on_ready=announce)
 
 
+def cmd_eval(args):
+    from .eval import run_eval
+    repo = _open(args)
+    r = run_eval(repo, args.commit)
+    data = {"commit": r["commit"], "passing": r["ok"], "passed": r["passed"],
+            "total": r["total"], "score": r["score"], "command": r["command"]}
+    verdict = _color("PASS", C_G) if r["ok"] else _color("FAIL", C_R)
+    human = (f"eval {verdict}  {r['passed']}/{r['total']} runs  score {r['score']}\n"
+             f"  $ {r['command']}  (commit {_short(r['commit'])})")
+    if not r["ok"]:
+        tail = (r["results"][-1].get("stderr_tail") or r["results"][-1].get("stdout_tail") or "").strip()
+        if tail:
+            human += "\n  " + _color(tail.splitlines()[-1][:200], C_DIM)
+    _out(args, data, human)
+
+
 def cmd_freeze(args):
     repo = Repository.open()
-    new_oid, artifact = crystallize(repo, args.commit, message=args.message)
+    new_oid, artifact = crystallize(repo, args.commit, message=args.message,
+                                    force=getattr(args, "force", False))
     new = repo.objects.read_obj(new_oid)
+    recipe = repo.objects.read_obj(new["crystal"])
     data = {"commit": new_oid, "source": new["parents"][0], "state": "crystallized",
-            "recipe_path": str(artifact)}
-    human = (f"Crystallized -> {_color(_short(new_oid), C_G)}\n"
+            "recipe_path": str(artifact), "verified": recipe.get("verified", False)}
+    badge = (_color("verified ✓", C_G) if recipe.get("verified")
+             else _color("unverified", C_Y))
+    human = (f"Crystallized -> {_color(_short(new_oid), C_G)} ({badge})\n"
              f"Deterministic recipe written to {_color(str(artifact), C_B)}")
     _out(args, data, human)
 
@@ -369,6 +552,10 @@ def build_parser() -> argparse.ArgumentParser:
     common.add_argument("-C", "--repo", dest="repo", default=None, metavar="DIR",
                         help="run as if started in DIR (robust for agents whose "
                              "shell cwd is not sticky; created by init if absent)")
+    common.add_argument("--mode", choices=["vcs", "runtime"], default=None,
+                        help="override agent.json's mode for this command: 'vcs' "
+                             "(code+goal+models+trace) or 'runtime' (also capture "
+                             "the budget/context/routing frame your runtime hides)")
 
     p = argparse.ArgumentParser(prog="agentvcs", description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -391,6 +578,10 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("path", nargs="?", default=".")
     sp.add_argument("--claude-code", action="store_true", dest="claude_code",
                     help="wire agent.json's trace to the live Claude Code session")
+    sp.add_argument("--qwen-code", action="store_true", dest="qwen_code",
+                    help="wire agent.json's trace to the live qwen-code session")
+    sp.add_argument("--runtime", action="store_true", dest="runtime",
+                    help="start in runtime mode (capture budget/context/routing frame)")
     sp.set_defaults(func=cmd_init)
 
     add("trace", help="show the current trace source (file or auto-discovered session)").set_defaults(func=cmd_trace)
@@ -426,9 +617,15 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("ref", nargs="?")
     sp.set_defaults(func=cmd_rollback)
 
+    sp = add("eval", help="run agent.json's eval and record the score for a commit")
+    sp.add_argument("commit", nargs="?")
+    sp.set_defaults(func=cmd_eval)
+
     sp = add("freeze", help="crystallize a fluid commit (alias: crystallize)")
     sp.add_argument("commit", nargs="?")
     sp.add_argument("-m", "--message")
+    sp.add_argument("--force", action="store_true",
+                    help="bypass the eval gate (crystallize even if unverified/failing)")
     sp.set_defaults(func=cmd_freeze)
 
     sp = add("replay", help="deterministically re-execute a crystallized recipe")
@@ -440,7 +637,30 @@ def build_parser() -> argparse.ArgumentParser:
     sp = add("crystallize", help=argparse.SUPPRESS)
     sp.add_argument("commit", nargs="?")
     sp.add_argument("-m", "--message")
+    sp.add_argument("--force", action="store_true")
     sp.set_defaults(func=cmd_freeze)
+
+    add("runtime", help="show the operational frame your runtime hides "
+        "(budget/context/routing/tools/subagents)").set_defaults(func=cmd_runtime)
+    add("budget", help="token + dollar accounting for the current state").set_defaults(func=cmd_budget)
+    add("context", help="context-window pressure + compaction count").set_defaults(func=cmd_context)
+
+    sp = add("recall", help="rank frozen recipes matching a goal — replay instead of re-deriving")
+    sp.add_argument("goal", nargs="?", help="goal to match (defaults to agent.json's goal)")
+    sp.add_argument("--limit", type=int, default=5)
+    sp.add_argument("--verified-only", action="store_true", dest="verified_only",
+                    help="only recipes that passed their eval gate")
+    sp.set_defaults(func=cmd_recall)
+
+    sp = add("watch", help="live in-terminal runtime feedback (redraws like top)")
+    sp.add_argument("--interval", type=float, default=2.0, help="seconds between refreshes")
+    sp.add_argument("--width", type=int, default=72)
+    sp.add_argument("--once", action="store_true", help="render a single frame and exit")
+    sp.set_defaults(func=cmd_watch)
+
+    sp = add("statusline", help="one compact line for your runtime's status line")
+    sp.add_argument("--no-color", action="store_true", dest="no_color")
+    sp.set_defaults(func=cmd_statusline)
 
     sp = add("ui", help="serve a local web dashboard to visualize the evolution")
     sp.add_argument("--host", default="127.0.0.1",
