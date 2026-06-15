@@ -21,6 +21,27 @@ from pathlib import Path
 from .repository import Repository, RepoError
 
 
+def _check_no_conflict_markers(repo) -> None:
+    """Raise RepoError if any tracked file contains git-style conflict markers."""
+    from .repository import DEFAULT_IGNORE
+    patterns = repo._ignore_patterns()
+    marker = b"<<<<<<< ours"
+    for path in sorted(repo.workdir.rglob("*")):
+        if not path.is_file():
+            continue
+        rel = path.relative_to(repo.workdir)
+        if repo._ignored(rel, patterns):
+            continue
+        try:
+            data = path.read_bytes()
+            if marker in data:
+                raise RepoError(
+                    f"conflict markers found in {rel} — resolve conflicts before freezing",
+                    code="CONFLICT_MARKERS")
+        except (OSError, PermissionError):
+            pass
+
+
 def crystallize(repo: Repository, commit_oid: str | None = None,
                 message: str | None = None, timestamp: int | None = None,
                 force: bool = False):
@@ -32,6 +53,9 @@ def crystallize(repo: Repository, commit_oid: str | None = None,
     if commit["state"] == "crystallized":
         raise RepoError(f"{commit_oid[:12]} is already crystallized",
                         code="ALREADY_CRYSTALLIZED")
+
+    # Guard: refuse to freeze while conflict markers exist in the working tree
+    _check_no_conflict_markers(repo)
 
     # the eval gate: if agent.json declares an eval, a commit must pass it before
     # it can be frozen — so a "deterministic recipe" is also a *verified* one.

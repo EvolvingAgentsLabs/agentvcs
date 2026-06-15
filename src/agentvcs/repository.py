@@ -187,12 +187,37 @@ class Repository:
         (self.dir / "ROLLBACK_HEAD").write_text(head + "\n")
         self._set_head_commit(target)
         commit = self.objects.read_obj(target)
+        goal_text = self.objects.read_obj(commit["goal"])["text"] if commit.get("goal") else ""
+        # Append to the durable rollback ledger (.agentvcs/rollbacks.jsonl)
+        ledger_path = self.dir / "rollbacks.jsonl"
+        with ledger_path.open("a", encoding="utf-8") as _lf:
+            _lf.write(json.dumps({
+                "from": head,
+                "to": target,
+                "timestamp": int(time.time()),
+                "reason": goal_text,
+            }, ensure_ascii=False) + "\n")
         return {
             "restored_to": target,
             "previous_head": head,
-            "goal": self.objects.read_obj(commit["goal"])["text"],
+            "goal": goal_text,
             "state": commit["state"],
         }
+
+    def read_rollbacks(self) -> list[dict]:
+        """Return all rollback events from the durable ledger, oldest first."""
+        ledger_path = self.dir / "rollbacks.jsonl"
+        if not ledger_path.exists():
+            return []
+        result = []
+        for line in ledger_path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line:
+                try:
+                    result.append(json.loads(line))
+                except json.JSONDecodeError:
+                    pass
+        return result
 
     # ------------------------------------------------------- ignore handling
     def _ignore_patterns(self) -> list[str]:

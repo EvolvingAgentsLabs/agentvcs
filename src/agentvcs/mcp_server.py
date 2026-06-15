@@ -24,6 +24,7 @@ import sys
 from . import __version__
 from .crystallize import crystallize
 from .diff import diff_commits
+from .merge import merge
 from .recall import recall
 from .replay import replay
 from .repository import Repository, RepoError
@@ -154,6 +155,14 @@ def tool_eval(args):
             "total": r["total"], "score": r["score"], "command": r["command"]}
 
 
+def tool_merge(args):
+    repo = _repo()
+    result = merge(repo, args["branch"],
+                   reconcile=args.get("reconcile"),
+                   force=args.get("force", False))
+    return result
+
+
 _REF = {"type": "string", "description": "branch name, full id, or short prefix"}
 TOOLS = [
     {"name": "avcs_log", "description": "List the evolution history (commits with state, goal, message).",
@@ -197,6 +206,12 @@ TOOLS = [
          "verified_only": {"type": "boolean", "description": "only recipes that passed their eval gate"}}}, "_fn": tool_recall},
     {"name": "avcs_eval", "description": "Run the eval declared in agent.json and record the pass/score for a commit. freeze requires a passing eval (the trust gate), so run this before freezing.",
      "inputSchema": {"type": "object", "properties": {"commit": _REF}}, "_fn": tool_eval},
+    {"name": "avcs_merge", "description": "Three-way merge a branch into HEAD. Returns status: merged, fast_forward, up_to_date, or conflict.",
+     "inputSchema": {"type": "object", "properties": {
+         "branch": {"type": "string", "description": "branch name to merge into HEAD"},
+         "reconcile": {"type": "string", "description": "command to pipe reconciliation bundle to"},
+         "force": {"type": "boolean", "description": "commit even when conflicts exist"}},
+         "required": ["branch"]}, "_fn": tool_merge},
 ]
 _TOOL_FNS = {t["name"]: t["_fn"] for t in TOOLS}
 _PUBLIC_TOOLS = [{k: v for k, v in t.items() if not k.startswith("_")} for t in TOOLS]
