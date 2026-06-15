@@ -88,9 +88,16 @@ Two branches diverge from a stub `store()` for a refund-ticket router:
   written.*
 
 The code conflicts (both rewrote `store.py`). A normal merge stops there. But we
-want the **minds** reconciled regardless, so we merge through the conflict with
-nanoLoop as the reconciler. Here is the real, unedited Consolidated Knowledge
-Trace it wrote into the merge commit:
+want the **minds** reconciled regardless, so we merge *through* the conflict
+(`--force`) with nanoLoop as the reconciler:
+
+```
+agentvcs merge feature-sql --reconcile "nanoloop reconcile nanoLoop/.env" --force
+```
+
+Here is the Consolidated Knowledge Trace it wrote into the merge commit —
+excerpted and trimmed for length (the run is fully reproducible from the example
+in this folder):
 
 > **Merged goal:** *Persist refund tickets durably with both schema validation and
 > high write throughput.*
