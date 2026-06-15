@@ -31,6 +31,7 @@ from pathlib import Path
 from . import __version__, views
 from .crystallize import crystallize
 from .diff import diff_commits
+from .merge import merge
 from .recall import recall
 from .replay import replay
 from .repository import Repository, RepoError
@@ -210,6 +211,9 @@ def _commit_summary(repo, oid, commit):
 
 def cmd_log(args):
     repo = Repository.open()
+    if getattr(args, "reasoning", False):
+        _cmd_log_reasoning(args, repo)
+        return
     history = repo.log()
     entries = [_commit_summary(repo, oid, c) for oid, c in history]
     if not entries:
@@ -223,6 +227,196 @@ def cmd_log(args):
         if e["goal"]:
             lines.append(f"    {_color('goal:', C_DIM)} {e['goal'][:80]}")
     _out(args, {"commits": entries}, "\n".join(lines))
+
+
+def _cmd_log_reasoning(args, repo):
+    """Decision-aware log: goal transitions, eval verdicts, rollback events."""
+    import subprocess, shlex, json as _json
+
+    # Collect history
+    head = repo.head_commit()
+    if not head:
+        _out(args, {"ledger": []}, "no commits yet")
+        return
+
+    # Walk history; with --all follow merge second-parents too
+    seen = set()
+    queue = [head]
+    ordered = []
+    while queue:
+        oid = queue.pop(0)
+        if oid in seen:
+            continue
+        seen.add(oid)
+        commit = repo.objects.read_obj(oid)
+        ordered.append((oid, commit))
+        parents = commit.get("parents") or []
+        if parents:
+            queue.append(parents[0])
+        if getattr(args, "all", False) and len(parents) > 1:
+            for p in parents[1:]:
+                if p not in seen:
+                    queue.append(p)
+
+    # Build rollback index: keyed by "to" (commit restored to, in history)
+    # and also track unanchored ones (neither from nor to is in history)
+    all_rollbacks = repo.read_rollbacks()
+    rollbacks_by_to = {}
+    for rb in all_rollbacks:
+        rollbacks_by_to.setdefault(rb["to"], []).append(rb)
+
+    explain_cmd = getattr(args, "explain", None)
+    ledger = []
+
+    for oid, commit in ordered:
+        parents = commit.get("parents") or []
+        parent_oid = parents[0] if parents else None
+
+        # Goal transition
+        goal_text = repo.objects.read_obj(commit["goal"])["text"] if commit.get("goal") else ""
+        parent_goal = ""
+        if parent_oid:
+            try:
+                pc = repo.objects.read_obj(parent_oid)
+                parent_goal = repo.objects.read_obj(pc["goal"])["text"] if pc.get("goal") else ""
+            except Exception:
+                pass
+        goal_delta = goal_text if goal_text != parent_goal else None
+
+        # Eval verdict
+        ev = repo.read_eval(oid)
+
+        # State info
+        state = commit.get("state", "fluid")
+        is_crystallized = state == "crystallized"
+        is_merge = len(parents) == 2
+
+        # Decision text (tier-1: goal delta; tier-2: last assistant message)
+        decision = goal_delta or ""
+        if not decision and commit.get("trace"):
+            try:
+                msgs = repo.objects.read_obj(commit["trace"])["messages"]
+                for m in reversed(msgs):
+                    if m.get("role") == "assistant":
+                        content = m.get("content", "")
+                        if isinstance(content, list):
+                            for blk in content:
+                                if isinstance(blk, dict) and blk.get("type") == "text":
+                                    content = blk.get("text", "")
+                                    break
+                        if isinstance(content, str) and content.strip():
+                            decision = content.strip()[:120]
+                            break
+            except Exception:
+                pass
+
+        # Optional --explain CMD
+        why = ""
+        if explain_cmd:
+            try:
+                thinking_msgs = []
+                if commit.get("trace"):
+                    msgs = repo.objects.read_obj(commit["trace"])["messages"]
+                    thinking_msgs = [m for m in msgs
+                                     if m.get("role") in ("assistant", "thinking")]
+                payload = _json.dumps({"commit": oid, "messages": thinking_msgs},
+                                      ensure_ascii=False)
+                cmd_parts = shlex.split(explain_cmd)
+                proc = subprocess.run(cmd_parts, input=payload, capture_output=True,
+                                      text=True, timeout=30)
+                if proc.returncode == 0 and proc.stdout.strip():
+                    parsed = _json.loads(proc.stdout.strip())
+                    decision = parsed.get("decision", decision)
+                    why = parsed.get("why", "")
+            except Exception:
+                pass
+
+        entry = {
+            "commit": oid,
+            "state": state,
+            "crystallized": is_crystallized,
+            "merge": is_merge,
+            "timestamp": commit.get("timestamp", 0),
+            "message": commit.get("message", ""),
+            "goal": goal_text,
+            "goal_delta": goal_delta,
+            "decision": decision,
+            "why": why,
+            "eval": _eval_summary_for_reasoning(ev),
+        }
+        ledger.append(entry)
+
+        # Interleave rollback events (keyed by "to" = the commit restored to)
+        for rb in rollbacks_by_to.get(oid, []):
+            ledger.append({
+                "type": "rollback",
+                "from": rb["from"],
+                "to": rb["to"],
+                "timestamp": rb.get("timestamp", 0),
+                "reason": rb.get("reason", ""),
+            })
+
+    # Append rollbacks whose "to" commit was not in the history walk
+    # (e.g. after two successive rollbacks, the intermediate commit is gone)
+    history_oids = {e["commit"] for e in ledger if e.get("type") != "rollback"}
+    for rb in all_rollbacks:
+        if rb["to"] not in history_oids:
+            # Check if already added (anchored to a history commit)
+            already = any(
+                e.get("type") == "rollback" and e.get("from") == rb["from"]
+                for e in ledger
+            )
+            if not already:
+                ledger.append({
+                    "type": "rollback",
+                    "from": rb["from"],
+                    "to": rb["to"],
+                    "timestamp": rb.get("timestamp", 0),
+                    "reason": rb.get("reason", ""),
+                })
+
+    if args.json:
+        import json as _json2
+        print(_json2.dumps({"ok": True, "command": "log", "ledger": ledger},
+                           ensure_ascii=False))
+        return
+
+    # Human output
+    lines = []
+    for entry in ledger:
+        if entry.get("type") == "rollback":
+            lines.append(_color("  ↩ ROLLBACK OCCURRED HERE", C_R))
+            lines.append(f"    from: {_short(entry['from'])}  to: {_short(entry['to'])}")
+            lines.append(f"    reason: {entry.get('reason', '')[:80]}")
+            continue
+        badges = []
+        if entry["crystallized"]:
+            badges.append(_color("[crystallized]", C_G))
+        if entry["merge"]:
+            badges.append(_color("[merge]", C_C))
+        badge_str = " ".join(badges)
+        lines.append(f"commit {_color(_short(entry['commit']), C_Y)} {badge_str}")
+        lines.append(f"  Goal:     {entry['goal'][:80]}")
+        if entry["decision"]:
+            lines.append(f"  Decision: {entry['decision'][:100]}")
+        if entry["why"]:
+            lines.append(f"  Why:      {entry['why'][:100]}")
+        ev = entry.get("eval")
+        if ev:
+            if ev.get("ok"):
+                proof = _color(f"✓ Passed '{ev.get('command','')}' (score {ev.get('score',0)})", C_G)
+            else:
+                proof = _color(f"✗ Failed '{ev.get('command','')}' (score {ev.get('score',0)})", C_R)
+            lines.append(f"  Proof:    {proof}")
+        lines.append("")
+    _out(args, {"ledger": ledger}, "\n".join(lines))
+
+
+def _eval_summary_for_reasoning(ev):
+    if not ev:
+        return None
+    return {"ok": ev.get("ok"), "passed": ev.get("passed"), "total": ev.get("total"),
+            "score": ev.get("score"), "command": ev.get("command")}
 
 
 def _diff_human(d: dict) -> str:
@@ -544,6 +738,44 @@ def cmd_freeze(args):
     _out(args, data, human)
 
 
+def cmd_merge(args):
+    repo = Repository.open()
+    try:
+        result = merge(repo, args.branch,
+                       reconcile=getattr(args, "reconcile", None),
+                       force=getattr(args, "force", False))
+    except RepoError as e:
+        if args.json:
+            import json as _json
+            print(_json.dumps({"ok": False, "command": "merge",
+                               "error": {"code": e.code, "message": str(e)}}))
+        else:
+            print(f"error: {e}", file=__import__("sys").stderr)
+        return 1
+    status = result.get("status", "merged")
+    if status == "up_to_date":
+        _out(args, result, f"Already up to date.")
+    elif status == "fast_forward":
+        _out(args, result, f"Fast-forward: {_short(result.get('commit', ''))}")
+    elif status == "conflict":
+        conflicts = result.get("conflicts", [])
+        lines = [_color("CONFLICT", C_R) + f" — {len(conflicts)} conflict(s); resolve then commit"]
+        for c in conflicts:
+            lines.append(f"  {_color('!', C_R)} {c['path']}: {c['reason']}")
+        if args.json:
+            import json as _json
+            print(_json.dumps({"ok": False, "command": "merge", **result}))
+        else:
+            print("\n".join(lines))
+        return 1
+    else:
+        commit_oid = result.get("commit", "")
+        lines = [f"Merged {_color(args.branch, C_B)} -> {_short(commit_oid)}"]
+        if result.get("conflicts"):
+            lines.append(_color(f"  (forced with {len(result['conflicts'])} conflict(s))", C_Y))
+        _out(args, result, "\n".join(lines))
+
+
 # ------------------------------------------------------------------- parser
 def build_parser() -> argparse.ArgumentParser:
     common = argparse.ArgumentParser(add_help=False)
@@ -591,7 +823,14 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--author", default="agent")
     sp.set_defaults(func=cmd_commit)
 
-    add("log", help="show evolution history").set_defaults(func=cmd_log)
+    sp = add("log", help="show evolution history")
+    sp.add_argument("--reasoning", action="store_true",
+                    help="decision-aware log: goal transitions, eval verdicts, rollback events")
+    sp.add_argument("--all", action="store_true",
+                    help="with --reasoning, follow merge second-parents too")
+    sp.add_argument("--explain", metavar="CMD",
+                    help="pipe each commit's thinking to CMD and read back {decision,why}")
+    sp.set_defaults(func=cmd_log)
     add("status", help="working-tree changes per dimension").set_defaults(func=cmd_status)
 
     sp = add("show", help="show one commit across all dimensions")
@@ -612,6 +851,15 @@ def build_parser() -> argparse.ArgumentParser:
     sp = add("checkout", help="restore working tree from a ref")
     sp.add_argument("ref")
     sp.set_defaults(func=cmd_checkout)
+
+    sp = add("merge", help="three-way merge a branch into HEAD")
+    sp.add_argument("branch", metavar="branch")
+    sp.add_argument("--reconcile", metavar="CMD",
+                    help="pipe the reconciliation bundle to CMD and read back "
+                         "{goal, trace, notes}")
+    sp.add_argument("--force", action="store_true",
+                    help="commit even when conflicts exist (markers written to files)")
+    sp.set_defaults(func=cmd_merge)
 
     sp = add("rollback", help="undo: restore full prior state (default: HEAD's parent)")
     sp.add_argument("ref", nargs="?")
