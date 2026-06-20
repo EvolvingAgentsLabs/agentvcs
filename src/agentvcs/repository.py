@@ -68,6 +68,10 @@ class Repository:
         (repo.dir / "objects").mkdir(parents=True)
         (repo.dir / "refs" / "heads").mkdir(parents=True)
         (repo.dir / "HEAD").write_text("ref: refs/heads/main\n")
+        # Soul birth: every instance is born with an Ed25519 identity so its
+        # signed history of traces is unforgeable provenance (see soul.py).
+        from . import soul as _soul
+        _soul.birth(repo.dir)
         manifest_path = repo.workdir / MANIFEST
         if not manifest_path.exists():
             manifest_path.write_text(manifest or _TEMPLATE_MANIFEST)
@@ -397,6 +401,20 @@ class Repository:
 
         return Snapshot(tree, goal, models, trace, state, manifest, runtime_oid)
 
+    # ------------------------------------------------------------------ soul
+    def soul_id(self) -> str | None:
+        """This instance's public identity (Ed25519 pubkey), or None for a repo
+        created before the Soul layer existed."""
+        from . import soul
+        return soul.soul_id(self.dir)
+
+    def write_commit(self, commit: dict) -> str:
+        """Sign a commit object with this instance's Soul (binding identity into
+        the signed content) and write it to the store. The single choke-point all
+        commit-creators go through, so every code path produces signed provenance."""
+        from . import soul
+        return self.objects.write_obj(soul.sign_commit(self.dir, commit))
+
     # --------------------------------------------------------------- commits
     def commit(self, message: str, author: str = "agent", timestamp: int | None = None) -> str:
         snap = self.snapshot(write=True)
@@ -418,7 +436,7 @@ class Repository:
         # when a runtime frame was actually captured.
         if snap.runtime:
             commit["runtime"] = snap.runtime
-        oid = self.objects.write_obj(commit)
+        oid = self.write_commit(commit)
         self._set_head_commit(oid)
         return oid
 
@@ -511,6 +529,17 @@ wrong folder between commands.
 ## Try alternatives without risk
 `agentvcs branch <name>` then `agentvcs checkout <name>` forks the *execution*,
 not just the text. Explore a strategy on a branch; keep the winner.
+
+## Your Soul: identity, provenance & reputation
+On `init` this instance was born with an Ed25519 **Soul**. Every commit you make is
+signed by it, so your history of traces is unforgeable provenance. The secret seed
+lives in `.agentvcs/soul/` — never commit it, never share it; the public `soul_id`
+is safe to publish.
+- `agentvcs verify [--all] --json` — confirm your commits (and SBTs) validate; a
+  tampered commit reads `FORGED`.
+- `agentvcs soul --json` — your CV: identity + the Soulbound Tokens (SBTs) you've
+  earned. A *verified* `freeze` mints one — proof you solved a goal, tied to a signed
+  commit. Reputation is bound to your Soul, not copyable with your files.
 
 ## Runtime mode — see what your runtime hides, and don't repeat work
 If this repo is in **runtime mode** (`"mode": "runtime"` in agent.json), agentvcs

@@ -13,7 +13,12 @@ from .replay import replay
 from .recall import recall
 from .runtime import build_frame
 from .eval import run_eval
+from .sbt import issue_sbt, read_sbts, verify_sbt, skill_profile
+from .plural import select_fleet, correlation
+from .soul import verify_commit
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 __all__ = ["Repository", "RepoError", "Snapshot", "crystallize", "diff_commits",
-           "merge", "replay", "recall", "build_frame", "run_eval"]
+           "merge", "replay", "recall", "build_frame", "run_eval",
+           "issue_sbt", "read_sbts", "verify_sbt", "skill_profile",
+           "select_fleet", "correlation", "verify_commit"]

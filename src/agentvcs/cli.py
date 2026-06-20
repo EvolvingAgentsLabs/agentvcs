@@ -776,6 +776,101 @@ def cmd_merge(args):
         _out(args, result, "\n".join(lines))
 
 
+def cmd_soul(args):
+    """The agent's curriculum vitae: its cryptographic identity and the verified
+    accomplishments (SBTs) minted onto its Soul."""
+    from . import soul as soul_mod
+    from .sbt import read_sbts, skill_profile
+    repo = Repository.open()
+    sid = repo.soul_id()
+    if sid is None:
+        _out(args, {"soul": None},
+             "this repo predates the Soul layer (no identity) — re-init to mint one")
+        return
+    sbts = read_sbts(repo)
+    profile = skill_profile(repo)
+    # count signed commits in history as a provenance measure
+    history = repo.log()
+    signed = sum(1 for _, c in history if soul_mod.is_signed(c))
+    data = {
+        "soul": sid,
+        "soul_short": soul_mod.short(sid),
+        "commits_signed": signed,
+        "commits_total": len(history),
+        "sbts": sbts,
+        "skill_profile": profile,
+    }
+    top = sorted(profile.items(), key=lambda kv: -kv[1])[:6]
+    lines = [f"{_color(soul_mod.short(sid), C_B)}  ({_color('soul_id', C_DIM)} {sid})",
+             f"  signed history: {signed}/{len(history)} commits",
+             f"  soulbound tokens: {_color(str(len(sbts)), C_G)}"]
+    for s in sbts[-5:]:
+        sk = ", ".join(s.get("skill", [])[:4]) or "(general)"
+        sc = s.get("score")
+        lines.append(f"    {_color('◆', C_G)} {sk}"
+                     + (f"  score {sc}" if sc is not None else "")
+                     + _color(f"  ({_short(s.get('commit'))})", C_DIM))
+    if top:
+        lines.append("  skills: " + ", ".join(f"{k}×{v:g}" for k, v in top))
+    _out(args, data, "\n".join(lines))
+
+
+def cmd_verify(args):
+    """Verify the Ed25519 provenance of commits — that this Soul, and no other,
+    authored them. Needs only the public soul_id; no secret."""
+    from . import soul as soul_mod
+    from .sbt import read_sbts, verify_sbt
+    repo = Repository.open()
+    if getattr(args, "all", False):
+        history = repo.log()
+    else:
+        oid = repo._resolve(args.commit, expect="commit") if args.commit else repo.head_commit()
+        if not oid:
+            raise RepoError("nothing to verify (no commits yet)", code="NO_COMMITS")
+        history = [(oid, repo.objects.read_obj(oid))]
+    checked = []
+    for oid, c in history:
+        if soul_mod.is_signed(c):
+            status = "valid" if soul_mod.verify_commit(c) else "FORGED"
+        else:
+            status = "unsigned"
+        checked.append({"commit": oid, "soul": c.get("soul"), "status": status})
+    sbts = read_sbts(repo)
+    sbt_ok = sum(1 for s in sbts if verify_sbt(s))
+    all_ok = all(x["status"] in ("valid", "unsigned") for x in checked) and sbt_ok == len(sbts)
+    data = {"ok_chain": all_ok, "commits": checked,
+            "sbts_total": len(sbts), "sbts_valid": sbt_ok}
+    lines = []
+    for x in checked:
+        c = (C_G if x["status"] == "valid" else
+             C_R if x["status"] == "FORGED" else C_DIM)
+        lines.append(f"  {_color(x['status'].ljust(8), c)} {_short(x['commit'])}"
+                     + (f"  {soul_mod.short(x['soul'])}" if x["soul"] else ""))
+    if sbts:
+        lines.append(f"  SBTs: {_color(f'{sbt_ok}/{len(sbts)} signatures valid', C_G if sbt_ok==len(sbts) else C_R)}")
+    verdict = _color("PROVENANCE OK", C_G) if all_ok else _color("PROVENANCE FAILED", C_R)
+    lines.append(verdict)
+    _out(args, data, "\n".join(lines))
+
+
+def cmd_fleet(args):
+    """Plural Intelligence: from a pool of Soul skill-profiles, select the maximally
+    diverse fleet via correlation discounting. Reads a JSON file of
+    ``[{"soul": id, "profile": {tag: weight}}, ...]``."""
+    from .plural import select_fleet
+    from . import soul as soul_mod
+    pool = json.loads(Path(args.profiles).read_text())
+    result = select_fleet(pool, args.size, discount=args.discount)
+    div = _color(f"{result['diversity']:.3f}", C_G)
+    n = _color(str(len(result["fleet"])), C_B)
+    lines = [f"selected {n} of {len(pool)} souls "
+             f"(diversity {div}, discount {result['discount']})"]
+    for m in result["fleet"]:
+        lines.append(f"  {_color('◆', C_G)} {soul_mod.short(m['soul'])}  "
+                     f"competence {m['competence']:g}")
+    _out(args, result, "\n".join(lines))
+
+
 # ------------------------------------------------------------------- parser
 def build_parser() -> argparse.ArgumentParser:
     common = argparse.ArgumentParser(add_help=False)
@@ -887,6 +982,21 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("-m", "--message")
     sp.add_argument("--force", action="store_true")
     sp.set_defaults(func=cmd_freeze)
+
+    add("soul", help="show this instance's cryptographic identity and its SBTs (its CV)"
+        ).set_defaults(func=cmd_soul)
+
+    sp = add("verify", help="verify the Ed25519 provenance of commits (and SBTs)")
+    sp.add_argument("commit", nargs="?")
+    sp.add_argument("--all", action="store_true", help="verify the whole history chain")
+    sp.set_defaults(func=cmd_verify)
+
+    sp = add("fleet", help="select a maximally-diverse fleet of souls (correlation discounting)")
+    sp.add_argument("profiles", help="JSON file: [{\"soul\": id, \"profile\": {tag: weight}}, ...]")
+    sp.add_argument("--size", type=int, default=3, help="fleet size to select")
+    sp.add_argument("--discount", type=float, default=1.0,
+                    help="correlation-discount strength (0=ignore overlap, 1=DeSoc default)")
+    sp.set_defaults(func=cmd_fleet)
 
     add("runtime", help="show the operational frame your runtime hides "
         "(budget/context/routing/tools/subagents)").set_defaults(func=cmd_runtime)

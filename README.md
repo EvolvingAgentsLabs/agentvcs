@@ -218,6 +218,64 @@ agentvcs replay 45922c00d97d                  # re-run the frozen recipe for ~$0
 A frozen, verified recipe is a cache hit: deterministic, cheap, and trustworthy
 because it carries the proof that it worked.
 
+## The Soul: identity, provenance & reputation (DeSoc)
+
+A trace tells you *what happened*; it doesn't tell you *whose* competence it proves.
+Copy an ordinary agent's files and you've copied the agent, reputation and all — it's
+fungible. agentvcs fixes that by giving each instance a cryptographic **Soul**.
+
+`agentvcs init` births an **Ed25519 keypair**. The public key is the agent's identity
+(its `soul_id`); the secret seed never leaves `.agentvcs/soul/` (like an SSH key).
+Every `commit` is then **signed**, so the agent's history of reasoning traces becomes
+a provenance chain *nobody can forge* without the seed — yet *anyone can verify* with
+only the public id.
+
+```bash
+agentvcs verify --all     # check the Ed25519 provenance of every commit (and SBTs)
+#   valid    d85aafc653db  soul:dda8b170
+#   valid    f635a1b24ca3  soul:dda8b170
+#   PROVENANCE OK
+```
+
+Tamper with a signed commit's content and `verify` flags it `FORGED`. This realizes
+*Decentralized Society: Finding Web3's Soul* (Weyl, Ohlhaver, Buterin): the instance
+is the Soul, and its signed traces are the captured line of its life.
+
+**Soulbound Tokens (SBTs).** A *verified* `freeze` is a proven accomplishment, so it
+**mints a non-transferable credential** onto the Soul — *Verified Machine Experience*.
+
+```bash
+agentvcs soul            # the agent's CV: its identity + the SBTs it has earned
+#   soul:dda8b170  (soul_id dda8b170…)
+#   signed history: 2/2 commits
+#   soulbound tokens: 1
+#     ◆ implement, correct, react, frontend  score 1.0  (d85aafc653db)
+```
+
+Copy the files and you copy the *ledger* but not the secret seed: you can mint nothing
+in its name, and its tokens still point at a Soul id you can't sign for. **Reputation
+doesn't move with the bytes.** By default SBTs are self-attested (anchored to a
+verifiable signed commit + a reproducible eval); an external oracle (e.g. SkillOpt —
+see `examples/skillopt-soul/`) can issue them instead.
+
+**Plural Intelligence.** Deploying 100 clones of your best agent is a *monoculture* —
+they share a Soul, so they fail together. `agentvcs fleet` applies DeSoc's
+**correlation discounting**: from a pool of Souls (described by their SBT skill
+profiles) it selects the maximally *diverse* team, so a fixed budget covers the most
+ground.
+
+```bash
+agentvcs fleet souls.json --size 3 --discount 1.0
+#   selected 3 of 6 souls (diversity 1.000, discount 1.0)
+#   ◆ soul:aaaa1111  ◆ soul:bbbb1111  ◆ soul:cccc1111   # react + security + backend
+```
+
+With `--discount 0` it just takes the strongest (and picks redundant clones); the
+DeSoc default `1.0` rewards complementary, less-correlated experience.
+
+> Read the full vision: [`docs/papers/souls-of-silicon.md`](docs/papers/souls-of-silicon.md).
+> Zero new dependencies — the Ed25519 signer is a vendored, RFC 8032-verified pure-Python module.
+
 ## Commands
 
 | command | what it does |
@@ -237,6 +295,9 @@ because it carries the proof that it worked.
 | `agentvcs freeze [COMMIT]` | crystallize a fluid commit into a deterministic recipe (eval-gated) |
 | `agentvcs replay [COMMIT]` | re-execute a crystallized recipe deterministically |
 | `agentvcs recall GOAL` | rank frozen recipes matching a goal — replay instead of re-deriving |
+| `agentvcs soul` | this instance's cryptographic identity and its earned SBTs (its CV) |
+| `agentvcs verify [COMMIT]` | verify the Ed25519 provenance of commits (`--all` for the whole chain) |
+| `agentvcs fleet PROFILES` | select a maximally-diverse fleet of souls (correlation discounting) |
 | `agentvcs runtime` | the operational frame your runtime hides (budget/context/routing/tools/subagents) |
 | `agentvcs budget` | token + dollar accounting vs a ceiling |
 | `agentvcs context` | context-window pressure + compaction count |

@@ -535,7 +535,7 @@ def merge(repo: Repository, branch: str, reconcile: Optional[str] = None,
         "author": "agent",
         "timestamp": int(time.time()),
     }
-    new_oid = repo.objects.write_obj(merge_commit)
+    new_oid = repo.write_commit(merge_commit)
     repo._set_head_commit(new_oid)
 
     # Restore working tree to merged state

@@ -99,9 +99,10 @@ def crystallize(repo: Repository, commit_oid: str | None = None,
     artifact = crystal_dir / f"{commit_oid[:12]}.json"
     artifact.write_text(json.dumps(recipe, indent=2, ensure_ascii=False) + "\n")
 
-    # 4. record the crystallized commit
+    # 4. record the crystallized commit (re-signed by this instance's Soul; drop
+    #    the parent's stale soul/signature before write_commit re-stamps fresh ones)
     new_commit = {
-        **commit,
+        **{k: v for k, v in commit.items() if k not in ("soul", "signature")},
         "parents": [commit_oid],
         "models": frozen_models,
         "state": "crystallized",
@@ -109,10 +110,21 @@ def crystallize(repo: Repository, commit_oid: str | None = None,
         "message": message or f"crystallize {commit_oid[:12]}",
         "timestamp": timestamp if timestamp is not None else int(time.time()),
     }
-    new_oid = repo.objects.write_obj(new_commit)
+    new_oid = repo.write_commit(new_commit)
     repo._set_head_commit(new_oid)
     # carry the verification forward so the crystallized commit reads as verified
     # too (this is the oid recall ranks on).
     if eval_result:
         repo.write_eval(new_oid, eval_result)
+
+    # 5. DeSoc: a *verified* crystallization is a proven accomplishment — mint a
+    #    Soulbound Token onto this instance's Soul. Best-effort: an un-souled repo
+    #    or an unverified (--force) freeze simply mints nothing.
+    if recipe.get("verified"):
+        try:
+            from .sbt import issue_sbt
+            issue_sbt(repo, new_oid, eval_result, goal_text=goal.get("text", ""))
+        except Exception:
+            pass
+
     return new_oid, artifact
