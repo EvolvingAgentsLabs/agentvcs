@@ -48,13 +48,28 @@ object that auto-discovers the agent's native session log at commit time:
 ```
 
 A provider lets agentvcs *vacuum* the high-fidelity trace the agent already
-produced instead of asking it to write one. The built-in `claude-code` provider
-reads the session transcript Claude Code records under
-`~/.claude/projects/<cwd "/"→"-">/<session-uuid>.jsonl`, keeping the real
-`tool_use` / `tool_result` / `thinking` blocks. Optional keys: `session`,
-`project_dir`, `projects_dir`, `path` (bypass discovery), and `redact` (a list
-of regexes scrubbed before storage). Either way, the result is normalized to the
-`trace` object below — the on-disk format is provider-agnostic.
+produced instead of asking it to write one. Three providers ship today, all
+normalizing to the same `trace` object — the on-disk format is provider-agnostic:
+
+- **`claude-code`** reads the transcript Claude Code records under
+  `~/.claude/projects/<cwd "/"→"-">/<session-uuid>.jsonl`, keeping the real
+  `tool_use` / `tool_result` / `thinking` blocks. Optional keys: `session`,
+  `project_dir`, `projects_dir`, `path` (bypass discovery).
+- **`qwen-code`** reads gemini-cli/qwen-code checkpoints under
+  `~/.qwen/tmp/<sha256(project)>/checkpoint*.json`. Optional keys: `model` (pin
+  routing), `project_hash`, `qwen_dir`, `path`.
+- **`vercel-eve`** reads the event stream a [Vercel eve](https://eve.dev) agent's
+  bridge hook appends to `<project>/.eve/agentvcs/trace.jsonl` (eve keeps its
+  durable state in the Workflow SDK, so a hook on the `*` stream event is the
+  capture seam — see `examples/eve/`). Optional keys: `model`, `eve_dir`,
+  `session`, `path`. It maps `session.started`→user, `message.completed`→assistant
+  (`thinking`+text+`tool_use`), `action.result`→`tool_result`, and
+  `turn.failed`→a visible failure marker.
+
+All providers accept `redact` (a list of regexes scrubbed before storage) and
+`redact_defaults: false` (keep only user patterns); known secrets are scrubbed by
+default. Adding a source is one module + one registry entry in
+`src/agentvcs/traces/`.
 
 A `models` entry may also carry `"auto": true`, in which case the `model` is
 filled from the model that actually produced the trace (so the pin can't drift

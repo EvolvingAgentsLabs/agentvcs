@@ -58,7 +58,8 @@ def _build_manifest(args) -> str | None:
     """Assemble agent.json for the requested runtime + mode. Returns None to let
     the repository scaffold its default file-trace template."""
     runtime_mode = getattr(args, "runtime", False)
-    if not (args.claude_code or args.qwen_code or runtime_mode):
+    eve = getattr(args, "eve", False)
+    if not (args.claude_code or args.qwen_code or eve or runtime_mode):
         return None
     m: dict = {"goal": "Describe the high-level objective this agent fleet is pursuing.",
                "models": [], "state": "fluid", "metrics": {}}
@@ -68,6 +69,9 @@ def _build_manifest(args) -> str | None:
     elif args.qwen_code:
         m["models"] = [{"provider": "qwen", "model": "qwen3-coder-plus"}]
         m["trace"] = {"provider": "qwen-code", "auto": True, "model": "qwen3-coder-plus"}
+    elif eve:
+        m["models"] = [{"provider": "anthropic", "model": "claude-opus-4-8"}]
+        m["trace"] = {"provider": "vercel-eve", "auto": True, "model": "claude-opus-4-8"}
     else:
         m["models"] = [{"provider": "anthropic", "model": "claude-opus-4-8",
                         "params": {"temperature": 1.0}}]
@@ -83,6 +87,8 @@ def _trace_provider(args) -> str | None:
         return "claude-code"
     if args.qwen_code:
         return "qwen-code"
+    if getattr(args, "eve", False):
+        return "vercel-eve"
     return None
 
 
@@ -142,7 +148,8 @@ def _out(args, data: dict, human: str) -> None:
 
 # ----------------------------------------------------------------- commands
 def cmd_new(args):
-    result = scaffold(args.path, claude_code=args.claude_code)
+    result = scaffold(args.path, claude_code=args.claude_code,
+                      with_soul=getattr(args, "with_soul", False))
     human = (f"Scaffolded an agentvcs-wired agent project in {_color(result['path'], C_B)}\n"
              f"  files: {', '.join(result['files'])}\n"
              f"  first commit: {_short(result['commit'])}\n"
@@ -152,11 +159,12 @@ def cmd_new(args):
 
 
 def cmd_init(args):
-    repo = Repository.init(args.path, manifest=_build_manifest(args))
+    with_soul = getattr(args, "with_soul", False)
+    repo = Repository.init(args.path, manifest=_build_manifest(args), with_soul=with_soul)
     provider = _trace_provider(args)
     mode = "runtime" if getattr(args, "runtime", False) else "vcs"
     data = {"repository": str(repo.dir), "manifest": "agent.json", "agents_md": "AGENTS.md",
-            "trace_provider": provider, "mode": mode}
+            "trace_provider": provider, "mode": mode, "soul": repo.soul_id()}
     extra = ""
     if provider:
         extra += (f"\nWired the trace to the live {_color(provider, C_C)} session "
@@ -165,6 +173,11 @@ def cmd_init(args):
         extra += (f"\nMode {_color('runtime', C_C)}: every commit also captures the "
                   "operational frame your runtime hides — budget, context pressure, "
                   "model routing, tools, subagents. See `agentvcs budget`/`context`/`runtime`.")
+    if with_soul:
+        from . import soul as _soul
+        extra += (f"\nCrypto layer {_color('on', C_C)}: born with a Soul "
+                  f"({_soul.short(repo.soul_id())}); commits are signed and verified "
+                  "freezes mint Soulbound Tokens. See `agentvcs soul`/`verify`.")
     human = (f"Initialized empty agentvcs repository in {repo.dir}\n"
              f"Scaffolded {_color('agent.json', C_B)} (your goal/models/trace) and "
              f"{_color('AGENTS.md', C_B)} (agent operating manual)." + extra)
@@ -899,6 +912,8 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("path")
     sp.add_argument("--claude-code", action="store_true", dest="claude_code",
                     help="wire the trace to the live Claude Code session (no trace file)")
+    sp.add_argument("--with-soul", "--enable-crypto", action="store_true", dest="with_soul",
+                    help="opt in to the crypto/DeSoc layer (off by default)")
     sp.set_defaults(func=cmd_new)
 
     sp = add("init", help="create a repository")
@@ -907,8 +922,15 @@ def build_parser() -> argparse.ArgumentParser:
                     help="wire agent.json's trace to the live Claude Code session")
     sp.add_argument("--qwen-code", action="store_true", dest="qwen_code",
                     help="wire agent.json's trace to the live qwen-code session")
+    sp.add_argument("--eve", "--vercel-eve", action="store_true", dest="eve",
+                    help="wire agent.json's trace to a Vercel eve agent "
+                         "(drop the bundled agent/hooks/agentvcs.ts into the eve project)")
     sp.add_argument("--runtime", action="store_true", dest="runtime",
                     help="start in runtime mode (capture budget/context/routing frame)")
+    sp.add_argument("--with-soul", "--enable-crypto", action="store_true", dest="with_soul",
+                    help="opt in to the crypto/DeSoc layer: born with an Ed25519 Soul, "
+                         "commits are signed, verified freezes mint Soulbound Tokens "
+                         "(off by default — the core is a pure VCS)")
     sp.set_defaults(func=cmd_init)
 
     add("trace", help="show the current trace source (file or auto-discovered session)").set_defaults(func=cmd_trace)

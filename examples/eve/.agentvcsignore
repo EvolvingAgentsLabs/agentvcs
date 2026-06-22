@@ -1,0 +1,7 @@
+# eve runtime artifacts: the event log under .eve/ is captured as the *trace*
+# dimension (normalized messages), so it must NOT also be tracked as code. This
+# keeps the code dimension to the agent's source, and lets agentvcs roll back
+# source files without clobbering eve's live, append-only event log.
+.eve
+node_modules
+.vercel

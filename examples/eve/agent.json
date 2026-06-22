@@ -1,0 +1,15 @@
+{
+  "goal": "A Vercel eve agent that builds and maintains a payments refund queue.",
+  "models": [
+    { "provider": "anthropic", "model": "claude-opus-4-8" }
+  ],
+  "trace": {
+    "provider": "vercel-eve",
+    "auto": true,
+    "model": "claude-opus-4-8"
+  },
+  "mode": "runtime",
+  "budget": { "ceiling_usd": 5.0 },
+  "state": "fluid",
+  "metrics": {}
+}

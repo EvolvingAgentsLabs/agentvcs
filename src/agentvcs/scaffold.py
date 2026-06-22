@@ -135,7 +135,7 @@ _FILES = {
 }
 
 
-def scaffold(path, claude_code: bool = False) -> dict:
+def scaffold(path, claude_code: bool = False, with_soul: bool = False) -> dict:
     root = Path(path)
     if (root / ".agentvcs").exists():
         raise RepoError(f"{root} is already an agentvcs repository", code="ALREADY_REPO")
@@ -145,12 +145,17 @@ def scaffold(path, claude_code: bool = False) -> dict:
         # the live session is the trace: swap the manifest, drop the trace file
         files["agent.json"] = _AGENT_JSON_CC
         files.pop("traces/run.jsonl", None)
+    if with_soul:
+        # surface the opt-in crypto layer in the scaffolded operating manual too
+        from .repository import _AGENTS_MD_SOUL
+        files["AGENTS.md"] = files["AGENTS.md"] + _AGENTS_MD_SOUL
     for rel, content in files.items():
         dest = root / rel
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_text(content)
     # init sees our richer agent.json/AGENTS.md already present and keeps them
-    repo = Repository.init(root)
+    repo = Repository.init(root, with_soul=with_soul)
     oid = repo.commit("scaffold agent project")
     return {"path": str(root), "files": sorted(files), "commit": oid,
-            "trace_provider": "claude-code" if claude_code else None}
+            "trace_provider": "claude-code" if claude_code else None,
+            "soul": repo.soul_id()}
