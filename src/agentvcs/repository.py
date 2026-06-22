@@ -60,7 +60,8 @@ class Repository:
 
     # ------------------------------------------------------------------ setup
     @classmethod
-    def init(cls, workdir, manifest: str | None = None) -> "Repository":
+    def init(cls, workdir, manifest: str | None = None,
+             with_soul: bool = False) -> "Repository":
         repo = cls(Path(workdir))
         if repo.dir.exists():
             raise RepoError(f"{repo.workdir} is already an agentvcs repository",
@@ -68,16 +69,22 @@ class Repository:
         (repo.dir / "objects").mkdir(parents=True)
         (repo.dir / "refs" / "heads").mkdir(parents=True)
         (repo.dir / "HEAD").write_text("ref: refs/heads/main\n")
-        # Soul birth: every instance is born with an Ed25519 identity so its
-        # signed history of traces is unforgeable provenance (see soul.py).
-        from . import soul as _soul
-        _soul.birth(repo.dir)
+        # Soul birth is **opt-in** (the DeSoc/crypto layer). By default agentvcs is
+        # a pure multidimensional VCS — zero crypto surface, commits are unsigned.
+        # `init(with_soul=True)` (CLI `--with-soul`/`--enable-crypto`) gives the
+        # instance an Ed25519 identity so its signed history is unforgeable
+        # provenance (see soul.py). Everything downstream already degrades
+        # gracefully when no Soul exists: sign_commit() returns the commit
+        # unchanged, verify reads "unsigned", freeze mints no SBT.
+        if with_soul:
+            from . import soul as _soul
+            _soul.birth(repo.dir)
         manifest_path = repo.workdir / MANIFEST
         if not manifest_path.exists():
             manifest_path.write_text(manifest or _TEMPLATE_MANIFEST)
         agents_path = repo.workdir / "AGENTS.md"
         if not agents_path.exists():
-            agents_path.write_text(_AGENTS_MD)
+            agents_path.write_text(_AGENTS_MD + (_AGENTS_MD_SOUL if with_soul else ""))
         return repo
 
     @classmethod
@@ -530,17 +537,6 @@ wrong folder between commands.
 `agentvcs branch <name>` then `agentvcs checkout <name>` forks the *execution*,
 not just the text. Explore a strategy on a branch; keep the winner.
 
-## Your Soul: identity, provenance & reputation
-On `init` this instance was born with an Ed25519 **Soul**. Every commit you make is
-signed by it, so your history of traces is unforgeable provenance. The secret seed
-lives in `.agentvcs/soul/` — never commit it, never share it; the public `soul_id`
-is safe to publish.
-- `agentvcs verify [--all] --json` — confirm your commits (and SBTs) validate; a
-  tampered commit reads `FORGED`.
-- `agentvcs soul --json` — your CV: identity + the Soulbound Tokens (SBTs) you've
-  earned. A *verified* `freeze` mints one — proof you solved a goal, tied to a signed
-  commit. Reputation is bound to your Soul, not copyable with your files.
-
 ## Runtime mode — see what your runtime hides, and don't repeat work
 If this repo is in **runtime mode** (`"mode": "runtime"` in agent.json), agentvcs
 reconstructs the operational state your closed runtime never shows you — from the
@@ -560,4 +556,21 @@ This works the same whether you are Claude Code, qwen-code, or anything else —
 agentvcs is the neutral substrate, not your runtime.
 
 Full contract and error codes: see `docs/AGENT_MODE.md` in the agentvcs project.
+"""
+
+
+# Appended to AGENTS.md only when the repo is initialized with the opt-in crypto
+# layer (`agentvcs init --with-soul`). A default repo never mentions Souls/SBTs —
+# the core is a pure VCS; this section exists only when the identity layer is on.
+_AGENTS_MD_SOUL = """
+## Your Soul: identity, provenance & reputation (crypto layer — enabled for this repo)
+This repo was initialized with `--with-soul`, so this instance was born with an
+Ed25519 **Soul**. Every commit you make is signed by it, so your history of traces
+is unforgeable provenance. The secret seed lives in `.agentvcs/soul/` — never commit
+it, never share it; the public `soul_id` is safe to publish.
+- `agentvcs verify [--all] --json` — confirm your commits (and SBTs) validate; a
+  tampered commit reads `FORGED`.
+- `agentvcs soul --json` — your CV: identity + the Soulbound Tokens (SBTs) you've
+  earned. A *verified* `freeze` mints one — proof you solved a goal, tied to a signed
+  commit. Reputation is bound to your Soul, not copyable with your files.
 """

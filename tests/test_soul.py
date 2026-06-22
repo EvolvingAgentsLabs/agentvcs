@@ -34,7 +34,7 @@ def test_ed25519_sign_verify_and_tamper():
 
 # --------------------------------------------------------------- soul birth
 def test_init_births_a_soul(tmp_path):
-    repo = Repository.init(tmp_path)
+    repo = Repository.init(tmp_path, with_soul=True)
     sid = repo.soul_id()
     assert sid and len(sid) == 64                      # 32-byte hex pubkey
     # the secret seed exists but lives outside the versioned tree
@@ -43,14 +43,58 @@ def test_init_births_a_soul(tmp_path):
 
 
 def test_two_repos_get_distinct_souls(tmp_path):
-    a = Repository.init(tmp_path / "a")
-    b = Repository.init(tmp_path / "b")
+    a = Repository.init(tmp_path / "a", with_soul=True)
+    b = Repository.init(tmp_path / "b", with_soul=True)
     assert a.soul_id() != b.soul_id()
+
+
+# ------------------------------------------------------ crypto is opt-in (default off)
+def test_default_init_has_no_soul(tmp_path):
+    repo = Repository.init(tmp_path)
+    assert repo.soul_id() is None
+    assert not (repo.dir / "soul").exists()
+
+
+def test_default_commit_is_unsigned(tmp_path):
+    repo = Repository.init(tmp_path)
+    (tmp_path / "main.py").write_text("x = 1\n")
+    oid = repo.commit("work")
+    c = repo.objects.read_obj(oid)
+    assert not soul.is_signed(c)
+    assert "soul" not in c and "signature" not in c
+    # an unsigned commit is "unsigned", never "FORGED"
+    assert soul.verify_commit(c) is False
+
+
+def test_default_freeze_mints_no_sbt(tmp_path):
+    repo = Repository.init(tmp_path)
+    (tmp_path / "main.py").write_text("x = 1\n")
+    (tmp_path / "test_x.py").write_text("def test(): assert 1 == 1\n")
+    m = repo.read_manifest()
+    m["goal"] = "ship a verified react widget"
+    m["eval"] = {"command": sys.executable + " -m pytest -q"}
+    (tmp_path / "agent.json").write_text(json.dumps(m))
+    oid = repo.commit("work")
+    run_eval(repo, oid)
+    crystallize(repo)
+    assert sbt.read_sbts(repo) == []
+
+
+def test_default_init_agents_md_has_no_soul_section(tmp_path):
+    Repository.init(tmp_path)
+    text = (tmp_path / "AGENTS.md").read_text()
+    assert "Soul" not in text and "Soulbound" not in text
+
+
+def test_with_soul_init_agents_md_has_soul_section(tmp_path):
+    Repository.init(tmp_path, with_soul=True)
+    text = (tmp_path / "AGENTS.md").read_text()
+    assert "Your Soul" in text and "Soulbound Tokens" in text
 
 
 # --------------------------------------------------------------- signed commits
 def _commit(tmp_path, goal="solve a hard backend migration", with_eval=False):
-    repo = Repository.init(tmp_path)
+    repo = Repository.init(tmp_path, with_soul=True)
     (tmp_path / "main.py").write_text("x = 1\n")
     m = repo.read_manifest()
     m["goal"] = goal
@@ -81,7 +125,7 @@ def test_commit_signed_by_other_soul_is_rejected(tmp_path):
     repo, oid = _commit(tmp_path / "real")
     c = repo.objects.read_obj(oid)
     # an impostor copies the trace but stamps their own soul id over it
-    impostor = Repository.init(tmp_path / "impostor")
+    impostor = Repository.init(tmp_path / "impostor", with_soul=True)
     c["soul"] = impostor.soul_id()
     assert not soul.verify_commit(c)                   # sig doesn't match the new id
 

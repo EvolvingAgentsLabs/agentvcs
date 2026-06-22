@@ -218,17 +218,25 @@ agentvcs replay 45922c00d97d                  # re-run the frozen recipe for ~$0
 A frozen, verified recipe is a cache hit: deterministic, cheap, and trustworthy
 because it carries the proof that it worked.
 
-## The Soul: identity, provenance & reputation (DeSoc)
+## The Soul: identity, provenance & reputation (DeSoc) — opt-in
+
+> **Optional layer.** Everything above is a pure multidimensional VCS with **zero
+> crypto surface** — commits are unsigned, no keys exist. The Soul/DeSoc layer
+> below is **off by default**; turn it on per repo with `agentvcs init --with-soul`
+> (alias `--enable-crypto`). Skip this section if you just want versioning,
+> rollback, and freeze.
 
 A trace tells you *what happened*; it doesn't tell you *whose* competence it proves.
 Copy an ordinary agent's files and you've copied the agent, reputation and all — it's
-fungible. agentvcs fixes that by giving each instance a cryptographic **Soul**.
+fungible. With the Soul layer on, agentvcs fixes that by giving each instance a
+cryptographic **Soul**.
 
-`agentvcs init` births an **Ed25519 keypair**. The public key is the agent's identity
-(its `soul_id`); the secret seed never leaves `.agentvcs/soul/` (like an SSH key).
-Every `commit` is then **signed**, so the agent's history of reasoning traces becomes
-a provenance chain *nobody can forge* without the seed — yet *anyone can verify* with
-only the public id.
+`agentvcs init --with-soul` births an **Ed25519 keypair**. The public key is the
+agent's identity (its `soul_id`); the secret seed never leaves `.agentvcs/soul/`
+(like an SSH key). Every `commit` is then **signed**, so the agent's history of
+reasoning traces becomes a provenance chain *nobody can forge* without the seed —
+yet *anyone can verify* with only the public id. (Without `--with-soul`, commits
+are simply unsigned and `verify` reports them as such.)
 
 ```bash
 agentvcs verify --all     # check the Ed25519 provenance of every commit (and SBTs)
@@ -386,9 +394,12 @@ agentvcs freeze                 # crystallize that real, high-fidelity trace
 code. You never write a trace file.*
 
 Known secrets are scrubbed by default (`redact` / `redact_defaults` to tune). The
-`trace` dimension is **pluggable** — `claude-code` and `qwen-code` ship today
-(`agentvcs init --qwen-code` wires the latter), and any tool that records a session
-(e.g. one backed by SQLite) can add another without changing the on-disk format.
+`trace` dimension is **pluggable** — `claude-code`, `qwen-code` and `vercel-eve`
+ship today (`agentvcs init --qwen-code` / `--eve` wire the latter two), and any
+tool that records a session (e.g. one backed by SQLite) can add another without
+changing the on-disk format. The [Vercel **eve**](https://eve.dev) integration
+adds Time-Travel Debugging to filesystem-first agents — see
+[`examples/eve/`](examples/eve/) (`bash examples/eve/demo.sh`).
 The same trace and the same runtime frame reconstruct identically across providers,
 so nothing here is tied to one runtime. See [`docs/SPEC.md`](docs/SPEC.md).
 
@@ -437,6 +448,10 @@ it. To put a **real** agent in front of agentvcs and score whether it adopts the
 loop, use [`examples/claude-code-task/`](examples/claude-code-task/). To see the
 **zero-friction trace provider** (commit captures the live Claude Code session,
 no trace file), see [`examples/claude-code-trace/`](examples/claude-code-trace/).
+To version a **filesystem-first [Vercel eve](https://eve.dev) agent** and undo a
+hallucinated turn with `rollback`+resume, see [`examples/eve/`](examples/eve/)
+(`bash examples/eve/demo.sh` — runs offline). Every example is indexed in
+[`examples/README.md`](examples/README.md).
 
 ## Scope
 

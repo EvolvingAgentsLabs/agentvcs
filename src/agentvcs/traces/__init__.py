@@ -21,11 +21,13 @@ from pathlib import Path
 
 from . import claude_code
 from . import qwen_code
+from . import vercel_eve
 
 # provider name (as written in agent.json) -> provider module
 _PROVIDERS = {
     "claude-code": claude_code,
     "qwen-code": qwen_code,
+    "vercel-eve": vercel_eve,
 }
 
 
