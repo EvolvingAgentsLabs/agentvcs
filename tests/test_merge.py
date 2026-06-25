@@ -287,6 +287,187 @@ def test_fast_forward(tmp_path):
 
 # ------------------------------------------------------------------ freeze guard
 
+# ------------------------------------------------------------------ PR2: target-goal
+
+def test_target_goal_directs_merge(tmp_path):
+    """--target-goal overrides the unioned goal even on the mechanical path."""
+    repo = setup_repo(tmp_path, file_content="shared\n")
+    commit_with(repo, tmp_path, message="base")
+
+    repo.branch("feature")
+    repo.checkout("feature")
+    commit_with(repo, tmp_path, goal="cut inference cost",
+                file_content="shared\nfeature\n", message="theirs")
+
+    repo.checkout("main")
+    commit_with(repo, tmp_path, goal="maximize accuracy",
+                file_content="shared\nmain\n", message="ours")
+
+    result = merge(repo, "feature", target_goal="maximize retention", force=True)
+    assert result["status"] == "merged"
+    assert result["goal"] == "maximize retention"
+
+    commit = repo.objects.read_obj(repo.head_commit())
+    goal_obj = repo.objects.read_obj(commit["goal"])
+    assert goal_obj["text"] == "maximize retention"
+    assert commit["metrics"]["target_goal"] == "maximize retention"
+
+
+# ------------------------------------------------------------------ PR1: AI code synthesis
+
+def test_reconcile_resolves_conflict_files(tmp_path):
+    """A reconciler returning resolved_files turns a conflict into a clean merge."""
+    repo = setup_repo(tmp_path, file_content="line1\nline2\nline3\n")
+    commit_with(repo, tmp_path, message="base")
+
+    repo.branch("feature")
+    repo.checkout("feature")
+    commit_with(repo, tmp_path, file_content="line1\nTHEIRS\nline3\n", message="theirs")
+
+    repo.checkout("main")
+    commit_with(repo, tmp_path, file_content="line1\nOURS\nline3\n", message="ours")
+
+    # Stub reconciler: rewrites main.py into a clean, marker-free file.
+    stub_cmd = (
+        f"{sys.executable} -c \""
+        "import sys, json; data = json.load(sys.stdin); "
+        "print(json.dumps({'goal': 'merged', "
+        "'trace': [{'role': 'system', 'content': 'ok'}], "
+        "'resolved_files': {'main.py': 'line1\\nMERGED\\nline3\\n'}, "
+        "'notes': 'ai-resolved'}))\""
+    )
+
+    # no --force: the only conflict is AI-resolved, so the merge must complete.
+    result = merge(repo, "feature", reconcile=stub_cmd)
+    assert result["status"] == "merged"
+    assert result["conflicts"] == []
+    assert "main.py" in result["ai_resolved"]
+
+    content = (tmp_path / "main.py").read_text()
+    assert "MERGED" in content
+    assert "<<<<<<<" not in content
+
+
+def test_conflict_files_in_bundle(tmp_path):
+    """The reconciler receives full base/ours/theirs text for each content conflict."""
+    repo = setup_repo(tmp_path, file_content="line1\nline2\nline3\n")
+    commit_with(repo, tmp_path, message="base")
+
+    repo.branch("feature")
+    repo.checkout("feature")
+    commit_with(repo, tmp_path, file_content="line1\nTHEIRS\nline3\n", message="theirs")
+
+    repo.checkout("main")
+    commit_with(repo, tmp_path, file_content="line1\nOURS\nline3\n", message="ours")
+
+    # Reconciler that asserts conflict_files carries all three sides, then resolves.
+    probe = (
+        f"{sys.executable} -c \""
+        "import sys, json; d = json.load(sys.stdin); "
+        "cf = d['conflict_files']; "
+        "assert any(c['path']=='main.py' and 'OURS' in c['ours'] "
+        "and 'THEIRS' in c['theirs'] and 'line2' in c['base'] for c in cf); "
+        "print(json.dumps({'goal':'g','trace':[{'role':'system','content':'x'}], "
+        "'resolved_files':{'main.py':'clean\\n'}}))\""
+    )
+    result = merge(repo, "feature", reconcile=probe)
+    assert result["status"] == "merged"
+    assert (tmp_path / "main.py").read_text() == "clean\n"
+
+
+# ------------------------------------------------------------------ PR3: metric-weighted
+
+def test_metric_autoselect_breaks_conflict(tmp_path):
+    """A clear eval winner pre-resolves a content conflict with no --force, no LLM."""
+    repo = setup_repo(tmp_path, file_content="line1\nline2\nline3\n")
+    commit_with(repo, tmp_path, message="base")
+
+    repo.branch("feature")
+    repo.checkout("feature")
+    theirs = commit_with(repo, tmp_path,
+                         file_content="line1\nTHEIRS\nline3\n", message="theirs")
+
+    repo.checkout("main")
+    ours = commit_with(repo, tmp_path,
+                       file_content="line1\nOURS\nline3\n", message="ours")
+
+    # ours passed its eval, theirs failed → ours wins the file outright.
+    repo.write_eval(ours, {"commit": ours, "score": 0.95, "ok": True})
+    repo.write_eval(theirs, {"commit": theirs, "score": 0.30, "ok": False})
+
+    result = merge(repo, "feature")  # no force, no reconcile
+    assert result["status"] == "merged"
+    assert result["conflicts"] == []
+    assert any(a["winner"] == "ours" and a["path"] == "main.py"
+               for a in result["autoselected"])
+
+    content = (tmp_path / "main.py").read_text()
+    assert "OURS" in content and "THEIRS" not in content
+    assert "<<<<<<<" not in content
+
+    commit = repo.objects.read_obj(repo.head_commit())
+    assert commit["metrics"]["ours_eval"] == 0.95
+    assert commit["metrics"]["theirs_eval"] == 0.30
+
+
+def test_metric_autoselect_is_per_hunk(tmp_path):
+    """A metric winner resolves only the *overlapping* hunk — each side's
+    non-conflicting hunks survive (per-hunk, not whole-file)."""
+    # separator lines (l2, l4) keep the three change regions distinct.
+    repo = setup_repo(tmp_path, file_content="l1\nl2\nl3\nl4\nl5\n")
+    commit_with(repo, tmp_path, message="base")
+
+    repo.branch("feature")
+    repo.checkout("feature")
+    # theirs: change l3 (overlaps) AND l5 (theirs-only)
+    theirs = commit_with(repo, tmp_path,
+                         file_content="l1\nl2\nTHEIRS_L3\nl4\nTHEIRS_L5\n",
+                         message="theirs")
+
+    repo.checkout("main")
+    # ours: change l1 (ours-only) AND l3 (overlaps)
+    ours = commit_with(repo, tmp_path,
+                       file_content="OURS_L1\nl2\nOURS_L3\nl4\nl5\n",
+                       message="ours")
+
+    repo.write_eval(ours, {"commit": ours, "score": 0.95, "ok": True})
+    repo.write_eval(theirs, {"commit": theirs, "score": 0.30, "ok": False})
+
+    result = merge(repo, "feature")
+    assert result["status"] == "merged"
+    assert result["conflicts"] == []
+
+    content = (tmp_path / "main.py").read_text()
+    assert "OURS_L1" in content      # ours-only hunk survives
+    assert "THEIRS_L5" in content    # theirs-only hunk survives
+    assert "OURS_L3" in content      # overlap resolved to the eval winner (ours)
+    assert "THEIRS_L3" not in content
+    assert "<<<<<<<" not in content
+
+
+def test_metric_tie_leaves_conflict(tmp_path):
+    """Eval scores within the threshold do NOT auto-resolve — conflict stands."""
+    repo = setup_repo(tmp_path, file_content="line1\nline2\nline3\n")
+    commit_with(repo, tmp_path, message="base")
+
+    repo.branch("feature")
+    repo.checkout("feature")
+    theirs = commit_with(repo, tmp_path,
+                         file_content="line1\nTHEIRS\nline3\n", message="theirs")
+
+    repo.checkout("main")
+    ours = commit_with(repo, tmp_path,
+                       file_content="line1\nOURS\nline3\n", message="ours")
+
+    repo.write_eval(ours, {"commit": ours, "score": 0.80, "ok": True})
+    repo.write_eval(theirs, {"commit": theirs, "score": 0.78, "ok": True})
+
+    result = merge(repo, "feature")  # Δ=0.02 < 0.2 threshold
+    assert result["status"] == "conflict"
+    assert result["autoselected"] == []
+    assert "<<<<<<<" in (tmp_path / "main.py").read_text()
+
+
 def test_freeze_blocked_with_conflict_markers(tmp_path):
     """freeze must be blocked while conflict markers exist in the tree."""
     from agentvcs.crystallize import crystallize

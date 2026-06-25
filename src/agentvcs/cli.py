@@ -855,7 +855,8 @@ def cmd_merge(args):
     try:
         result = merge(repo, args.branch,
                        reconcile=getattr(args, "reconcile", None),
-                       force=getattr(args, "force", False))
+                       force=getattr(args, "force", False),
+                       target_goal=getattr(args, "target_goal", None))
     except RepoError as e:
         if args.json:
             import json as _json
@@ -1083,7 +1084,10 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("branch", metavar="branch")
     sp.add_argument("--reconcile", metavar="CMD",
                     help="pipe the reconciliation bundle to CMD and read back "
-                         "{goal, trace, notes}")
+                         "{goal, trace, notes, resolved_files?}")
+    sp.add_argument("--target-goal", metavar="TEXT", dest="target_goal",
+                    help="reorient the merge toward this objective instead of "
+                         "unioning both parents' goals (directed merge)")
     sp.add_argument("--force", action="store_true",
                     help="commit even when conflicts exist (markers written to files)")
     sp.set_defaults(func=cmd_merge)

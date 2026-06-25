@@ -19,6 +19,7 @@ from typing import Optional
 
 from .diff import diff_commits
 from .repository import Repository, RepoError
+from .swarm import merge_swarms
 
 
 # ------------------------------------------------------------------ merge-base
@@ -102,12 +103,33 @@ def _tree_entries(repo: Repository, commit_oid: str) -> dict:
 # ------------------------------------------------------------------ 3-way text merge
 
 def _three_way_text(base_lines: list, ours_lines: list, theirs_lines: list,
-                    path: str) -> tuple[list, bool]:
+                    path: str, prefer: Optional[str] = None) -> tuple[list, bool]:
     """Attempt a line-level three-way merge.
 
     Returns (merged_lines, had_conflict).
-    On overlap writes git-style conflict markers.
+    On overlap, when ``prefer`` is ``"ours"``/``"theirs"`` the *conflicting hunk* is
+    resolved to that side (per-hunk metric auto-select — non-conflicting hunks from
+    both sides are still merged); otherwise git-style conflict markers are written.
     """
+    overlap = [False]   # did any hunk truly overlap (regardless of resolution)?
+
+    def _emit_conflict(merged, ours_repl, theirs_repl):
+        """Resolve one conflicting hunk: prefer a side, else write markers.
+        Returns True if a real (marker) conflict was emitted."""
+        overlap[0] = True
+        if prefer == "ours":
+            merged.extend(ours_repl)
+            return False
+        if prefer == "theirs":
+            merged.extend(theirs_repl)
+            return False
+        merged.append("<<<<<<< ours\n")
+        merged.extend(ours_repl)
+        merged.append("=======\n")
+        merged.extend(theirs_repl)
+        merged.append(">>>>>>> theirs\n")
+        return True
+
     # Use SequenceMatcher to find matching blocks between base and each side
     sm_ours = difflib.SequenceMatcher(None, base_lines, ours_lines, autojunk=False)
     sm_theirs = difflib.SequenceMatcher(None, base_lines, theirs_lines, autojunk=False)
@@ -165,13 +187,9 @@ def _three_way_text(base_lines: list, ours_lines: list, theirs_lines: list,
                 if i <= (i - 1):
                     i += 1
             else:
-                # Conflict
-                had_conflict = True
-                merged.append("<<<<<<< ours\n")
-                merged.extend(ours_repl)
-                merged.append("=======\n")
-                merged.extend(theirs_repl)
-                merged.append(">>>>>>> theirs\n")
+                # Conflict — prefer a side (per-hunk auto-select) or write markers
+                if _emit_conflict(merged, ours_repl, theirs_repl):
+                    had_conflict = True
                 i = max(ours_end, theirs_end)
                 if i == 0:
                     i = 1
@@ -193,28 +211,30 @@ def _three_way_text(base_lines: list, ours_lines: list, theirs_lines: list,
         theirs_tail = theirs_lines[theirs_tail_start[0]:theirs_tail_start[1]]
         if ours_tail == theirs_tail:
             merged.extend(ours_tail)
-        else:
+        elif _emit_conflict(merged, ours_tail, theirs_tail):
             had_conflict = True
-            merged.append("<<<<<<< ours\n")
-            merged.extend(ours_tail)
-            merged.append("=======\n")
-            merged.extend(theirs_tail)
-            merged.append(">>>>>>> theirs\n")
     elif ours_tail_start:
         merged.extend(ours_lines[ours_tail_start[0]:ours_tail_start[1]])
     elif theirs_tail_start:
         merged.extend(theirs_lines[theirs_tail_start[0]:theirs_tail_start[1]])
 
-    return merged, had_conflict
+    return merged, had_conflict, overlap[0]
 
 
 # ------------------------------------------------------------------ code merge
 
 def _merge_trees(repo: Repository, base_oid: Optional[str],
-                 ours_oid: str, theirs_oid: str) -> tuple[dict, list]:
+                 ours_oid: str, theirs_oid: str,
+                 prefer: Optional[str] = None,
+                 prefer_reason: str = "") -> tuple[dict, list, list]:
     """Three-way merge of tree entries.
 
-    Returns (merged_entries: {path: blob_oid}, conflicts: [{path, reason}]).
+    ``prefer`` (``"ours"``/``"theirs"``/None) is the metric-chosen winner: when set,
+    overlapping hunks resolve to that side instead of becoming marker conflicts, and
+    the affected paths are reported as auto-selected rather than as conflicts.
+
+    Returns (merged_entries: {path: blob_oid}, conflicts: [{path, reason}],
+    autoselected: [{path, winner, reason}]).
     """
     base_entries = _tree_entries(repo, base_oid) if base_oid else {}
     ours_entries = _tree_entries(repo, ours_oid)
@@ -223,6 +243,11 @@ def _merge_trees(repo: Repository, base_oid: Optional[str],
     all_paths = set(base_entries) | set(ours_entries) | set(theirs_entries)
     merged: dict = {}
     conflicts: list = []
+    autoselected: list = []
+
+    def _auto(path, reason):
+        autoselected.append({"path": path, "winner": prefer,
+                             "reason": prefer_reason or reason})
 
     for path in sorted(all_paths):
         base_blob = base_entries.get(path)
@@ -240,6 +265,11 @@ def _merge_trees(repo: Repository, base_oid: Optional[str],
             elif base_blob == theirs_blob:
                 # Deleted on ours, unchanged on theirs → take deletion (omit)
                 pass
+            elif prefer == "ours":
+                _auto(path, "deleted on ours, modified on theirs")  # honor ours' deletion
+            elif prefer == "theirs":
+                merged[path] = theirs_blob
+                _auto(path, "deleted on ours, modified on theirs")
             else:
                 # Deleted on ours, modified on theirs → conflict (keep theirs)
                 merged[path] = theirs_blob
@@ -252,6 +282,11 @@ def _merge_trees(repo: Repository, base_oid: Optional[str],
             elif base_blob == ours_blob:
                 # Deleted on theirs, unchanged on ours → take deletion (omit)
                 pass
+            elif prefer == "theirs":
+                _auto(path, "deleted on theirs, modified on ours")  # honor theirs' deletion
+            elif prefer == "ours":
+                merged[path] = ours_blob
+                _auto(path, "deleted on theirs, modified on ours")
             else:
                 # Deleted on theirs, modified on ours → conflict (keep ours)
                 merged[path] = ours_blob
@@ -271,7 +306,7 @@ def _merge_trees(repo: Repository, base_oid: Optional[str],
             merged[path] = ours_blob
             continue
 
-        # Both sides changed — attempt text merge
+        # Both sides changed — attempt text merge (per-hunk preference when set)
         try:
             base_data = repo.objects.read_blob(base_blob) if base_blob else b""
             ours_data = repo.objects.read_blob(ours_blob)
@@ -285,19 +320,28 @@ def _merge_trees(repo: Repository, base_oid: Optional[str],
             ours_lines = ours_text.splitlines(keepends=True)
             theirs_lines = theirs_text.splitlines(keepends=True)
 
-            merged_lines, had_conflict = _three_way_text(
-                base_lines, ours_lines, theirs_lines, path)
+            merged_lines, had_conflict, had_overlap = _three_way_text(
+                base_lines, ours_lines, theirs_lines, path, prefer=prefer)
             merged_text = "".join(merged_lines)
             merged_blob = repo.objects.write_blob(merged_text.encode("utf-8"))
             merged[path] = merged_blob
             if had_conflict:
                 conflicts.append({"path": path, "reason": "content conflict"})
+            elif prefer and had_overlap:
+                _auto(path, "content conflict")   # overlapping hunk resolved to winner
         except UnicodeDecodeError:
-            # Binary conflict — keep ours
-            merged[path] = ours_blob
-            conflicts.append({"path": path, "reason": "binary conflict"})
+            # Binary conflict — resolve to the metric winner if any, else keep ours
+            if prefer == "theirs":
+                merged[path] = theirs_blob
+                _auto(path, "binary conflict")
+            elif prefer == "ours":
+                merged[path] = ours_blob
+                _auto(path, "binary conflict")
+            else:
+                merged[path] = ours_blob
+                conflicts.append({"path": path, "reason": "binary conflict"})
 
-    return merged, conflicts
+    return merged, conflicts, autoselected
 
 
 # ------------------------------------------------------------------ model merge
@@ -338,13 +382,17 @@ def _merge_models(repo: Repository, ours_models: list, theirs_models: list,
 def _run_reconcile(cmd: str, bundle: dict) -> Optional[dict]:
     """Run the reconcile command, write bundle to stdin, parse stdout.
 
-    Returns parsed dict or None on failure.
+    The reconciler must return ``{goal: str, trace: list}`` and *may* additionally
+    return ``resolved_files: {path: content}`` — the conflict-free final text for
+    files the merge could not auto-resolve. When present, the merge writes that
+    content and clears those conflicts, so the agent (not a human) resolves code,
+    not just reasoning. Returns the parsed dict or None on failure.
     """
     try:
         cmd_parts = shlex.split(cmd)
         payload = json.dumps(bundle, ensure_ascii=False)
         proc = subprocess.run(
-            cmd_parts, input=payload, capture_output=True, text=True, timeout=60
+            cmd_parts, input=payload, capture_output=True, text=True, timeout=120
         )
         if proc.returncode != 0 or not proc.stdout.strip():
             return None
@@ -354,6 +402,9 @@ def _run_reconcile(cmd: str, bundle: dict) -> Optional[dict]:
             return None
         if not isinstance(parsed.get("trace"), list):
             return None
+        rf = parsed.get("resolved_files")
+        if rf is not None and not isinstance(rf, dict):
+            parsed.pop("resolved_files", None)
         return parsed
     except Exception:
         return None
@@ -361,9 +412,14 @@ def _run_reconcile(cmd: str, bundle: dict) -> Optional[dict]:
 
 def _mechanical_reconcile(ours_branch: str, ours_oid: str,
                            theirs_branch: str, theirs_oid: str,
-                           ours_goal: str, theirs_goal: str) -> dict:
-    """Deterministic fallback reconciliation (no LLM)."""
-    merged_goal = f"[merge] {ours_goal} + {theirs_goal}"
+                           ours_goal: str, theirs_goal: str,
+                           target_goal: Optional[str] = None) -> dict:
+    """Deterministic fallback reconciliation (no LLM).
+
+    With a ``target_goal`` the merge is *directed*: the merged goal becomes the
+    target verbatim rather than the union of both parents' goals.
+    """
+    merged_goal = target_goal if target_goal else f"[merge] {ours_goal} + {theirs_goal}"
     merged_trace = [{
         "role": "system",
         "content": (
@@ -376,11 +432,69 @@ def _mechanical_reconcile(ours_branch: str, ours_oid: str,
     return {"goal": merged_goal, "trace": merged_trace, "notes": ""}
 
 
+# ------------------------------------------------------------------ metrics
+
+def _commit_metrics(repo: Repository, oid: str) -> dict:
+    """The eval/score + cost a side carries, used to weight reconciliation.
+
+    ``score`` and ``ok`` come from the eval side-table (``agentvcs eval``); ``cost``
+    from the runtime frame the commit may pin. All optional — ``None`` when a side
+    was never measured."""
+    out: dict = {"eval_score": None, "eval_ok": None, "cost_usd": None}
+    ev = repo.read_eval(oid)
+    if ev:
+        out["eval_score"] = ev.get("score")
+        out["eval_ok"] = ev.get("ok")
+    try:
+        commit = repo.objects.read_obj(oid)
+        if commit.get("runtime"):
+            frame = repo.objects.read_obj(commit["runtime"])
+            out["cost_usd"] = (frame.get("budget") or {}).get("cost_usd")
+    except Exception:
+        pass
+    return out
+
+
+def _metric_winner(ours_metrics: dict, theirs_metrics: dict,
+                   threshold: float) -> tuple[Optional[str], str]:
+    """Which side the recorded evals favor, if either clearly does.
+
+    One side passing its eval while the other fails wins outright; otherwise the
+    side whose score exceeds the other by more than ``threshold`` wins. Returns
+    ``(winner, reason)`` with ``winner`` in ``{"ours","theirs",None}``. When a
+    winner exists the three-way merge resolves *overlapping hunks* to it (per-hunk
+    auto-select), keeping both sides' non-conflicting hunks intact."""
+    o_score, t_score = ours_metrics.get("eval_score"), theirs_metrics.get("eval_score")
+    o_ok, t_ok = ours_metrics.get("eval_ok"), theirs_metrics.get("eval_ok")
+
+    if o_ok is True and t_ok is False:
+        return "ours", "ours passed eval, theirs failed"
+    if t_ok is True and o_ok is False:
+        return "theirs", "theirs passed eval, ours failed"
+    if isinstance(o_score, (int, float)) and isinstance(t_score, (int, float)):
+        if o_score - t_score >= threshold:
+            return "ours", f"eval {o_score} vs {t_score} (Δ≥{threshold})"
+        if t_score - o_score >= threshold:
+            return "theirs", f"eval {t_score} vs {o_score} (Δ≥{threshold})"
+    return None, ""
+
+
 # ------------------------------------------------------------------ main merge
 
 def merge(repo: Repository, branch: str, reconcile: Optional[str] = None,
-          force: bool = False) -> dict:
+          force: bool = False, target_goal: Optional[str] = None) -> dict:
     """Merge *branch* into HEAD.
+
+    Multidimensional reconciliation across code, models, goal+trace and the
+    sub-agent swarm. Beyond the textual three-way merge it adds:
+
+    * **metric-weighted auto-select** — content conflicts the eval scores already
+      settle are resolved to the winning side before the LLM is asked (PR3);
+    * **conflict-aware code synthesis** — the reconciler is handed the full text of
+      every unresolved conflict and may return ``resolved_files`` it writes (PR1);
+    * **target-directed merge** — ``target_goal`` reorients the merge toward a new
+      objective instead of unioning both parents' goals (PR2);
+    * **swarm versioning** — the sub-agent topology is merged node-by-node (PR4).
 
     Returns a dict with at minimum ``{"status": ...}``.
     Possible statuses: "up_to_date", "fast_forward", "conflict", "merged".
@@ -418,16 +532,43 @@ def merge(repo: Repository, branch: str, reconcile: Optional[str] = None,
     # Find merge base
     base_oid = merge_base(repo, ours_oid, theirs_oid)
 
-    # Three-way merge of trees
-    conflicts: list = []
-    merged_entries, tree_conflicts = _merge_trees(repo, base_oid, ours_oid, theirs_oid)
-    conflicts.extend(tree_conflicts)
-
-    # Merge model pins
     ours_commit = repo.objects.read_obj(ours_oid)
     theirs_commit = repo.objects.read_obj(theirs_oid)
+
+    # ---- metric-weighted auto-select (PR3): decide which side the evals favor
+    # *before* the tree merge, so overlapping hunks resolve to it per-hunk rather
+    # than becoming marker conflicts. Threshold is configurable in agent.json.
+    ours_metrics = _commit_metrics(repo, ours_oid)
+    theirs_metrics = _commit_metrics(repo, theirs_oid)
+    merge_cfg = repo.read_manifest().get("merge") or {}
+    threshold = float(merge_cfg.get("autoselect_threshold", 0.2))
+    winner, win_reason = _metric_winner(ours_metrics, theirs_metrics, threshold)
+
+    # Three-way merge of trees (per-hunk preference for the metric winner)
+    conflicts: list = []
+    merged_entries, tree_conflicts, autoselected = _merge_trees(
+        repo, base_oid, ours_oid, theirs_oid, prefer=winner, prefer_reason=win_reason)
+    conflicts.extend(tree_conflicts)
+
+    ours_entries = _tree_entries(repo, ours_oid)
+    theirs_entries = _tree_entries(repo, theirs_oid)
+
+    # Merge model pins
     merged_models = _merge_models(
         repo, ours_commit.get("models", []), theirs_commit.get("models", []), conflicts)
+
+    # ---- swarm dimension (PR4): merge the sub-agent topology node-by-node.
+    ours_swarm = repo.objects.read_obj(ours_commit["swarm"]) if ours_commit.get("swarm") else None
+    theirs_swarm = repo.objects.read_obj(theirs_commit["swarm"]) if theirs_commit.get("swarm") else None
+    base_swarm = None
+    if base_oid:
+        try:
+            bc = repo.objects.read_obj(base_oid)
+            base_swarm = repo.objects.read_obj(bc["swarm"]) if bc.get("swarm") else None
+        except Exception:
+            pass
+    merged_swarm, swarm_conflicts = merge_swarms(base_swarm, ours_swarm, theirs_swarm)
+    conflicts.extend(swarm_conflicts)
 
     # Build reconciliation bundle
     ours_goal_obj = repo.objects.read_obj(ours_commit["goal"]) if ours_commit.get("goal") else {}
@@ -464,6 +605,11 @@ def merge(repo: Repository, branch: str, reconcile: Optional[str] = None,
     ours_code_diff = diff_commits(repo, base_oid, ours_oid)["code"] if base_oid else {}
     theirs_code_diff = diff_commits(repo, base_oid, theirs_oid)["code"] if base_oid else {}
 
+    # Conflict-aware code synthesis (PR1): hand the reconciler the *full text* of
+    # every still-unresolved content conflict so it can rewrite a clean file.
+    conflict_files = _conflict_files(repo, conflicts, base_oid,
+                                     ours_entries, theirs_entries)
+
     bundle = {
         "base": {
             "commit": base_oid,
@@ -476,6 +622,7 @@ def merge(repo: Repository, branch: str, reconcile: Optional[str] = None,
             "goal": ours_goal_text,
             "trace_messages": ours_trace_msgs,
             "code_diff": ours_code_diff,
+            "metrics": ours_metrics,
         },
         "theirs": {
             "branch": branch,
@@ -483,11 +630,15 @@ def merge(repo: Repository, branch: str, reconcile: Optional[str] = None,
             "goal": theirs_goal_text,
             "trace_messages": theirs_trace_msgs,
             "code_diff": theirs_code_diff,
+            "metrics": theirs_metrics,
         },
         "conflicts": conflicts,
+        "conflict_files": conflict_files,
+        "autoselected": autoselected,
+        "target_goal": target_goal,
     }
 
-    # Reconcile goal + trace
+    # Reconcile goal + trace (+ optional resolved_files)
     reconciled = None
     if reconcile:
         reconciled = _run_reconcile(reconcile, bundle)
@@ -495,16 +646,29 @@ def merge(repo: Repository, branch: str, reconcile: Optional[str] = None,
     if reconciled is None:
         reconciled = _mechanical_reconcile(
             current_branch, ours_oid, branch, theirs_oid,
-            ours_goal_text, theirs_goal_text)
+            ours_goal_text, theirs_goal_text, target_goal=target_goal)
 
-    # If conflicts and not force → write conflict markers to working tree, return
+    # Apply any reconciler-resolved files: rewrite the blob and clear that conflict.
+    resolved_paths = []
+    resolved_files = reconciled.get("resolved_files") if isinstance(reconciled, dict) else None
+    if isinstance(resolved_files, dict):
+        conflict_paths = {c.get("path") for c in conflicts}
+        for path, content in resolved_files.items():
+            if path not in conflict_paths or not isinstance(content, str):
+                continue
+            merged_entries[path] = repo.objects.write_blob(content.encode("utf-8"))
+            resolved_paths.append(path)
+        if resolved_paths:
+            conflicts = [c for c in conflicts if c.get("path") not in resolved_paths]
+
+    # If conflicts remain and not force → write conflict markers to tree, return
     if conflicts and not force:
-        # Write conflict-marked files to working tree
         for path, blob_oid in merged_entries.items():
             dest = repo.workdir / path
             dest.parent.mkdir(parents=True, exist_ok=True)
             dest.write_bytes(repo.objects.read_blob(blob_oid))
-        return {"status": "conflict", "conflicts": conflicts, "ok": False}
+        return {"status": "conflict", "conflicts": conflicts,
+                "autoselected": autoselected, "resolved": resolved_paths, "ok": False}
 
     # Write the merged tree object
     merged_tree_oid = repo.objects.write_obj({"type": "tree", "entries": merged_entries})
@@ -521,6 +685,16 @@ def merge(repo: Repository, branch: str, reconcile: Optional[str] = None,
         "messages": new_trace_msgs,
     }) if new_trace_msgs else None
 
+    # Record what the merge decided, so `log --reasoning` can render it.
+    metrics = {
+        "ours_eval": ours_metrics.get("eval_score"),
+        "theirs_eval": theirs_metrics.get("eval_score"),
+        "autoselected": autoselected,
+        "ai_resolved": resolved_paths,
+    }
+    if target_goal:
+        metrics["target_goal"] = target_goal
+
     # Write the merge commit (two parents)
     merge_commit = {
         "type": "commit",
@@ -530,11 +704,13 @@ def merge(repo: Repository, branch: str, reconcile: Optional[str] = None,
         "models": merged_models,
         "trace": new_trace_oid,
         "state": "fluid",
-        "metrics": {},
+        "metrics": metrics,
         "message": f"merge {branch} into {current_branch}",
         "author": "agent",
         "timestamp": int(time.time()),
     }
+    if merged_swarm and merged_swarm.get("nodes"):
+        merge_commit["swarm"] = repo.objects.write_obj(merged_swarm)
     new_oid = repo.write_commit(merge_commit)
     repo._set_head_commit(new_oid)
 
@@ -550,4 +726,35 @@ def merge(repo: Repository, branch: str, reconcile: Optional[str] = None,
         "conflicts": conflicts,
         "goal": reconciled["goal"],
         "notes": reconciled.get("notes", ""),
+        "autoselected": autoselected,
+        "ai_resolved": resolved_paths,
     }
+
+
+def _conflict_files(repo: Repository, conflicts: list, base_oid: Optional[str],
+                    ours_entries: dict, theirs_entries: dict) -> list:
+    """Full base/ours/theirs text for each content conflict — the raw material the
+    reconciler needs to synthesize a clean file (PR1)."""
+    base_entries = _tree_entries(repo, base_oid) if base_oid else {}
+
+    def _text(entries, path):
+        oid = entries.get(path)
+        if not oid:
+            return ""
+        try:
+            return repo.objects.read_blob(oid).decode("utf-8")
+        except (UnicodeDecodeError, Exception):
+            return ""
+
+    out = []
+    for c in conflicts:
+        if c.get("reason") != "content conflict":
+            continue
+        path = c.get("path")
+        out.append({
+            "path": path,
+            "base": _text(base_entries, path),
+            "ours": _text(ours_entries, path),
+            "theirs": _text(theirs_entries, path),
+        })
+    return out
