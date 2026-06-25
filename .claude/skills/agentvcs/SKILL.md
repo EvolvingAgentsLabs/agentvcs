@@ -110,7 +110,8 @@ so it can't hang the bar. `agentvcs log` then reads as the session's frame histo
 
 ## MCP alternative
 If the `agentvcs` MCP server is connected, the same operations are available as
-tools `avcs_log`, `avcs_show` (pass `trace:true` for the conversation), `avcs_diff`,
-`avcs_status`, `avcs_commit`, `avcs_freeze`, `avcs_replay`, `avcs_rollback`,
-`avcs_branch`, `avcs_checkout`, `avcs_trace`. Each returns the same `{"ok": ...}`
-JSON. Register with: `claude mcp add agentvcs -- agentvcs-mcp`.
+tools `avcs_log`, `avcs_show` (pass `trace:true` for the conversation), `avcs_trace`,
+`avcs_diff`, `avcs_status`, `avcs_commit`, `avcs_freeze`, `avcs_replay`,
+`avcs_rollback`, `avcs_branch`, `avcs_checkout`, `avcs_merge`, `avcs_eval`,
+`avcs_recall`, `avcs_runtime`, `avcs_budget`, `avcs_context`. Each returns the same
+`{"ok": ...}` JSON. Register with: `claude mcp add agentvcs -- agentvcs-mcp`.
