@@ -25,6 +25,7 @@ runtime, one on-disk format.
 
 | Example | Feature | What it shows |
 | --- | --- | --- |
+| [`eve-evolve-merge/`](eve-evolve-merge/) | `merge` + `swarm` | **The core scenario, end-to-end on [Vercel eve](https://vercel.com/eve):** a self-evolving agent rewrites its own skill and spawns a sub-agent at run-time, the team evolves the same files in git, and `merge` fuses both — skill conflict synthesized (`resolved_files`), sub-agent swarm merged node-by-node. Runnable offline: `bash eve-evolve-merge/demo.sh`. |
 | [`nanoloop-reconcile/`](nanoloop-reconcile/) | `merge --reconcile` | A reference reconciler for merging two agent branches — reconciles goal + trace **and** synthesizes the conflict-free code (`resolved_files`), with a worked write-up in [`ARTICLE.md`](nanoloop-reconcile/ARTICLE.md). |
 | [`blind-fleet-task/`](blind-fleet-task/) | fleet / blind eval | A fair blind A/B test — does agentvcs actually change agent outcomes? |
 | [`skillopt-soul/`](skillopt-soul/) | Soul (opt-in crypto) | The evolution seam of *Souls of Silicon*: signed traces ⇆ skill optimization. Requires `--with-soul`. |

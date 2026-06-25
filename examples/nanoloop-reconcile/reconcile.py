@@ -21,8 +21,9 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
-
-from dotenv import load_dotenv
+# NB: dotenv is imported lazily inside main() so SYSTEM / build_user_prompt can be
+# imported as a library (e.g. by a different-backend reconciler) without requiring
+# python-dotenv or nanoLoop's other runtime deps.
 
 
 SYSTEM = """You reconcile two divergent agent branches into ONE working memory
@@ -111,6 +112,7 @@ Return the strict JSON."""
 
 
 def main() -> int:
+    from dotenv import load_dotenv  # lazy: only the CLI entrypoint needs it
     # load nanoLoop's .env (OPENROUTER_API_KEY, HARNESS_MODEL) if a path is given
     if len(sys.argv) > 1:
         load_dotenv(Path(sys.argv[1]))

@@ -101,6 +101,12 @@ to a safe mechanical union so the merge still completes. The reasoning that *cau
 runtime evolution is captured automatically (see [trace capture](#zero-friction-trace-capture-claude-code)),
 so the merge is informed by *why* each side changed, not just *what* changed.
 
+See it end-to-end on a [Vercel **eve**](https://vercel.com/eve) agent that rewrites
+its own skill and spawns a sub-agent at run-time, while the team evolves the same
+files in git — then merges into one (`bash examples/eve-evolve-merge/demo.sh`):
+
+![a self-evolving eve agent merged with its design-time release: the skill conflict is synthesized with both rules, and the sub-agent swarm keeps the run-time-created and design-evolved agents](examples/eve-evolve-merge/demo.gif)
+
 > This is the heart of the project. Everything below — the runtime frame, the trust
 > gate (`freeze`/`recall`), and the optional Soul/corporate layers — exists to make
 > that captured run-time line **measurable, trustworthy, and accountable**.
