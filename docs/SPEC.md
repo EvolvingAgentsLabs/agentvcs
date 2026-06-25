@@ -235,6 +235,10 @@ This is the mechanism by which run-time evolution is **not lost** at the next
 release: an agent, not a textual heuristic, decides how the field-learned goal and
 reasoning combine with the freshly-developed code.
 
+A runnable, offline walk-through of all of the above on a [Vercel eve](https://vercel.com/eve)
+agent — a self-evolving skill + sub-agent merged with a design-time release — lives in
+`examples/eve-evolve-merge/` (`bash examples/eve-evolve-merge/demo.sh`).
+
 ## 6. Reserved for a later version (not yet implemented)
 
 - **goal lineage queries** over `goal.parent`.
