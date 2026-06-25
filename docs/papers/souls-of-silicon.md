@@ -9,20 +9,27 @@
 
 ## Abstract
 
-As software engineering shifts from *writing* static code to *cultivating* dynamic
-behavior mediated by Large Language Models (LLMs), traditional version control
-collapses. Git versions one thing — text, frozen in time, changed by humans — but a
-fleet of agents mutates four things at once and *while running*: the **code**, the
-**goal** it pursues, the **models** in force, and the **reasoning trace** that
-produced the result. Worse, even if we version all four, the agents themselves
-remain fungible: copy the files and you copy the agent, reputation and all. There is
-no machine identity, so there can be no machine reputation, and a swarm of cloned
-agents fails in correlated lockstep.
+Software engineering is shifting from *writing* static code to *cultivating* systems
+whose behavior is mediated by Large Language Models (LLMs) — built today the modern
+way: skills as markdown, tools as code, prompts in files, all under git. But an
+autonomous agent does not merely *run* that system; it **rewrites** it *while it
+runs*, creating, editing, and deleting its own skills, tools, prompts, and goals as
+it adapts in the field. Git never sees that run-time evolution, so the next release
+silently **overwrites** it — and the reasoning traces that produced it are lost.
+Traditional version control collapses across four dimensions that now move at once
+and at run-time: the **code**, the **goal**, the **models**, and the **reasoning
+trace**. Worse, even versioning all four leaves the agents fungible: copy the files
+and you copy the agent, reputation and all — no machine identity, so no machine
+reputation, and a swarm of clones that fails in correlated lockstep.
 
-We present a three-layer architecture that gives autonomous agents memory,
-learning, and identity. **(1) AgentVCS** is a multidimensional version control
-system that captures each iteration's code, goal, models, and trace as one signed
-commit. **(2) SkillOpt-Sleep** is an offline consolidation engine that distills those
+We present a three-layer architecture that versions the run-time line, reconciles it
+with new releases through an agent, and gives autonomous agents memory, learning, and
+identity. **(1) AgentVCS** is a multidimensional version control system that captures
+each iteration's code, goal, models, and trace as one signed commit, and **merges the
+run-time line back into a design-time release with an agent** (`merge --reconcile`) —
+a three-way merge for code/skills/tools plus an agent reconciling goals and traces —
+rather than letting a release erase what the system learned. **(2) SkillOpt-Sleep** is
+an offline consolidation engine that distills those
 traces into validated skills behind a held-out evaluation gate. **(3) Agentic
 DeSoc** applies *Decentralized Society* (Weyl, Ohlhaver & Buterin, 2022) to machines:
 each instance is born with an Ed25519 **Soul**, every commit is signed into an
