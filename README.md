@@ -7,6 +7,10 @@
 
 **Version control for software that *evolves while it runs*.**
 
+> The open-source **'git for agents'**: version an agent's **code, skills, goals,
+> models, traces & sub-agent swarm together** — and merge its **autonomous evolution
+> back into your releases, intelligently.**
+
 You build an agent system the modern way: **skills as markdown, tools as code,
 prompts in files** — all under git. But an autonomous agent doesn't just *run* that
 system; it **rewrites** it. In the field it writes a new skill, edits a tool, drops a
@@ -18,10 +22,10 @@ hard-won field adaptations — and the reasoning traces that produced them — a
 
 That's the problem agentvcs solves. It is a multidimensional VCS that versions the
 **run-time line** of your agent system — not just the files it changed (skills, tools,
-prompts), but the **goal** it's pursuing, the **models** running it, and the
-**intelligently-captured trace** that *caused* each change — and then **merges that
-evolution back into your next release with an agent**, instead of letting a `git pull`
-erase it.
+prompts) and the **sub-agent swarm** it spawned, but the **goal** it's pursuing, the
+**models** running it, and the **intelligently-captured trace** that *caused* each
+change — and then **merges that autonomous evolution back into your next release with
+an agent**, instead of letting a `git pull` erase it.
 
 ```
  design-time line   ●──────●──────●  (what your team develops & releases under git)
@@ -30,7 +34,7 @@ erase it.
                        \            ◆  one reconciled history
                         \          ▲
  run-time line          ●────●────●  (what the autonomous system changed about itself)
-   (captured by agentvcs: code+skills+tools+prompts · goal · models · selected traces)
+   (captured by agentvcs: code+skills+tools+prompts · sub-agent swarm · goal · models · selected traces)
 ```
 
 The line between design-time and run-time has disappeared, so **two** lines now evolve
@@ -38,7 +42,8 @@ in parallel — what your team ships, and what the system changes about itself. 
 either and you lose half the system. agentvcs versions **both** and reconciles them.
 
 It does this by capturing every iteration as one commit across **four dimensions**
-plus a **state**:
+plus a **state** — and, when the agent has them, a sub-agent **swarm** and the runtime
+**frame**:
 
 ```
             ┌─────────── one commit ───────────┐
@@ -230,13 +235,17 @@ Declare the non-code dimensions in `agent.json`:
     { "provider": "anthropic", "model": "claude-opus-4-8", "params": { "temperature": 1.0 } }
   ],
   "trace": "traces/run.jsonl",
+  "swarm": { "refund-verifier": { "role": "verify a refund", "skill_file": "agent/subagents/refund-verifier.md" } },
   "state": "fluid"
 }
 ```
 
 The `trace` can be a file you maintain (above) **or** a *provider* that captures
 the agent's native session automatically — see
-[Zero-friction trace capture](#zero-friction-trace-capture-claude-code) below.
+[Zero-friction trace capture](#zero-friction-trace-capture-claude-code) below. The
+optional `swarm` declares the agent's **sub-agent topology** (or set it to `"auto"`
+to derive it from the trace's sub-agent fan-out) — a dimension that is versioned and
+merged node-by-node like the rest.
 
 Then version the whole evolving system:
 
@@ -532,7 +541,10 @@ loop, use [`examples/claude-code-task/`](examples/claude-code-task/). To see the
 no trace file), see [`examples/claude-code-trace/`](examples/claude-code-trace/).
 To version a **filesystem-first [Vercel eve](https://eve.dev) agent** and undo a
 hallucinated turn with `rollback`+resume, see [`examples/eve/`](examples/eve/)
-(`bash examples/eve/demo.sh` — runs offline). Every example is indexed in
+(`bash examples/eve/demo.sh` — runs offline). To watch a **self-evolving agent
+merged with its design-time release** — skill conflict synthesized, sub-agent swarm
+reconciled node-by-node — see [`examples/eve-evolve-merge/`](examples/eve-evolve-merge/)
+(`bash examples/eve-evolve-merge/demo.sh`). Every example is indexed in
 [`examples/README.md`](examples/README.md).
 
 ## Scope
