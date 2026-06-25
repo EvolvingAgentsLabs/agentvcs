@@ -25,7 +25,7 @@ runtime, one on-disk format.
 
 | Example | Feature | What it shows |
 | --- | --- | --- |
-| [`nanoloop-reconcile/`](nanoloop-reconcile/) | `merge --reconcile` | A reference reconciler for merging two agent branches (code + goal + trace), with a worked write-up in [`ARTICLE.md`](nanoloop-reconcile/ARTICLE.md). |
+| [`nanoloop-reconcile/`](nanoloop-reconcile/) | `merge --reconcile` | A reference reconciler for merging two agent branches — reconciles goal + trace **and** synthesizes the conflict-free code (`resolved_files`), with a worked write-up in [`ARTICLE.md`](nanoloop-reconcile/ARTICLE.md). |
 | [`blind-fleet-task/`](blind-fleet-task/) | fleet / blind eval | A fair blind A/B test — does agentvcs actually change agent outcomes? |
 | [`skillopt-soul/`](skillopt-soul/) | Soul (opt-in crypto) | The evolution seam of *Souls of Silicon*: signed traces ⇆ skill optimization. Requires `--with-soul`. |
 

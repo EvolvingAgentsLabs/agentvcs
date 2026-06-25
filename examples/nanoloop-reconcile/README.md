@@ -2,9 +2,11 @@
 
 A reference reconciler for `agentvcs merge --reconcile`. When two agent branches
 diverge, agentvcs merges the **code** deterministically and hands the
-**reasoning** (goals + traces + diffs + conflicts) to this process, which uses
+**reasoning** (goals + traces + diffs + per-side eval/cost metrics + the full text
+of any unresolved conflict) to this process, which uses
 [nanoLoop](https://github.com/ismaelfaro/nanoLoop)'s model layer to synthesize a
-single *Consolidated Knowledge Trace* for the merge commit.
+single *Consolidated Knowledge Trace* — and, for conflicts the text merge couldn't
+settle, the **resolved code** itself — for the merge commit.
 
 See **[ARTICLE.md](./ARTICLE.md)** for the write-up and a worked SQL-vs-NoSQL example.
 
@@ -12,11 +14,13 @@ See **[ARTICLE.md](./ARTICLE.md)** for the write-up and a worked SQL-vs-NoSQL ex
 
 agentvcs core never calls an LLM. The `--reconcile CMD` seam (mirroring
 `replay --exec`) pipes a JSON bundle to `CMD` on stdin and reads back
-`{goal, trace, notes}` on stdout.
+`{goal, trace, notes, resolved_files?}` on stdout (`resolved_files` is optional —
+the conflict-free code the agent synthesized; omit it when there's nothing to fix).
 
 ```
-bundle (stdin)                         reconciler                response (stdout)
-{base, ours, theirs, conflicts}  ──►   nanoLoop / OpenRouter  ──►  {goal, trace, notes}
+bundle (stdin)                                    reconciler           response (stdout)
+{base, ours, theirs, conflicts,           ──►  nanoLoop/OpenRouter  ──► {goal, trace, notes,
+ conflict_files, metrics, target_goal}                                   resolved_files?}
 ```
 
 ## Run it (built-in command)

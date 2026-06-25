@@ -78,18 +78,27 @@ agentvcs merge main --reconcile "claude -p reconcile"   # any agent/command you 
 ```
 
 - **code · skills · tools · prompts** → a real **three-way merge** against the
-  merge-base (line-level, with git-style conflict markers only on true overlaps).
+  merge-base (line-level, with git-style conflict markers only on true overlaps). When
+  one side has a higher **verified eval score** than the other, agentvcs resolves the
+  *overlapping hunks* to that side automatically — **per-hunk**, before the agent is
+  ever asked (configurable via `merge.autoselect_threshold`).
 - **models** → the model pins are **unioned**.
 - **goal · trace** → the *semantic* dimensions are **not** merged textually. agentvcs
-  builds a reconciliation **bundle** (`base` / `ours` / `theirs`, each with its goal
-  and the reasoning trace that drove it) and pipes it as JSON to your `--reconcile`
-  agent, which reads both lines and returns the reconciled `{goal, trace, notes}`.
+  builds a reconciliation **bundle** (`base` / `ours` / `theirs`, each with its goal,
+  reasoning trace, **eval/cost metrics**, and the full text of any unresolved
+  **conflict**) and pipes it as JSON to your `--reconcile` agent. The agent returns
+  the reconciled `{goal, trace, notes}` — and, optionally, **`resolved_files`**: the
+  conflict-free code it synthesized, which agentvcs writes for you. So the **agent
+  resolves the code too**, not just the reasoning.
+- **swarm** → if either side reshaped its **sub-agent topology** (created, evolved or
+  retired sub-agents at run-time), that topology is merged node-by-node too.
 
 The result is a two-parent merge commit that keeps the field-learned behavior **and**
 the new release — with an **agent**, not a textual heuristic, deciding how the goals
-and the learnings combine. Without `--reconcile`, agentvcs falls back to a safe
-mechanical union so the merge still completes. The reasoning that *caused* the runtime
-evolution is captured automatically (see [trace capture](#zero-friction-trace-capture-claude-code)),
+and the learnings combine. Add **`--target-goal "…"`** to *direct* the merge toward a
+new objective (keeping only what serves it). Without `--reconcile`, agentvcs falls back
+to a safe mechanical union so the merge still completes. The reasoning that *caused* the
+runtime evolution is captured automatically (see [trace capture](#zero-friction-trace-capture-claude-code)),
 so the merge is informed by *why* each side changed, not just *what* changed.
 
 > This is the heart of the project. Everything below — the runtime frame, the trust
@@ -362,7 +371,7 @@ DeSoc default `1.0` rewards complementary, less-correlated experience.
 | `agentvcs diff [A] [B]` | dimensional diff (default: parent..HEAD) |
 | `agentvcs branch [NAME]` | list, or create a live branch |
 | `agentvcs checkout REF` | restore the working tree from a branch/commit |
-| `agentvcs merge BRANCH` | multidimensional merge; `--reconcile CMD` hands goal+trace to an agent |
+| `agentvcs merge BRANCH` | multidimensional merge; `--reconcile CMD` hands goal+trace+conflicts to an agent (which may return resolved code); `--target-goal` directs it; eval scores auto-resolve conflicts |
 | `agentvcs rollback [REF]` | undo: restore the full prior state (the panic button) |
 | `agentvcs eval [COMMIT]` | run `agent.json`'s eval and record the score |
 | `agentvcs freeze [COMMIT]` | crystallize a fluid commit into a deterministic recipe (eval-gated) |
