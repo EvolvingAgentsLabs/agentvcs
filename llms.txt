@@ -24,8 +24,13 @@ run-time evolution with a freshly-developed release without losing either side.
   cheap, reproducible execution.
 - `agentvcs merge <branch> --reconcile "<agent-cmd>"` → reconcile two evolving lines
   (your run-time evolution vs a new release): three-way merge for code/skills/tools,
-  pin union for models, and an agent decides the merged goal+trace from a JSON bundle
-  ({base,ours,theirs}). This is how run-time evolution survives the next release.
+  pin union for models, node-by-node merge of the sub-agent **swarm**, and an agent
+  decides the merged goal+trace from a JSON bundle ({base,ours,theirs} + per-side
+  eval/cost metrics + the text of any unresolved conflict). The agent may return
+  `resolved_files` (conflict-free code agentvcs writes). A clear eval winner
+  auto-resolves conflicts per-hunk before the agent is asked; `--target-goal "<obj>"`
+  directs the merge toward a new objective. This is how run-time evolution survives
+  the next release.
 - **Trace providers** → if `agent.json` sets `"trace": {"provider": "claude-code"}`,
   you don't maintain a trace file at all: `commit` auto-captures your native Claude
   Code session (real tool_use/thinking blocks), and `"models":[{"auto":true}]` pins

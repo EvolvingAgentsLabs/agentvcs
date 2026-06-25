@@ -50,6 +50,7 @@ class Snapshot:
     state: str
     manifest: dict
     runtime: str | None = None  # the operational frame, only captured in runtime mode
+    swarm: str | None = None    # the sub-agent topology, only when agent.json declares one
 
 
 class Repository:
@@ -406,7 +407,18 @@ class Repository:
             frame = self._build_runtime_frame(manifest, messages)
             runtime_oid = put({"type": "runtime", **frame})
 
-        return Snapshot(tree, goal, models, trace, state, manifest, runtime_oid)
+        # swarm dimension: the versioned sub-agent topology. Only captured when
+        # agent.json declares "swarm", so commits without one stay byte-identical.
+        swarm_oid = None
+        swarm_decl = manifest.get("swarm")
+        if swarm_decl:
+            from .swarm import build_swarm
+            swarm_obj = build_swarm(self, swarm_decl, write=write, messages=messages)
+            if swarm_obj:
+                swarm_oid = put(swarm_obj)
+
+        return Snapshot(tree, goal, models, trace, state, manifest, runtime_oid,
+                        swarm_oid)
 
     # ------------------------------------------------------------------ soul
     def soul_id(self) -> str | None:
@@ -443,6 +455,9 @@ class Repository:
         # when a runtime frame was actually captured.
         if snap.runtime:
             commit["runtime"] = snap.runtime
+        # same byte-compat rule for the swarm dimension.
+        if snap.swarm:
+            commit["swarm"] = snap.swarm
         oid = self.write_commit(commit)
         self._set_head_commit(oid)
         return oid

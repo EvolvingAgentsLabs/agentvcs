@@ -230,8 +230,12 @@ re-execute the frozen path deterministically.
   ```
 
   Code/skills/tools get a three-way merge; model pins are unioned; the `--reconcile`
-  agent reads a `{base, ours, theirs}` bundle of goals+traces and returns the merged
-  goal and trace. See [`docs/SPEC.md` §5](SPEC.md).
+  agent reads a `{base, ours, theirs}` bundle (each side carries its goal, trace,
+  eval/cost **metrics**, and the text of any unresolved **conflict**) and returns the
+  merged goal and trace — optionally with **`resolved_files`**, the conflict-free code
+  it synthesized. A clear eval winner auto-resolves conflicts per-hunk before the agent
+  is asked, and **`--target-goal "…"`** can direct the whole merge toward a new
+  objective. The sub-agent **swarm** topology is merged too. See [`docs/SPEC.md` §5](SPEC.md).
 - Secrets are scrubbed by default; tune with `"redact": [...]` or `"redact": false`.
 - The `trace` dimension is **pluggable** — `claude-code`, `qwen-code`, `vercel-eve`
   and `anthropic-managed` ship today, and the same interface works for any tool that

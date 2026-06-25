@@ -186,22 +186,50 @@ fits it, rather than as one opaque text merge.
    auto-merge; true overlaps get git-style `<<<<<<< / ======= / >>>>>>>` conflict
    markers written into the files. Add/delete vs modify is surfaced as a conflict.
 3. **models** — the model pins of both sides are unioned.
-4. **goal + trace** — the *semantic* dimensions are not merged textually. agentvcs
+4. **metric-weighted auto-select** — before any agent is consulted, conflicts the
+   recorded `eval` scores already settle are resolved to the winning side: if one
+   branch passed its eval and the other failed, or the scores differ by more than
+   `merge.autoselect_threshold` (default `0.2`, set in `agent.json`), the winner is
+   chosen. Resolution is **per-hunk**: only the *overlapping* hunk goes to the
+   winner; each side's non-conflicting hunks still merge normally. Each decision is
+   recorded under the merge commit's `metrics.autoselected`.
+5. **goal + trace** — the *semantic* dimensions are not merged textually. agentvcs
    assembles a reconciliation **bundle** and, if `--reconcile CMD` is given, pipes it
-   as JSON to that command (an agent) on stdin:
+   as JSON to that command (an agent) on stdin. The bundle carries each side's
+   `goal`, `trace_messages`, `code_diff`, recorded `metrics`, the full text of every
+   still-unresolved conflict (`conflict_files`), the `autoselected` decisions, and an
+   optional `target_goal`:
 
    ```json
-   { "base":   { "goal": "…", "trace": [ … ] },
-     "ours":   { "goal": "…", "trace": [ … ] },
-     "theirs": { "goal": "…", "trace": [ … ] } }
+   { "base":   { "goal": "…", "trace_messages": [ … ] },
+     "ours":   { "goal": "…", "metrics": { "eval_score": 0.95, "cost_usd": 1.2 } },
+     "theirs": { "goal": "…", "metrics": { "eval_score": 0.40, "cost_usd": 0.5 } },
+     "conflict_files": [ { "path": "…", "base": "…", "ours": "…", "theirs": "…" } ],
+     "target_goal": "Maximize retention regardless of inference cost" }
    ```
 
-   The command returns `{ "goal": "string", "trace": [ … ], "notes": "string" }`,
-   which becomes the merged goal and trace. Without `--reconcile`, a mechanical
-   fallback unions the goals and concatenates the traces so the merge still completes.
-5. **commit** — a two-parent merge commit (first parent = HEAD/`ours`, second =
-   `theirs`). When conflicts remain, the merge reports them and exits non-zero unless
-   `--force` (which commits with the markers in place).
+   The command returns `{ "goal", "trace", "notes", "resolved_files"? }`. `goal` and
+   `trace` become the merged semantics; the optional **`resolved_files`**
+   (`{path: content}`) lets the agent return *conflict-free code* it synthesized — the
+   merge writes that content and clears those conflicts, so an agent resolves code,
+   not just reasoning. Without `--reconcile`, a mechanical fallback unions the goals
+   (or adopts the `target_goal`) and concatenates the traces so the merge completes.
+6. **swarm** — the sub-agent topology, declared in `agent.json` → `"swarm"` either
+   explicitly (a node map, each node a `role` + `skill`/`skill_file` + `parent`) or
+   as `"auto"`, which **derives** the topology from the sub-agent fan-out the trace
+   providers already reconstruct from the native session log (one node per sub-agent
+   type, with its invocation `count`). When either side carries a swarm it is merged
+   node-by-node with the same three-way lifecycle logic as code: created / evolved /
+   retired on each side relative to the base. *Retired on one side, evolved on the
+   other* surfaces as an explicit conflict (the revival is kept, like git's
+   delete/modify).
+7. **`--target-goal TEXT`** — reorients the whole merge toward a new objective:
+   the merged goal becomes the target verbatim, and the reconciler is told to keep
+   only learnings that serve it and discard those that fight it.
+8. **commit** — a two-parent merge commit (first parent = HEAD/`ours`, second =
+   `theirs`). `metrics` records `ours_eval`/`theirs_eval`, `autoselected`,
+   `ai_resolved` and any `target_goal`. When conflicts remain, the merge reports them
+   and exits non-zero unless `--force` (which commits with the markers in place).
 
 This is the mechanism by which run-time evolution is **not lost** at the next
 release: an agent, not a textual heuristic, decides how the field-learned goal and
@@ -211,5 +239,6 @@ reasoning combine with the freshly-developed code.
 
 - **goal lineage queries** over `goal.parent`.
 - **packed objects** for large histories.
-- **richer metric-weighted reconciliation** (auto-selecting the winning side per
-  hunk from recorded `metrics`/`eval` scores).
+- **cross-region merge** — the line-level merge resolves *overlapping* hunks per-hunk
+  (to the metric winner), but adjacent change regions that begin at different base
+  lines are still coalesced; a smarter region splitter is future work.

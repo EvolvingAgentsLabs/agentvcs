@@ -25,26 +25,37 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 
-SYSTEM = """You reconcile two divergent agent branches into ONE working memory.
+SYSTEM = """You reconcile two divergent agent branches into ONE working memory
+AND resolve their code conflicts.
 
 You are given a merge bundle: a common-ancestor (base) goal+trace, and two
 branches (ours/theirs) that evolved from it — each with its own goal, message
-trace (the agent's reasoning), and code diff. The branches may have explored
-different, even contradictory, approaches.
+trace (the agent's reasoning), code diff, and recorded metrics (eval_score,
+eval_ok, cost_usd). The branches may have explored different, even contradictory,
+approaches. The bundle may also carry:
+  * target_goal — if non-null, the merge is DIRECTED: keep only what serves this
+    objective and DISCARD learnings/optimizations that fight it (e.g. drop a
+    cost-cutting branch's lessons if the target prioritizes quality at any cost).
+  * conflict_files — files the textual merge could not resolve, each with full
+    base/ours/theirs text. You MUST rewrite each into one clean, conflict-free
+    file (no <<<<<<< markers), combining the best of both, weighted by the
+    metrics (favor the side with the higher verified eval_score).
+  * autoselected — conflicts already resolved by eval score; do not revisit them.
 
 Do NOT concatenate the two traces. Synthesize. Produce a single Consolidated
 Knowledge Trace that an agent resuming on the merged branch can read as coherent
-working memory: what each branch was trying, what it learned, which decision
-won and why, and what dead-ends to avoid re-exploring.
+working memory: what each branch tried, what it learned, which decision won and
+why, and what dead-ends to avoid re-exploring.
 
 Return STRICT JSON, nothing else:
 {
-  "goal": "<the merged goal, one line>",
+  "goal": "<the merged goal, one line — equal to target_goal if one was given>",
   "trace": [ {"role": "system"|"assistant", "content": "<one synthesized step>"}, ... ],
+  "resolved_files": { "<path>": "<full final file content, no conflict markers>" },
   "notes": "<one-line summary of how you reconciled>"
 }
-The trace should be 2-5 messages: a system summary of the reconciliation, then
-assistant notes capturing the retained learning from each side."""
+Include resolved_files ONLY for paths present in conflict_files; omit the key
+(or pass {}) when there are none. The trace should be 2-5 messages."""
 
 
 def build_user_prompt(bundle: dict) -> str:
@@ -67,23 +78,36 @@ def build_user_prompt(bundle: dict) -> str:
         return "\n".join(out) or "  (none)"
 
     b, o, t = bundle["base"], bundle["ours"], bundle["theirs"]
-    return f"""BASE goal: {b.get('goal','')}
+    target = bundle.get("target_goal")
+    cfiles = bundle.get("conflict_files", [])
+    return f"""TARGET GOAL (directed merge; null = "best of both"): {json.dumps(target)}
+
+BASE goal: {b.get('goal','')}
 BASE trace:
 {fmt_trace(b.get('trace_messages'))}
 
 OURS branch '{o.get('branch','')}' goal: {o.get('goal','')}
+OURS metrics: {json.dumps(o.get('metrics', {}))}
 OURS code diff: {json.dumps(o.get('code_diff', {}))}
 OURS trace:
 {fmt_trace(o.get('trace_messages'))}
 
 THEIRS branch '{t.get('branch','')}' goal: {t.get('goal','')}
+THEIRS metrics: {json.dumps(t.get('metrics', {}))}
 THEIRS code diff: {json.dumps(t.get('code_diff', {}))}
 THEIRS trace:
 {fmt_trace(t.get('trace_messages'))}
 
+AUTO-SELECTED (already resolved by eval score — do not revisit):
+{json.dumps(bundle.get('autoselected', []))}
+
+CONFLICT FILES (rewrite each into one clean file → resolved_files):
+{json.dumps(cfiles)}
+
 CONFLICTS: {json.dumps(bundle.get('conflicts', []))}
 
-Reconcile these into one Consolidated Knowledge Trace. Return the strict JSON."""
+Reconcile into one Consolidated Knowledge Trace and resolve every conflict file.
+Return the strict JSON."""
 
 
 def main() -> int:
@@ -111,12 +135,16 @@ def main() -> int:
     start, end = text.find("{"), text.rfind("}")
     parsed = json.loads(text[start:end + 1])
 
-    # agentvcs validates {goal:str, trace:list}; emit exactly that
-    print(json.dumps({
+    # agentvcs validates {goal:str, trace:list}; resolved_files is optional.
+    out = {
         "goal": parsed["goal"],
         "trace": parsed["trace"],
         "notes": parsed.get("notes", "reconciled by nanoLoop"),
-    }))
+    }
+    rf = parsed.get("resolved_files")
+    if isinstance(rf, dict) and rf:
+        out["resolved_files"] = rf
+    print(json.dumps(out))
     return 0
 
 

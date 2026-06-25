@@ -59,12 +59,15 @@ So the merge is split along the seam the project already uses for `replay --exec
 
 - **agentvcs (the mechanism, deterministic):** finds the base, merges the code
   tree, unions models, and assembles a **reconciliation bundle** — base / ours /
-  theirs goals + traces + code diffs + conflicts. With no helper, it ships a
-  deterministic fallback (a mechanical merge marker; both parent traces stay
-  reachable, nothing is lost).
+  theirs goals + traces + code diffs + per-side eval/cost metrics + conflicts + the
+  full text of any unresolved conflict. With no helper, it ships a deterministic
+  fallback (a mechanical merge marker; both parent traces stay reachable, nothing is
+  lost).
 - **An external reconciler (the intelligence, probabilistic):** when you pass
-  `--reconcile <CMD>`, agentvcs pipes the bundle to that process on stdin and
-  reads back `{goal, trace, notes}` on stdout. The core never imports an LLM.
+  `--reconcile <CMD>`, agentvcs pipes the bundle to that process on stdin and reads
+  back `{goal, trace, notes}` — optionally with **`resolved_files`**, the
+  conflict-free code the reconciler synthesized, which agentvcs writes. The core
+  never imports an LLM.
 
 That `CMD` is where **nanoLoop plugs in** — it ships a first-class
 `nanoloop reconcile` subcommand that reads the bundle on stdin and writes the
@@ -137,10 +140,15 @@ dead-ends so the next agent won't re-explore them. That's the whole point.
 - nanoLoop ships a first-class **`nanoloop reconcile`** subcommand, so the merge
   command above works verbatim. (A from-scratch reference reconciler also lives in
   this folder, `reconcile.py`, for anyone who wants to wire a different brain.)
-- Not yet done: conflict-aware *code* synthesis (the reconciler reasons about the
-  conflict but a human/agent still resolves `store.py`), and surfacing the
-  *abandoned* commit's decision text in `log --reasoning` (the data is on disk;
-  it's a rendering gap).
+- Now done: **conflict-aware code synthesis.** The bundle carries the full
+  base/ours/theirs text of every unresolved conflict, and the reconciler may return
+  `resolved_files` — the conflict-free code it wrote — which agentvcs commits. The
+  reconciler no longer just *reasons* about `store.py`; it can *resolve* it. (Two
+  more dials landed alongside it: a `--target-goal` to direct the merge, and
+  eval-score-weighted auto-select that breaks conflicts per-hunk before the LLM is
+  asked.)
+- Still a rendering gap: surfacing the *abandoned* commit's decision text in
+  `log --reasoning` (the data is on disk; the renderer just doesn't show it yet).
 
 The loop is satisfying: the harness that *builds* the merge is the same one that
 *performs* the knowledge reconciliation. nanoLoop writes the mechanism; agentvcs

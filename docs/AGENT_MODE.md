@@ -98,11 +98,12 @@ dependencies). Register it with Claude Code:
 claude mcp add agentvcs -- agentvcs-mcp
 ```
 
-It exposes one tool per operation: `avcs_log`, `avcs_show`, `avcs_diff`,
-`avcs_status`, `avcs_commit`, `avcs_freeze`, `avcs_replay`, `avcs_rollback`,
-`avcs_branch`, `avcs_checkout`, `avcs_trace`. Each tool result is a single
-text-content item whose text is the same `{"ok": ...}` JSON described above; tool
-failures set `isError: true`.
+It exposes one tool per operation: `avcs_log`, `avcs_show`, `avcs_trace`,
+`avcs_diff`, `avcs_status`, `avcs_commit`, `avcs_freeze`, `avcs_replay`,
+`avcs_rollback`, `avcs_branch`, `avcs_checkout`, `avcs_merge`, `avcs_eval`,
+`avcs_recall`, `avcs_runtime`, `avcs_budget`, `avcs_context`. Each tool result is a
+single text-content item whose text is the same `{"ok": ...}` JSON described above;
+tool failures set `isError: true`.
 
 The server operates on the repository discovered from its working directory.
 
