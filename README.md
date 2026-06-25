@@ -5,15 +5,40 @@
 [![Python](https://img.shields.io/pypi/pyversions/agentvcs.svg)](https://pypi.org/project/agentvcs/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-**Version control for software that is *cultivated*, not written.**
+**Version control for software that *evolves while it runs*.**
 
-Git versions one thing: source code, frozen in time, changed by humans. But when
-a fleet of agents builds and runs software, four things change at once — the
-**code**, the **goal** it's pursuing, the **models** it's running, and the
-**messages** the agents exchange to get there — and they change *while the system
-is running*. The line between design-time and run-time disappears.
+You build an agent system the modern way: **skills as markdown, tools as code,
+prompts in files** — all under git. But an autonomous agent doesn't just *run* that
+system; it **rewrites** it. In the field it writes a new skill, edits a tool, drops a
+stale prompt, redirects its own goal — adapting to what it learns from real traffic.
 
-No tool versions that. `agentvcs` does.
+**Git never sees any of it.** That run-time evolution lives only inside the running
+process. The day your team cuts a new release from `main`, you **overwrite it**: the
+hard-won field adaptations — and the reasoning traces that produced them — are gone.
+
+That's the problem agentvcs solves. It is a multidimensional VCS that versions the
+**run-time line** of your agent system — not just the files it changed (skills, tools,
+prompts), but the **goal** it's pursuing, the **models** running it, and the
+**intelligently-captured trace** that *caused* each change — and then **merges that
+evolution back into your next release with an agent**, instead of letting a `git pull`
+erase it.
+
+```
+ design-time line   ●──────●──────●  (what your team develops & releases under git)
+                     \              \
+                      \              ▼  agentvcs merge --reconcile <agent>
+                       \            ◆  one reconciled history
+                        \          ▲
+ run-time line          ●────●────●  (what the autonomous system changed about itself)
+   (captured by agentvcs: code+skills+tools+prompts · goal · models · selected traces)
+```
+
+The line between design-time and run-time has disappeared, so **two** lines now evolve
+in parallel — what your team ships, and what the system changes about itself. Lose
+either and you lose half the system. agentvcs versions **both** and reconciles them.
+
+It does this by capturing every iteration as one commit across **four dimensions**
+plus a **state**:
 
 ```
             ┌─────────── one commit ───────────┐
@@ -21,16 +46,55 @@ No tool versions that. `agentvcs` does.
             └───────────────────────────────────┘
 ```
 
-Every commit is a snapshot across **all four dimensions** plus a **state**:
-
-- **`fluid`** — the agent is still evolving: high-temperature models, code and
+- **`fluid`** — still evolving: high-temperature models, code, skills, prompts and
   goals mutating between iterations. Powerful, expensive, non-deterministic.
-- **`crystallized`** — a solution you trust, *frozen*. Models pinned to
-  temperature 0 and the message trace compiled into a replayable recipe. Cheap,
-  stable, deterministic. `agentvcs freeze` does the conversion.
+- **`crystallized`** — a solution you trust, *frozen*. Models pinned to temperature 0
+  and the message trace compiled into a replayable recipe. Cheap, stable,
+  deterministic. `agentvcs freeze` does the conversion.
 
 This is the open-source core — the "git for agents". Zero runtime dependencies,
 pure Python stdlib, fully auditable. Apache-2.0.
+
+![Why agentvcs: an autonomous agent evolves its own skills/tools/prompts at run-time; a new git release would erase it; agentvcs versions that run-time line and merges it back with an agent](docs/media/runtime-evolution.gif)
+
+*The core idea in 30 seconds: the run-time line (what the agent changed about itself)
+and the design-time line (your next release) evolve in parallel — agentvcs versions
+both and reconciles them with an agent, so a release never erases what the system
+learned in the field.*
+
+## Don't lose the evolution: reconcile the two lines (agent-driven merge)
+
+When your team ships a new release, the autonomous system has already moved on — a
+new skill here, an edited tool there, a redirected goal. A plain `git merge` would
+either clobber those field adaptations or bury them in conflict markers, and it has
+no idea what the *goal* or the *reasoning* should become. agentvcs merges
+**multidimensionally**, and hands the semantic part to an agent:
+
+```bash
+# main    = your new release      (the design-time line, developed under version control)
+# runtime = what agentvcs captured (the run-time line: skills/tools/prompts the system rewrote)
+agentvcs checkout runtime
+agentvcs merge main --reconcile "claude -p reconcile"   # any agent/command you trust
+```
+
+- **code · skills · tools · prompts** → a real **three-way merge** against the
+  merge-base (line-level, with git-style conflict markers only on true overlaps).
+- **models** → the model pins are **unioned**.
+- **goal · trace** → the *semantic* dimensions are **not** merged textually. agentvcs
+  builds a reconciliation **bundle** (`base` / `ours` / `theirs`, each with its goal
+  and the reasoning trace that drove it) and pipes it as JSON to your `--reconcile`
+  agent, which reads both lines and returns the reconciled `{goal, trace, notes}`.
+
+The result is a two-parent merge commit that keeps the field-learned behavior **and**
+the new release — with an **agent**, not a textual heuristic, deciding how the goals
+and the learnings combine. Without `--reconcile`, agentvcs falls back to a safe
+mechanical union so the merge still completes. The reasoning that *caused* the runtime
+evolution is captured automatically (see [trace capture](#zero-friction-trace-capture-claude-code)),
+so the merge is informed by *why* each side changed, not just *what* changed.
+
+> This is the heart of the project. Everything below — the runtime frame, the trust
+> gate (`freeze`/`recall`), and the optional Soul/corporate layers — exists to make
+> that captured run-time line **measurable, trustworthy, and accountable**.
 
 ![agentvcs surfacing the runtime frame, then gating freeze on a passing eval](examples/recording/runtime-trust.gif)
 
@@ -298,6 +362,7 @@ DeSoc default `1.0` rewards complementary, less-correlated experience.
 | `agentvcs diff [A] [B]` | dimensional diff (default: parent..HEAD) |
 | `agentvcs branch [NAME]` | list, or create a live branch |
 | `agentvcs checkout REF` | restore the working tree from a branch/commit |
+| `agentvcs merge BRANCH` | multidimensional merge; `--reconcile CMD` hands goal+trace to an agent |
 | `agentvcs rollback [REF]` | undo: restore the full prior state (the panic button) |
 | `agentvcs eval [COMMIT]` | run `agent.json`'s eval and record the score |
 | `agentvcs freeze [COMMIT]` | crystallize a fluid commit into a deterministic recipe (eval-gated) |
@@ -394,12 +459,14 @@ agentvcs freeze                 # crystallize that real, high-fidelity trace
 code. You never write a trace file.*
 
 Known secrets are scrubbed by default (`redact` / `redact_defaults` to tune). The
-`trace` dimension is **pluggable** — `claude-code`, `qwen-code` and `vercel-eve`
-ship today (`agentvcs init --qwen-code` / `--eve` wire the latter two), and any
-tool that records a session (e.g. one backed by SQLite) can add another without
-changing the on-disk format. The [Vercel **eve**](https://eve.dev) integration
-adds Time-Travel Debugging to filesystem-first agents — see
-[`examples/eve/`](examples/eve/) (`bash examples/eve/demo.sh`).
+`trace` dimension is **pluggable** — `claude-code`, `qwen-code`, `vercel-eve` and
+`anthropic-managed` ship today (`agentvcs init --qwen-code` / `--eve` /
+`--anthropic-managed` wire the others), and any tool that records a session (e.g. one
+backed by SQLite) can add another without changing the on-disk format. The Vercel
+**eve** integration adds Time-Travel Debugging to filesystem-first agents (`npx
+@agentvcs/eve init` drops the hook — see [`packages/eve/`](packages/eve/) and
+[`examples/eve/`](examples/eve/)); the `anthropic-managed` provider versions agents
+that run server-side in Anthropic's [managed cloud](https://platform.claude.com/docs/en/managed-agents/overview).
 The same trace and the same runtime frame reconstruct identically across providers,
 so nothing here is tied to one runtime. See [`docs/SPEC.md`](docs/SPEC.md).
 
@@ -456,9 +523,11 @@ hallucinated turn with `rollback`+resume, see [`examples/eve/`](examples/eve/)
 ## Scope
 
 This repo is the **local protocol and runtime**, and it is deliberately
-complete on its own — it works offline, on your machine, forever. Hosted
-collaboration, a visual evolution tree, AI-assisted branch merging and fleet
-observability are a separate concern and not part of this open-source core.
+complete on its own — it works offline, on your machine, forever. It already
+includes the multidimensional, **agent-driven merge** (`merge --reconcile`) that
+reconciles the run-time and design-time lines, and a local **visual evolution tree**
+(`agentvcs ui`). Hosted collaboration and fleet observability at scale are a separate
+concern and not part of this open-source core.
 
 ## License
 

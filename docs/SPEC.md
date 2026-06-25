@@ -65,6 +65,13 @@ normalizing to the same `trace` object — the on-disk format is provider-agnost
   `session`, `path`. It maps `session.started`→user, `message.completed`→assistant
   (`thinking`+text+`tool_use`), `action.result`→`tool_result`, and
   `turn.failed`→a visible failure marker.
+- **`anthropic-managed`** reads Anthropic Managed Agents' server-side **session event
+  stream** (`GET /v1/sessions/<id>/events?beta=true`, beta header
+  `managed-agents-2026-04-01`) — from an exported file or a live `auto_fetch` (stdlib
+  only). Optional keys: `session`, `agent_id`, `auto_fetch`, `base_url`, `api_key`,
+  `anthropic_dir`, `path`, `model`. It collapses `agent.thinking`/`agent.message`/
+  `agent.tool_use` into one assistant turn, maps `agent.tool_result`→`tool_result`,
+  and reconstructs the runtime frame from `span.model_request_end.model_usage`.
 
 All providers accept `redact` (a list of regexes scrubbed before storage) and
 `redact_defaults: false` (keep only user patterns); known secrets are scrubbed by
@@ -74,6 +81,20 @@ default. Adding a source is one module + one registry entry in
 A `models` entry may also carry `"auto": true`, in which case the `model` is
 filled from the model that actually produced the trace (so the pin can't drift
 from reality).
+
+**Optional dimensions.** The manifest may also carry, both off by default:
+
+- `"mode": "runtime"` — additionally capture the operational frame (budget, context
+  pressure, model routing, tool/subagent usage) as a `runtime` object per commit,
+  alongside an optional `"budget": { "ceiling_usd": …, "windows": {…}, "pricing": {…} }`.
+- `"corporate": { … }` — the digital statute of an autonomous legal entity
+  (`entity_type`, `jurisdiction`, `liability_limits.{max_inference_usd,
+  requires_human_for}`, `legal_representatives[]`). Because it lives in `agent.json`
+  it is versioned and (with a Soul) signed by the tree hash like any other file; the
+  policy gate and the signed *Libro de Actas* are produced by `agentvcs audit`.
+
+When a repo has a **Soul** (`agentvcs init --with-soul`), every commit is additionally
+stamped with `soul` (Ed25519 public id) and `signature` over its canonical content.
 
 ## 3. Objects
 
@@ -120,12 +141,16 @@ storage, so a file and a JSON object with the same bytes never collide.
   "message": "string",
   "author": "string",
   "timestamp": 1234567890,
-  "crystal": "<crystal-id>   (present only when state == crystallized)"
+  "crystal": "<crystal-id>   (present only when state == crystallized)",
+  "runtime": "<runtime-id>   (optional; present in runtime mode)",
+  "soul": "<ed25519-pubkey-hex>   (optional; present when signed)",
+  "signature": "<ed25519-sig-hex>  (optional; covers the commit minus this field)"
 }
 ```
 
-`parents` is a list to allow future merges (conciliación of live branches).
-The first parent is the linear ancestor `log` follows.
+`parents` is a list of one or more commit ids. The first parent is the linear
+ancestor `log` follows; a **merge** commit (see §5) has two — the run-time line and
+the design-time line it reconciled.
 
 ### 3.6 `crystal` — the frozen recipe
 Produced by `freeze`. A self-contained, deterministic replay of a fluid commit.
@@ -148,10 +173,43 @@ Produced by `freeze`. A self-contained, deterministic replay of a fluid commit.
   Re-running it is intended to be reproducible. A crystallized commit cannot be
   re-crystallized.
 
-## 5. Reserved for v1 (not yet implemented)
+## 5. Merge & reconciliation (implemented)
 
-- **merge / conciliation**: combining two live branches by evaluating their
-  recorded `metrics` and integrating the winning code + learnings. The `parents`
-  list and `metrics` field already reserve space for this.
+`agentvcs merge <branch>` reconciles two evolving lines — canonically the **run-time
+line** (what an autonomous system changed about itself in the field, captured by
+agentvcs) and the **design-time line** (a new release developed under version
+control). It is *multidimensional*: each dimension is reconciled in the way that
+fits it, rather than as one opaque text merge.
+
+1. **merge-base** — the lowest common ancestor over the full `parents` DAG.
+2. **code (tree)** — a three-way, line-level merge against the base. Clean hunks
+   auto-merge; true overlaps get git-style `<<<<<<< / ======= / >>>>>>>` conflict
+   markers written into the files. Add/delete vs modify is surfaced as a conflict.
+3. **models** — the model pins of both sides are unioned.
+4. **goal + trace** — the *semantic* dimensions are not merged textually. agentvcs
+   assembles a reconciliation **bundle** and, if `--reconcile CMD` is given, pipes it
+   as JSON to that command (an agent) on stdin:
+
+   ```json
+   { "base":   { "goal": "…", "trace": [ … ] },
+     "ours":   { "goal": "…", "trace": [ … ] },
+     "theirs": { "goal": "…", "trace": [ … ] } }
+   ```
+
+   The command returns `{ "goal": "string", "trace": [ … ], "notes": "string" }`,
+   which becomes the merged goal and trace. Without `--reconcile`, a mechanical
+   fallback unions the goals and concatenates the traces so the merge still completes.
+5. **commit** — a two-parent merge commit (first parent = HEAD/`ours`, second =
+   `theirs`). When conflicts remain, the merge reports them and exits non-zero unless
+   `--force` (which commits with the markers in place).
+
+This is the mechanism by which run-time evolution is **not lost** at the next
+release: an agent, not a textual heuristic, decides how the field-learned goal and
+reasoning combine with the freshly-developed code.
+
+## 6. Reserved for a later version (not yet implemented)
+
 - **goal lineage queries** over `goal.parent`.
 - **packed objects** for large histories.
+- **richer metric-weighted reconciliation** (auto-selecting the winning side per
+  hunk from recorded `metrics`/`eval` scores).
