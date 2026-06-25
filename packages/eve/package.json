@@ -1,0 +1,46 @@
+{
+  "name": "@agentvcs/eve",
+  "version": "0.1.0",
+  "description": "Zero-friction agentvcs trace bridge for Vercel eve — version, time-travel debug and audit your eve agents.",
+  "type": "module",
+  "main": "hook.ts",
+  "exports": {
+    ".": "./hook.ts",
+    "./hook": "./hook.ts"
+  },
+  "bin": {
+    "agentvcs-eve": "bin/cli.mjs"
+  },
+  "files": [
+    "hook.ts",
+    "bin/cli.mjs",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node --test"
+  },
+  "keywords": [
+    "eve",
+    "vercel",
+    "agentvcs",
+    "agents",
+    "version-control",
+    "tracing",
+    "observability"
+  ],
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/EvolvingAgentsLabs/agentvcs/tree/main/packages/eve",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/EvolvingAgentsLabs/agentvcs.git",
+    "directory": "packages/eve"
+  },
+  "peerDependencies": {
+    "eve": "*"
+  },
+  "peerDependenciesMeta": {
+    "eve": {
+      "optional": true
+    }
+  }
+}

@@ -6,6 +6,12 @@ conversation, not just the code. By the end you'll have committed across all fou
 dimensions, seen a dimensional diff, undone a bad iteration, and frozen a trusted
 solution into a deterministic recipe.
 
+> **Why this matters.** An autonomous agent rewrites its own skills, tools and
+> prompts *while it runs* — and a plain git release would erase that run-time
+> evolution. This tutorial captures it iteration by iteration; the final step points
+> to `agentvcs merge --reconcile`, which folds that run-time line back into a new
+> release **with an agent** so nothing learned in the field is lost.
+
 > **Two kinds of block below.** Lines you run in a normal shell are shown as
 > shell commands with their real output. Lines that happen *inside a Claude Code
 > session* are called out as **▶ In Claude Code** — that's where the agent writes
@@ -214,8 +220,20 @@ re-execute the frozen path deterministically.
 
 ## Next steps
 
+- **Reconcile run-time evolution with a new release.** When your team ships a new
+  version while the running system has evolved its own skills/tools/prompts, merge the
+  two lines so neither is lost — an agent decides how the goals and learnings combine:
+
+  ```bash
+  agentvcs checkout runtime          # the line agentvcs captured from the live system
+  agentvcs merge main --reconcile "claude -p reconcile"
+  ```
+
+  Code/skills/tools get a three-way merge; model pins are unioned; the `--reconcile`
+  agent reads a `{base, ours, theirs}` bundle of goals+traces and returns the merged
+  goal and trace. See [`docs/SPEC.md` §5](SPEC.md).
 - Secrets are scrubbed by default; tune with `"redact": [...]` or `"redact": false`.
-- The `trace` dimension is **pluggable** — `claude-code` is the first provider; the
-  same interface works for any tool that records a session. See
-  [`docs/SPEC.md`](SPEC.md) and the [trace-providers epic](https://github.com/EvolvingAgentsLabs/agentvcs/issues/1).
+- The `trace` dimension is **pluggable** — `claude-code`, `qwen-code`, `vercel-eve`
+  and `anthropic-managed` ship today, and the same interface works for any tool that
+  records a session. See [`docs/SPEC.md`](SPEC.md).
 - Full agent contract and error codes: [`docs/AGENT_MODE.md`](AGENT_MODE.md).
