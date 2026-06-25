@@ -19,6 +19,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from . import anthropic_managed
 from . import claude_code
 from . import qwen_code
 from . import vercel_eve
@@ -28,6 +29,7 @@ _PROVIDERS = {
     "claude-code": claude_code,
     "qwen-code": qwen_code,
     "vercel-eve": vercel_eve,
+    "anthropic-managed": anthropic_managed,
 }
 
 

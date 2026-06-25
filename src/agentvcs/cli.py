@@ -59,7 +59,10 @@ def _build_manifest(args) -> str | None:
     the repository scaffold its default file-trace template."""
     runtime_mode = getattr(args, "runtime", False)
     eve = getattr(args, "eve", False)
-    if not (args.claude_code or args.qwen_code or eve or runtime_mode):
+    managed = getattr(args, "anthropic_managed", False)
+    corporate = getattr(args, "corporate", None)
+    if not (args.claude_code or args.qwen_code or eve or managed
+            or runtime_mode or corporate):
         return None
     m: dict = {"goal": "Describe the high-level objective this agent fleet is pursuing.",
                "models": [], "state": "fluid", "metrics": {}}
@@ -72,13 +75,23 @@ def _build_manifest(args) -> str | None:
     elif eve:
         m["models"] = [{"provider": "anthropic", "model": "claude-opus-4-8"}]
         m["trace"] = {"provider": "vercel-eve", "auto": True, "model": "claude-opus-4-8"}
+    elif managed:
+        m["models"] = [{"provider": "anthropic", "auto": True}]
+        m["trace"] = {"provider": "anthropic-managed", "auto": True,
+                      "agent_id": "", "session": "", "auto_fetch": True}
     else:
         m["models"] = [{"provider": "anthropic", "model": "claude-opus-4-8",
                         "params": {"temperature": 1.0}}]
         m["trace"] = "traces/run.jsonl"
+    # The corporate layer needs the operational frame (to enforce spend ceilings),
+    # so a corporate repo runs in runtime mode and carries a signed statute.
+    if corporate:
+        from .corporate import default_block
+        m["corporate"] = default_block(corporate)
+        runtime_mode = True
     if runtime_mode:
         m["mode"] = "runtime"
-        m["budget"] = {"ceiling_usd": None}
+        m.setdefault("budget", {"ceiling_usd": None})
     return json.dumps(m, indent=2) + "\n"
 
 
@@ -89,6 +102,8 @@ def _trace_provider(args) -> str | None:
         return "qwen-code"
     if getattr(args, "eve", False):
         return "vercel-eve"
+    if getattr(args, "anthropic_managed", False):
+        return "anthropic-managed"
     return None
 
 
@@ -159,12 +174,17 @@ def cmd_new(args):
 
 
 def cmd_init(args):
-    with_soul = getattr(args, "with_soul", False)
+    corporate = getattr(args, "corporate", None)
+    # the corporate layer is built on signed actas — it implies the Soul/crypto layer
+    with_soul = getattr(args, "with_soul", False) or bool(corporate)
     repo = Repository.init(args.path, manifest=_build_manifest(args), with_soul=with_soul)
     provider = _trace_provider(args)
-    mode = "runtime" if getattr(args, "runtime", False) else "vcs"
+    mode = "runtime" if (getattr(args, "runtime", False) or corporate) else "vcs"
+    if corporate:
+        _write_corporate_docs(repo)
     data = {"repository": str(repo.dir), "manifest": "agent.json", "agents_md": "AGENTS.md",
-            "trace_provider": provider, "mode": mode, "soul": repo.soul_id()}
+            "trace_provider": provider, "mode": mode, "soul": repo.soul_id(),
+            "corporate": bool(corporate)}
     extra = ""
     if provider:
         extra += (f"\nWired the trace to the live {_color(provider, C_C)} session "
@@ -178,9 +198,88 @@ def cmd_init(args):
         extra += (f"\nCrypto layer {_color('on', C_C)}: born with a Soul "
                   f"({_soul.short(repo.soul_id())}); commits are signed and verified "
                   "freezes mint Soulbound Tokens. See `agentvcs soul`/`verify`.")
+    if corporate:
+        extra += (f"\nCorporate layer {_color('on', C_C)}: this instance operates as an "
+                  f"autonomous legal entity. Wrote {_color('LEGAL.md', C_B)} (the digital "
+                  "statute) — edit `agent.json`'s `corporate` block to set spending limits, "
+                  "reserved matters and legal representatives. Commits are actas; "
+                  "`agentvcs audit` produces the signed Libro de Actas Digital.")
     human = (f"Initialized empty agentvcs repository in {repo.dir}\n"
              f"Scaffolded {_color('agent.json', C_B)} (your goal/models/trace) and "
              f"{_color('AGENTS.md', C_B)} (agent operating manual)." + extra)
+    _out(args, data, human)
+
+
+def _write_corporate_docs(repo) -> None:
+    """Generate LEGAL.md (the digital statute) and append the corporate operating
+    section to AGENTS.md, from the just-written agent.json `corporate` block."""
+    from . import corporate as corp_mod
+    manifest = repo.read_manifest()
+    corp = corp_mod.config(manifest)
+    if not corp:
+        return
+    legal_path = repo.workdir / corp_mod.STATUTE_FILE
+    if not legal_path.exists():
+        legal_path.write_text(corp_mod.statute_markdown(corp, repo.soul_id()))
+    agents_path = repo.workdir / "AGENTS.md"
+    if agents_path.exists():
+        text = agents_path.read_text()
+        if "corporate layer" not in text:
+            agents_path.write_text(text + corp_mod.AGENTS_MD_CORPORATE)
+
+
+def cmd_audit(args):
+    """The Libro de Actas Digital: walk every commit (acta) and check it against the
+    mandate. The report is signed by the entity's Soul — proof for a regulator."""
+    from . import corporate as corp_mod
+    repo = Repository.open()
+    report = corp_mod.audit(repo)
+    if not report["corporate"]:
+        _out(args, report,
+             "this repo has no corporate statute (not initialized with --corporate)")
+        return
+    e, s = report["entity"], report["summary"]
+    verdict = (_color("COMPLIANT", C_G) if s["compliant"]
+               else _color("OUT OF MANDATE", C_R))
+    lines = [
+        f"{_color('Libro de Actas Digital', C_B)}  {verdict}",
+        f"  entity:   {e.get('entity_type') or '?'} ({e.get('jurisdiction') or '?'})"
+        + (f"  {e['legal_name']}" if e.get("legal_name") else ""),
+        f"  soul:     {report['soul'] or '(none)'}",
+        f"  actas:    {s['actas']}  within {_color(str(s['within_mandate']), C_G)}"
+        f"  breached {_color(str(s['breached']), C_R if s['breached'] else C_DIM)}",
+        f"  signed:   {s['signed']} valid / {s['unsigned']} unsigned / "
+        f"{_color(str(s['forged']) + ' forged', C_R) if s['forged'] else '0 forged'}",
+    ]
+    for a in report["actas"]:
+        if a["breaches"]:
+            kinds = ", ".join(b["kind"] for b in a["breaches"])
+            lines.append(f"  {_color('!', C_R)} {_short(a['commit'])} {a['message'][:50]}"
+                         f"  [{_color(kinds, C_R)}]")
+    lines.append(_color(f"  report signed: {bool(report.get('report_signature'))}", C_DIM))
+    _out(args, report, "\n".join(lines))
+
+
+def cmd_approve(args):
+    """A human legal representative authorizes a reserved-matter acta (board
+    resolution). Sign it with the representative's own Ed25519 seed to make it
+    cryptographically clear the breach; otherwise it is recorded as advisory only."""
+    from . import corporate as corp_mod
+    repo = Repository.open()
+    oid = repo._resolve(args.commit, expect="commit") if args.commit else repo.head_commit()
+    if not oid:
+        raise RepoError("nothing to approve (no commits yet)", code="NO_COMMITS")
+    approval = corp_mod.record_approval(
+        repo, oid, representative=getattr(args, "by", "") or "",
+        name=getattr(args, "name", "") or "", note=getattr(args, "note", "") or "",
+        seed_hex=getattr(args, "seed", None))
+    corp = corp_mod.config(repo.read_manifest()) or {}
+    valid = corp_mod.approval_is_valid(approval, corp)
+    data = {"commit": oid, "approval": approval, "valid": valid}
+    tag = _color("signed ✓ clears the acta", C_G) if valid else _color(
+        "advisory (unsigned or not a listed representative)", C_Y)
+    human = (f"Recorded authorization for acta {_short(oid)} "
+             f"by {corp_mod.short_rep(approval)}  {tag}")
     _out(args, data, human)
 
 
@@ -925,12 +1024,23 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--eve", "--vercel-eve", action="store_true", dest="eve",
                     help="wire agent.json's trace to a Vercel eve agent "
                          "(drop the bundled agent/hooks/agentvcs.ts into the eve project)")
+    sp.add_argument("--anthropic-managed", "--managed", action="store_true",
+                    dest="anthropic_managed",
+                    help="wire agent.json's trace to an Anthropic Managed Agents session "
+                         "(set the agent_id/session in agent.json's trace block)")
     sp.add_argument("--runtime", action="store_true", dest="runtime",
                     help="start in runtime mode (capture budget/context/routing frame)")
     sp.add_argument("--with-soul", "--enable-crypto", action="store_true", dest="with_soul",
                     help="opt in to the crypto/DeSoc layer: born with an Ed25519 Soul, "
                          "commits are signed, verified freezes mint Soulbound Tokens "
                          "(off by default — the core is a pure VCS)")
+    sp.add_argument("--corporate", "--dao", dest="corporate", nargs="?",
+                    const="AR_SAS_Auto", default=None, metavar="PROFILE",
+                    help="opt in to the corporate/legal layer: operate as an autonomous "
+                         "legal entity with a versioned digital statute (mandate, spending "
+                         "limits, reserved matters, legal representatives). Commits become "
+                         "signed actas; `agentvcs audit` is the Libro de Actas Digital. "
+                         "Implies --with-soul and runtime mode. Default profile: AR_SAS_Auto")
     sp.set_defaults(func=cmd_init)
 
     add("trace", help="show the current trace source (file or auto-discovered session)").set_defaults(func=cmd_trace)
@@ -1012,6 +1122,19 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("commit", nargs="?")
     sp.add_argument("--all", action="store_true", help="verify the whole history chain")
     sp.set_defaults(func=cmd_verify)
+
+    add("audit", help="Libro de Actas Digital: check every acta against the corporate "
+        "mandate and emit a Soul-signed compliance report").set_defaults(func=cmd_audit)
+
+    sp = add("approve", help="a human legal representative authorizes a reserved-matter acta")
+    sp.add_argument("commit", nargs="?", help="acta to authorize (default: HEAD)")
+    sp.add_argument("--by", default="", help="representative's Ed25519 public key (soul_id)")
+    sp.add_argument("--name", default="", help="representative's name (for the record)")
+    sp.add_argument("--seed", default=None, metavar="HEX",
+                    help="representative's Ed25519 seed (hex) — signs the approval so it "
+                         "cryptographically clears the acta; omit for an advisory note")
+    sp.add_argument("--note", default="", help="reason / context for the authorization")
+    sp.set_defaults(func=cmd_approve)
 
     sp = add("fleet", help="select a maximally-diverse fleet of souls (correlation discounting)")
     sp.add_argument("profiles", help="JSON file: [{\"soul\": id, \"profile\": {tag: weight}}, ...]")
