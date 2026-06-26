@@ -11,19 +11,25 @@ trust gate in ``crystallize.py`` / ``eval.py``). On a *verified* freeze an SBT i
 minted onto the instance's Soul — a signed record of "this Soul solved <goal> with
 score <s>, proven by commit <oid> whose trace is signed provenance."
 
-Why this can't be faked or stolen:
-  * The SBT references a **signed commit** — anyone can re-verify that commit's
-    Ed25519 signature against the Soul's public id with no secret (see soul.py).
-  * The SBT itself is **signed by the issuer**. By default the issuer is the Soul
-    itself (self-attested, but anchored to an independently-verifiable signed trace
-    + a reproducible eval). In production an external issuer — an orchestrator, an
-    eval oracle, an AgentHub/DAO — signs instead, and ``self_issued`` is False.
-  * Copy an agent's files and you copy its SBT *ledger*, but not its secret seed:
-    you cannot mint new SBTs in its name, and its existing ones still point at a
-    Soul id you cannot sign for. Reputation does not transfer with the bytes.
+What an SBT does and does NOT prove:
+  * **Provenance (proven).** The SBT references a **signed commit** — anyone can
+    re-verify that commit's Ed25519 signature against the Soul's public id with no
+    secret (see soul.py). And the SBT itself is signed: copy an agent's files and you
+    copy its SBT *ledger* but not its out-of-repo seed, so you cannot mint new SBTs in
+    its name. Provenance does not transfer with the bytes.
+  * **Reputation (only as strong as the issuer).** By default the issuer is the Soul
+    *itself* (``self_issued: True``), anchored to a reproducible eval — but that eval
+    is declared by the agent's own author, so a self-issued SBT is a *self-graded*
+    claim, not Sybil-resistant reputation (Souls are free to mint). Trustworthy
+    reputation needs an **external issuer** — an orchestrator, eval oracle, or
+    AgentHub/DAO — which signs with ``issuer_seed`` and sets ``self_issued: False``.
+    ``verify_sbt`` checks the signature; the *self vs external* distinction is what
+    tells a consumer how much to trust it.
 
-SBTs are **soulbound**: append-only, never transferred. They live in
-``.agentvcs/soul/sbt.jsonl`` (one JSON object per line).
+SBTs are **soulbound**: append-only, never re-pointed to another Soul without that
+Soul's signature. They live in ``.agentvcs/soul/sbt.jsonl`` (one JSON per line); the
+guarantee is verification-side (a tampered/forged token fails ``verify_sbt``), not
+storage-side.
 """
 from __future__ import annotations
 

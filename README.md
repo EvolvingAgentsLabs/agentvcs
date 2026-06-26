@@ -311,11 +311,14 @@ fungible. With the Soul layer on, agentvcs fixes that by giving each instance a
 cryptographic **Soul**.
 
 `agentvcs init --with-soul` births an **Ed25519 keypair**. The public key is the
-agent's identity (its `soul_id`); the secret seed never leaves `.agentvcs/soul/`
-(like an SSH key). Every `commit` is then **signed**, so the agent's history of
-reasoning traces becomes a provenance chain *nobody can forge* without the seed —
-yet *anyone can verify* with only the public id. (Without `--with-soul`, commits
-are simply unsigned and `verify` reports them as such.)
+agent's identity (its `soul_id`, written to `.agentvcs/soul/soul.pub`); the secret
+seed is stored **outside the repo** — under `~/.config/agentvcs/souls/<soul_id>/`
+(override with `AGENTVCS_SOUL_HOME`), exactly like an SSH key in `~/.ssh`. So copying
+a repo's files carries the public id and the SBT ledger but **never the seed** — a
+copy cannot sign in the Soul's name. Every `commit` is then **signed**, so the
+agent's signed history becomes provenance *nobody can forge* without the seed, yet
+*anyone can verify* with only the public id. (Without `--with-soul`, commits are
+simply unsigned and `verify` reports them as such.)
 
 ```bash
 agentvcs verify --all     # check the Ed25519 provenance of every commit (and SBTs)
@@ -324,9 +327,13 @@ agentvcs verify --all     # check the Ed25519 provenance of every commit (and SB
 #   PROVENANCE OK
 ```
 
-Tamper with a signed commit's content and `verify` flags it `FORGED`. This realizes
-*Decentralized Society: Finding Web3's Soul* (Weyl, Ohlhaver, Buterin): the instance
-is the Soul, and its signed traces are the captured line of its life.
+Tamper with a signed commit's content and `verify` flags it `FORGED`. This implements
+the **provenance and diversity primitives** of *Decentralized Society: Finding Web3's
+Soul* (Weyl, Ohlhaver, Buterin): the instance is the Soul, and its signed traces are
+the captured line of its life. One honest caveat about *scope*: signing proves
+**provenance** ("Soul X authored these bytes"), not Sybil-resistant **reputation** —
+Souls are free to mint, so "X is *competent*" is only as trustworthy as who attests it
+(see SBTs below).
 
 **Soulbound Tokens (SBTs).** A *verified* `freeze` is a proven accomplishment, so it
 **mints a non-transferable credential** onto the Soul — *Verified Machine Experience*.
@@ -335,21 +342,27 @@ is the Soul, and its signed traces are the captured line of its life.
 agentvcs soul            # the agent's CV: its identity + the SBTs it has earned
 #   soul:dda8b170  (soul_id dda8b170…)
 #   signed history: 2/2 commits
-#   soulbound tokens: 1
-#     ◆ implement, correct, react, frontend  score 1.0  (d85aafc653db)
+#   soulbound tokens: 1 (0 externally attested)
+#     ◆ implement, correct, react, frontend  score 1.0  · self-attested  (d85aafc653db)
 ```
 
-Copy the files and you copy the *ledger* but not the secret seed: you can mint nothing
-in its name, and its tokens still point at a Soul id you can't sign for. **Reputation
-doesn't move with the bytes.** By default SBTs are self-attested (anchored to a
-verifiable signed commit + a reproducible eval); an external oracle (e.g. SkillOpt —
-see `examples/skillopt-soul/`) can issue them instead.
+Copy the files and you copy the *ledger* but not the seed: you can mint nothing in its
+name, and its tokens still point at a Soul id you can't sign for. **Provenance doesn't
+move with the bytes.** But note the trust boundary: by default SBTs are **self-attested**
+(`self_issued: true`) — anchored to a verifiable signed commit + a reproducible eval,
+but the eval is the agent's *own*, so a self-issued token is a self-graded claim, not
+external reputation. `soul` and `verify` label each token *self-attested* vs *issued by
+<soul>* so a consumer knows how much to trust it. For real reputation, an **external
+issuer** — an orchestrator, an eval oracle, an AgentHub/DAO (e.g. SkillOpt — see
+`examples/skillopt-soul/`) — signs the SBT instead (`self_issued: false`).
 
 **Plural Intelligence.** Deploying 100 clones of your best agent is a *monoculture* —
-they share a Soul, so they fail together. `agentvcs fleet` applies DeSoc's
-**correlation discounting**: from a pool of Souls (described by their SBT skill
-profiles) it selects the maximally *diverse* team, so a fixed budget covers the most
-ground.
+they share the same **skills**, so they fail together. `agentvcs fleet` applies DeSoc's
+**correlation discounting**: from a pool of agents described by their **skill profiles**
+(aggregated from their SBTs) it selects the maximally *diverse* team, so a fixed budget
+covers the most ground. The selection math is crypto-independent — it runs on skill
+vectors; the Soul is what makes those profiles **non-forgeable**, not what computes the
+diversity.
 
 ```bash
 agentvcs fleet souls.json --size 3 --discount 1.0

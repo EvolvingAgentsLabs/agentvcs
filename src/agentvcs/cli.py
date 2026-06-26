@@ -914,14 +914,20 @@ def cmd_soul(args):
         "skill_profile": profile,
     }
     top = sorted(profile.items(), key=lambda kv: -kv[1])[:6]
+    ext_n = sum(1 for s in sbts if not s.get("self_issued", True))
+    data["sbts_externally_attested"] = ext_n
     lines = [f"{_color(soul_mod.short(sid), C_B)}  ({_color('soul_id', C_DIM)} {sid})",
              f"  signed history: {signed}/{len(history)} commits",
-             f"  soulbound tokens: {_color(str(len(sbts)), C_G)}"]
+             f"  soulbound tokens: {_color(str(len(sbts)), C_G)}"
+             + (_color(f" ({ext_n} externally attested)", C_DIM) if sbts else "")]
     for s in sbts[-5:]:
         sk = ", ".join(s.get("skill", [])[:4]) or "(general)"
         sc = s.get("score")
+        att = (_color("self-attested", C_DIM) if s.get("self_issued", True)
+               else _color(f"issued by {soul_mod.short(s.get('issuer'))}", C_G))
         lines.append(f"    {_color('◆', C_G)} {sk}"
                      + (f"  score {sc}" if sc is not None else "")
+                     + f"  · {att}"
                      + _color(f"  ({_short(s.get('commit'))})", C_DIM))
     if top:
         lines.append("  skills: " + ", ".join(f"{k}×{v:g}" for k, v in top))
@@ -950,9 +956,11 @@ def cmd_verify(args):
         checked.append({"commit": oid, "soul": c.get("soul"), "status": status})
     sbts = read_sbts(repo)
     sbt_ok = sum(1 for s in sbts if verify_sbt(s))
+    self_n = sum(1 for s in sbts if s.get("self_issued", True))
     all_ok = all(x["status"] in ("valid", "unsigned") for x in checked) and sbt_ok == len(sbts)
     data = {"ok_chain": all_ok, "commits": checked,
-            "sbts_total": len(sbts), "sbts_valid": sbt_ok}
+            "sbts_total": len(sbts), "sbts_valid": sbt_ok,
+            "sbts_self_attested": self_n}
     lines = []
     for x in checked:
         c = (C_G if x["status"] == "valid" else
@@ -960,7 +968,9 @@ def cmd_verify(args):
         lines.append(f"  {_color(x['status'].ljust(8), c)} {_short(x['commit'])}"
                      + (f"  {soul_mod.short(x['soul'])}" if x["soul"] else ""))
     if sbts:
-        lines.append(f"  SBTs: {_color(f'{sbt_ok}/{len(sbts)} signatures valid', C_G if sbt_ok==len(sbts) else C_R)}")
+        lines.append(f"  SBTs: {_color(f'{sbt_ok}/{len(sbts)} signatures valid', C_G if sbt_ok==len(sbts) else C_R)}"
+                     + (_color(f"  ({self_n} self-attested — provenance, not external reputation)", C_DIM)
+                        if self_n else ""))
     verdict = _color("PROVENANCE OK", C_G) if all_ok else _color("PROVENANCE FAILED", C_R)
     lines.append(verdict)
     _out(args, data, "\n".join(lines))

@@ -108,12 +108,16 @@ the trust they represent. Inspired by *Decentralized Society: Finding Web3's Sou
 we give each agent instance a cryptographic **Soul**.
 
 On `agentvcs init`, the instance is born with an **Ed25519 keypair**. The 32-byte
-public key *is* the agent's identity — its `soul_id` — and is safe to publish. The
-secret seed lives outside the versioned tree (like an SSH key) and never leaves the
-instance. Every commit is then **signed** over the canonical encoding of its content,
-with the `soul_id` bound into the signed bytes. The result is a provenance chain that
-**nobody can forge** without the secret seed, yet **anybody can verify** holding only
-the public `soul_id`.
+public key *is* the agent's identity — its `soul_id` — and is safe to publish; it is
+written into the repo (`.agentvcs/soul/soul.pub`). The secret seed is stored **outside
+the repository** — under `~/.config/agentvcs/souls/<soul_id>/` (overridable via
+`AGENTVCS_SOUL_HOME`), exactly like an SSH key in `~/.ssh`. This is what makes the
+guarantee real rather than aspirational: copying a repo's files carries the public id
+and the token ledger, but **not the seed**, so a copy cannot sign in the Soul's name.
+Every commit is then **signed** over the canonical encoding of its content, with the
+`soul_id` bound into the signed bytes. The result is a provenance chain that **nobody
+can forge** without the secret seed, yet **anybody can verify** holding only the public
+`soul_id`.
 
 The choice of *asymmetric* signatures is essential and deliberate. Symmetric HMAC
 would let an agent sign its own history, but verification would require sharing the
@@ -139,17 +143,23 @@ onto the instance's Soul:
 > *Soul `dda8b170…` solved "ship a verified React widget" with score 1.0, proven by
 > commit `d85aafc6…`, whose reasoning trace is signed provenance.*
 
-Three properties make this credential robust:
+Three properties make this credential robust — but with one honest boundary between
+*provenance* (which is cryptographic) and *reputation* (which is social):
 
 1. **It references a signed commit.** Anyone can re-verify that commit's Ed25519
-   signature against the Soul's public id, with no secret.
-2. **The SBT itself is signed by its issuer.** By default the issuer is the Soul
-   (self-attested, but anchored to an independently-verifiable signed trace *and* a
-   reproducible eval). In production the issuer is external — an orchestrator, an
-   eval oracle, an AgentHub or DAO — and `self_issued` is `false`.
-3. **It is soulbound.** Copy an agent's files and you copy its SBT *ledger*, but not
-   its secret seed: you can mint nothing in its name, and its existing tokens still
-   point at a Soul id you cannot sign for. Reputation does not move with the bytes.
+   signature against the Soul's public id, with no secret. This is provenance.
+2. **The SBT itself is signed by its issuer — and the issuer matters.** By default the
+   issuer is the Soul *itself* (`self_issued: true`), anchored to a signed trace and a
+   reproducible eval — but that eval is the agent's own, so a self-issued token is a
+   *self-graded* claim, not Sybil-resistant reputation (Souls are free to mint). Real
+   reputation requires an **external issuer** — an orchestrator, an eval oracle, an
+   AgentHub or DAO — which signs with its own key and sets `self_issued: false`.
+   `verify` checks the signature; the *self vs external* label is what tells a consumer
+   how much to trust the claim.
+3. **It is soulbound.** Copy an agent's files and you copy its SBT *ledger*, but not its
+   out-of-repo seed: you can mint nothing in its name, and its existing tokens still
+   point at a Soul id you cannot sign for. **Provenance** does not move with the bytes;
+   trustworthy reputation is bounded by who issued the tokens (point 2).
 
 This bootstraps an economy of digital workers. An agent holding 50 SBTs for "complex
 React refactoring", each tied to a verified commit, is *mathematically* more
@@ -165,14 +175,19 @@ lived experience, not their own marketing.
 As local inference (Gemma, Llama, Qwen on commodity hardware) drives marginal cost
 toward zero, the dominant strategy becomes brute force: deploy a large swarm to solve
 a problem by Monte Carlo. But here lies the trap that *DeSoc* §4.5/§5.2 anticipates:
-**a monoculture collapses.** A hundred exact clones of your best agent share a Soul —
-the same SBTs, the same prompt weights, the same blind spots — and so they
-hallucinate *together*. The swarm's effective size is far below its head count.
+**a monoculture collapses.** A hundred exact clones of your best agent share the same
+**skills** — the same crystallized recipes, the same prompt weights, the same blind
+spots — and so they hallucinate *together*. The swarm's effective size is far below its
+head count.
 
-DeSoc's antidote is **correlation discounting**: measure how correlated two Souls are
-and discount redundant agreement, rewarding cooperation across genuinely different
-lived experience. We apply it directly to fleet selection. Each candidate Soul is
-described by the skill→competence vector built from its SBTs. An orchestrator with a
+DeSoc's antidote is **correlation discounting**: measure how correlated two agents'
+*skill profiles* are and discount redundant agreement, rewarding cooperation across
+genuinely different lived experience. We apply it directly to fleet selection. Each
+candidate is described by the skill→competence vector built from its SBTs. Note that
+this selection is **crypto-independent** — it is cosine geometry over skill vectors,
+and would run on any honest skill profile; the Soul layer is what makes those profiles
+**non-forgeable** (each tag is backed by a signed, verifiable commit), not what
+computes the diversity. An orchestrator with a
 budget of *N* agents does not pick the *N* strongest; it greedily assembles the fleet
 that maximizes total competence *after discounting overlap*:
 
