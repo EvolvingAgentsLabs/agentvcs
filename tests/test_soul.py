@@ -35,11 +35,50 @@ def test_ed25519_sign_verify_and_tamper():
 # --------------------------------------------------------------- soul birth
 def test_init_births_a_soul(tmp_path):
     repo = Repository.init(tmp_path, with_soul=True)
+    from agentvcs import soul as soul_mod
     sid = repo.soul_id()
     assert sid and len(sid) == 64                      # 32-byte hex pubkey
-    # the secret seed exists but lives outside the versioned tree
-    assert (repo.dir / "soul" / "seed.secret").exists()
+    # the public id lives in the repo...
     assert (repo.dir / "soul" / "soul.pub").read_text().strip() == sid
+    # ...but the secret seed lives OUTSIDE the repo, so copying the repo's files
+    # cannot carry the key.
+    assert not (repo.dir / "soul" / "seed.secret").exists()
+    assert soul_mod._external_seed_path(sid).exists()
+    # signing still works because the seed is resolvable on this machine
+    assert soul_mod.sign_bytes(repo.dir, b"hello") is not None
+
+
+def test_copying_repo_files_does_not_carry_the_seed(tmp_path, monkeypatch):
+    """The core guarantee: copy a repo's files and you get the public id + ledger,
+    but NOT the out-of-repo seed — so the copy cannot sign in the Soul's name."""
+    import shutil
+    from agentvcs import soul as soul_mod
+
+    repo = Repository.init(tmp_path / "orig", with_soul=True)
+    sid = repo.soul_id()
+    assert soul_mod.sign_bytes(repo.dir, b"x") is not None   # seed present locally
+
+    # someone copies ONLY the repo's files to another machine; the seed store does not travel
+    shutil.copytree(tmp_path / "orig", tmp_path / "copy")
+    monkeypatch.setenv("AGENTVCS_SOUL_HOME", str(tmp_path / "empty-home"))
+
+    copied = Repository(tmp_path / "copy")
+    assert copied.soul_id() == sid                            # public id copied
+    assert not (copied.dir / "soul" / "seed.secret").exists() # no in-repo seed
+    assert soul_mod.sign_bytes(copied.dir, b"x") is None      # cannot sign — fails closed
+
+
+def test_legacy_in_repo_seed_still_works(tmp_path, monkeypatch):
+    """Backward-compat: Souls born before relocation kept the seed in .agentvcs/soul/;
+    those must keep signing."""
+    from agentvcs import soul as soul_mod
+    repo = Repository.init(tmp_path, with_soul=True)
+    sid = repo.soul_id()
+    # emulate a legacy layout: move the seed back into the repo, empty the external store
+    seed_hex = soul_mod._external_seed_path(sid).read_text()
+    (repo.dir / "soul" / "seed.secret").write_text(seed_hex)
+    monkeypatch.setenv("AGENTVCS_SOUL_HOME", str(tmp_path / "empty-home"))
+    assert soul_mod.sign_bytes(repo.dir, b"x") is not None    # legacy fallback path
 
 
 def test_two_repos_get_distinct_souls(tmp_path):
