@@ -21,6 +21,7 @@ from pathlib import Path
 
 from . import anthropic_managed
 from . import claude_code
+from . import odyssey
 from . import qwen_code
 from . import vercel_eve
 
@@ -30,6 +31,7 @@ _PROVIDERS = {
     "qwen-code": qwen_code,
     "vercel-eve": vercel_eve,
     "anthropic-managed": anthropic_managed,
+    "odyssey": odyssey,
 }
 
 

@@ -85,6 +85,30 @@ def test_read_rollbacks_empty(tmp_path):
     assert repo.read_rollbacks() == []
 
 
+def test_rollback_reason_override(tmp_path):
+    """rollback(reason=...) records the caller's reason in the ledger; without
+    it, the reason falls back to the restored commit's goal text (unchanged)."""
+    repo = setup_repo(tmp_path)
+    commit_with(repo, tmp_path, goal="goal A", message="A")
+    commit_with(repo, tmp_path, goal="goal B", file_content="v2\n", message="B")
+
+    info = repo.rollback(reason="success_rate 0.4 < 0.75 on patrol; revert skill v3")
+    entry = repo.read_rollbacks()[-1]
+    assert entry["reason"] == "success_rate 0.4 < 0.75 on patrol; revert skill v3"
+    # the return dict still exposes the restored goal for context
+    assert info["goal"] == "goal A"
+
+
+def test_rollback_reason_defaults_to_goal(tmp_path):
+    """Omitting reason keeps the historical behavior: reason == restored goal."""
+    repo = setup_repo(tmp_path)
+    commit_with(repo, tmp_path, goal="goal A", message="A")
+    commit_with(repo, tmp_path, goal="goal B", file_content="v2\n", message="B")
+
+    repo.rollback()
+    assert repo.read_rollbacks()[-1]["reason"] == "goal A"
+
+
 # ------------------------------------------------------------------ log --reasoning JSON
 
 def _run_log_reasoning(tmp_path, extra_args=None):
