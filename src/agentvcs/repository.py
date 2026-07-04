@@ -180,11 +180,16 @@ class Repository:
         raise RepoError(f"cannot resolve '{ref}'", code="BAD_REF")
 
     # -------------------------------------------------------------- rollback
-    def rollback(self, target: str | None = None) -> dict:
+    def rollback(self, target: str | None = None, reason: str | None = None) -> dict:
         """The agent panic button. Restore the full multidimensional state
         (code + goal + models + trace) to a prior commit and move the current
         branch there. The previous head is saved to ROLLBACK_HEAD so the undo
-        is itself reversible — nothing is ever lost from the object store."""
+        is itself reversible — nothing is ever lost from the object store.
+
+        ``reason`` records *why* the rollback happened in the durable ledger
+        (e.g. an eval regression: "success_rate 0.4 < 0.75"). When omitted it
+        falls back to the restored commit's goal text, preserving prior
+        behavior byte-for-byte."""
         head = self.head_commit()
         if head is None:
             raise RepoError("no commits to roll back", code="NO_COMMITS")
@@ -207,7 +212,7 @@ class Repository:
                 "from": head,
                 "to": target,
                 "timestamp": int(time.time()),
-                "reason": goal_text,
+                "reason": reason if reason is not None else goal_text,
             }, ensure_ascii=False) + "\n")
         return {
             "restored_to": target,
