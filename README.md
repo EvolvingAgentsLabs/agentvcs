@@ -5,8 +5,7 @@
 </p>
 
 [![CI](https://github.com/EvolvingAgentsLabs/agentvcs/actions/workflows/ci.yml/badge.svg)](https://github.com/EvolvingAgentsLabs/agentvcs/actions/workflows/ci.yml)
-[![PyPI](https://img.shields.io/pypi/v/agentvcs.svg)](https://pypi.org/project/agentvcs/)
-[![Python](https://img.shields.io/pypi/pyversions/agentvcs.svg)](https://pypi.org/project/agentvcs/)
+![Python](https://img.shields.io/badge/python-3.10%20%E2%80%93%203.13-blue.svg)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
 **Version control for software that *evolves while it runs*.**
@@ -16,6 +15,11 @@
 > your releases, intelligently.**
 
 ![agentvcs: a v1 agent splits into a run-time line that evolves itself autonomously and a design-time line developed under version control, then agentvcs merges both back into one reconciled v4](docs/media/agentvcs-evolution.gif)
+
+<p align="center">
+  <img src="docs/media/agentvcs-merge.gif" alt="Two branches of commits advance independently — one in ink, one in indigo — then converge on a diamond that seals the merge, and a single thicker line continues carrying nodes from both" width="640">
+</p>
+<p align="center"><sub>The merge, in seven seconds. <a href="docs/media/agentvcs-merge.mp4">MP4</a> · generated with <code>gemini-omni-flash-preview</code></sub></p>
 
 ## The problem
 
@@ -107,7 +111,8 @@ Without `--reconcile`, agentvcs falls back to a safe mechanical union.
 ## Install
 
 ```bash
-pip install agentvcs        # or: pipx install agentvcs  (a real binary on PATH)
+git clone https://github.com/EvolvingAgentsLabs/agentvcs
+cd agentvcs && pip install -e .   # not on PyPI yet
 ```
 
 > `avcs` is a built-in shorthand for `agentvcs` — every command works with either name.
