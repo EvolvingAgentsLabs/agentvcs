@@ -108,6 +108,22 @@ Without `--reconcile`, agentvcs falls back to a safe mechanical union.
 > own skill and spawns a sub-agent at run-time while the team evolves the same files in
 > git: `bash examples/eve-evolve-merge/demo.sh`.
 
+## How it compares
+
+An agent's work spans three ops disciplines, and today each lives in a **separate** tool:
+code in **git** (DevOps), the reasoning trace in **LangSmith/Langfuse** (LLMOps), the model
+version in **MLflow/W&B** (MLOps). None of them versions those dimensions *together, at the
+moment the agent changed them* — so a Voyager-style skill learned mid-run is a loose JSON
+file detached from the code, goal, model and reasoning behind it, and the next release
+overwrites it.
+
+agentvcs is the **one atomic commit** across all of them — plus a **semantic** merge that a
+plain `git merge` can't do (it reconciles goal and reasoning, not just text lines). It
+**complements** git rather than replacing it: `agentvcs init` in an existing repo, keep your
+git history and your LLMOps dashboards, and use agentvcs for the thing they can't —
+versioning and reconciling the four dimensions as one record. Full breakdown, and an honest
+"what it's *not*", in [`docs/COMPARISON.md`](docs/COMPARISON.md).
+
 ## Install
 
 ```bash
@@ -256,6 +272,8 @@ recover programmatically. An **MCP server** ships too: `claude mcp add agentvcs 
   · reproduction guide [`docs/DEMOS.md`](docs/DEMOS.md)
 - **Tutorial** — build a tiny bot with Claude Code and version every iteration:
   [`docs/TUTORIAL.md`](docs/TUTORIAL.md)
+- **How it compares** — where agentvcs sits next to git, LangSmith/Langfuse and MLflow/W&B,
+  and what it deliberately is *not*: [`docs/COMPARISON.md`](docs/COMPARISON.md)
 - **Spec** — the on-disk format (content-addressed objects, like git's, with `commit` /
   `tree` / `goal` / `modelpin` / `trace` / `crystal` types): [`docs/SPEC.md`](docs/SPEC.md)
 - **Examples** — every demo indexed in [`examples/README.md`](examples/README.md), incl.
@@ -264,8 +282,9 @@ recover programmatically. An **MCP server** ships too: `claude mcp add agentvcs 
 ## Scope
 
 This repo is the **local protocol and runtime** — complete on its own, offline, forever.
-Hosted collaboration and fleet observability at scale are a separate concern, not part of
-this open-source core.
+It **complements** your existing stack (git, LangSmith/Langfuse, MLflow/W&B) rather than
+replacing any of it — see [`docs/COMPARISON.md`](docs/COMPARISON.md). Hosted collaboration
+and fleet observability at scale are a separate concern, not part of this open-source core.
 
 ## License
 

@@ -75,7 +75,7 @@ versions; messages may change.
 - `diff` → `a`, `b`, `diff` (per-dimension; `null` where unchanged)
 - `branch` → list `{current, branches[]}` or `{branch, commit}` when creating
 - `checkout` → `ref`, `commit`
-- `rollback` → `restored_to`, `previous_head`, `goal`, `state`
+- `rollback` → `restored_to`, `previous_head`, `goal`, `state`, `reason` (the justification recorded in the durable ledger; `--reason TEXT` sets it, else it defaults to the restored commit's goal)
 - `freeze` → `commit`, `source`, `state`, `recipe_path`
 - `replay` → `commit`, `source_commit`, `goal`, `models`, `executed`, `steps[]` (each `{index, step[, exit_code, output]}`)
 - `ui` → `url`, `host`, `port` (printed once when the dashboard binds, then it keeps serving until interrupted)
