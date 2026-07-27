@@ -163,6 +163,16 @@ def tool_merge(args):
     return result
 
 
+def tool_price(args):
+    from .dynamics import price
+    return price(_repo(), since=args.get("since"), trait=args.get("trait", "score"))
+
+
+def tool_health(args):
+    from .dynamics import health
+    return health(_repo())
+
+
 _REF = {"type": "string", "description": "branch name, full id, or short prefix"}
 TOOLS = [
     {"name": "avcs_log", "description": "List the evolution history (commits with state, goal, message).",
@@ -212,6 +222,13 @@ TOOLS = [
          "reconcile": {"type": "string", "description": "command to pipe reconciliation bundle to"},
          "force": {"type": "boolean", "description": "commit even when conflicts exist"}},
          "required": ["branch"]}, "_fn": tool_merge},
+    {"name": "avcs_price", "description": "Is my self-improvement loop working? Price-equation decomposition over the commit graph: how much of the trait change came from selecting between branches (Cov(w,z)) vs editing within a lineage (E[w·Δz]), plus the Eigen error-catastrophe verdict (degradation outrunning selection). trait = score | size | cost.",
+     "inputSchema": {"type": "object", "properties": {
+         "since": {**_REF, "description": "only decompose commits descended from this ref"},
+         "trait": {"type": "string", "enum": ["score", "size", "cost"],
+                   "description": "the trait to track (default: eval score)"}}}, "_fn": tool_price},
+    {"name": "avcs_health", "description": "Evolution-health rollup: Price verdict + critical-slowing-down early warning (rising variance/autocorrelation in the eval-score series) + Muller's-ratchet load on long unmerged branches. Returns a flat warnings[] to act on.",
+     "inputSchema": {"type": "object", "properties": {}}, "_fn": tool_health},
 ]
 _TOOL_FNS = {t["name"]: t["_fn"] for t in TOOLS}
 _PUBLIC_TOOLS = [{k: v for k, v in t.items() if not k.startswith("_")} for t in TOOLS]

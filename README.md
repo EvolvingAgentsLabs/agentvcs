@@ -161,6 +161,32 @@ A flaky check (`"runs": 5`) must pass **all** runs; `freeze --force` past a fail
 the recipe `verified: false` — never a silent lie. Secrets in the captured trace are
 `[REDACTED]` by default.
 
+## Is the evolution actually working? (`price` / `health`)
+
+Because agentvcs owns the whole lineage — every variant as a commit with an eval
+score attached — it can answer something a code VCS never could: *is this
+self-improvement loop still net-positive?* `agentvcs price` runs the **Price
+equation** over the commit graph and splits the gain into **selection** (choosing
+well between branches, `Cov(w,z)`) vs **transmission** (editing well within a
+lineage, `E[w·Δz]`). When the transmission term goes negative and outruns selection,
+you've hit the **Eigen error catastrophe** — the loop is losing information faster
+than selection recovers it — and `price` says so, without you estimating a single
+mutation rate.
+
+```bash
+agentvcs price                 # selection vs transmission + the error-catastrophe verdict
+agentvcs health                # + critical-slowing-down early warning + Muller's-ratchet load
+```
+
+`health` folds in two more signals over data already on disk: **critical slowing
+down** (rising variance/autocorrelation in the score series flags a collapse before
+the mean moves) and **Muller's ratchet** (a long, unmerged branch is a condemned
+asexual lineage — `merge` is the recombination that reconstitutes it). Declare an
+`"editable": ["skills/", "prompts/…"]` surface in `agent.json` and the error bound is
+computed against *that* size, not the whole spec — the engineering answer to "how
+much can I let the agent rewrite itself?". Design notes:
+[`docs/EVOLUTIONARY_DYNAMICS.md`](docs/EVOLUTIONARY_DYNAMICS.md).
+
 ## The runtime your agent can't see
 
 agentvcs vacuums your session log, so it can reconstruct the operational frame your closed
@@ -190,6 +216,7 @@ and `anthropic-managed` sessions. Wire it into Claude Code once with
 | `agentvcs merge BRANCH` | multidimensional merge; `--reconcile CMD` hands goal+trace+conflicts to an agent; `--target-goal` directs it |
 | `agentvcs rollback [REF]` | undo: restore the full prior state (the panic button) |
 | `agentvcs eval` / `freeze` / `replay` / `recall` | the trust gate: prove → crystallize → re-run → find |
+| `agentvcs price` / `health` | is the evolution *working*: selection-vs-transmission + error-catastrophe & ratchet warnings |
 | `agentvcs runtime` / `budget` / `context` / `statusline` / `watch` | the operational frame your runtime hides |
 | `agentvcs ui` | serve a local web dashboard to *watch* the evolution |
 | `agentvcs soul` / `verify` / `fleet` | optional Soul/DeSoc layer (see below) |

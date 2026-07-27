@@ -1,8 +1,10 @@
-# Evolutionary dynamics for agentvcs — a design plan
+# Evolutionary dynamics for agentvcs — design & status
 
 *A mapping of the "control-theory / biophysics for harnesses" brainstorm onto
-agentvcs specifically, with a phased build plan. This is a design note, not shipped
-behavior.*
+agentvcs specifically. Tiers 1–2 are **shipped** (`src/agentvcs/dynamics.py`,
+commands `agentvcs price` / `agentvcs health`, ratchet warnings on `agentvcs
+branch`, MCP tools `avcs_price` / `avcs_health`); Tier 3 is documented and partly
+deferred by design (see below).*
 
 ## The one distinction that scopes everything
 
@@ -242,3 +244,29 @@ commit graph).
 Order 1→5 is strict-value-first: each step is independently useful, none blocks on the
 next, and steps 1–2 deliver the headline capability — *a VCS that can measure whether an
 agent's self-modification is net-positive, from data it already stores.*
+
+## Status (shipped)
+
+Steps 1–5 above are implemented in `src/agentvcs/dynamics.py` (pure stdlib, no new
+stored-object shapes, `--json` throughout):
+
+- **`agentvcs price [--since REF] [--trait score|size|cost]`** — Price decomposition
+  (`selection` = `Cov(w,z)`, `transmission` = `E[w·Δz]`, fitness = offspring count)
+  with the `ERROR_CATASTROPHE` verdict folded in, and `l_total`/`l_effective` from the
+  optional `agent.json` `"editable"` surface.
+- **`agentvcs health`** — rollup of Price + critical-slowing-down (`slowing()`, lag-1
+  autocorrelation + variance trend over the eval-score series) + Muller's-ratchet load
+  (`ratchet()`), with a flat `warnings[]`.
+- **`agentvcs branch`** now carries a per-branch `ratchet` risk and surfaces
+  merge-me warnings for long unmerged lineages.
+- The slowing signal also rides in `agentvcs watch`'s panel.
+- MCP tools **`avcs_price`** / **`avcs_health`**; new stable error code **`BAD_TRAIT`**.
+- Architecture notes landed where they belong: the kinetic-proofreading / hard-reject
+  argument in `eval.py`, the replicator connection in `plural.py`.
+
+**Deferred by design (Tier 3, not shipped):** an `infobits` estimator of
+`I(context; action)` and the branching-process `R₀` memory-poisoning bound. Both
+govern the harness/retrieval/memory layers rather than the commit graph, and shipping
+a soft mutual-information number computed from heterogeneous traces would mislead more
+than it informs. They stay documented as future work for the sibling components, per
+the scope boundary above — not built into the VCS core.

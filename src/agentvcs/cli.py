@@ -633,10 +633,25 @@ def cmd_branch(args):
     if not args.name:
         current = repo.current_branch()
         branches = repo.branches()
+        # Muller's-ratchet check: flag long unmerged lineages worth recombining.
+        from . import dynamics
+        rt = dynamics.ratchet(repo)
+        risk = {e["branch"]: e["risk"] for e in rt.get("branches", [])}
         data = {"current": current,
-                "branches": [{"name": n, "commit": o} for n, o in sorted(branches.items())]}
-        lines = [f"{'* ' if n == current else '  '}{n} {_color(_short(o), C_DIM)}"
-                 for n, o in sorted(branches.items())]
+                "branches": [{"name": n, "commit": o, "ratchet": risk.get(n, "none")}
+                             for n, o in sorted(branches.items())],
+                "warnings": rt.get("warnings", [])}
+        lines = []
+        for n, o in sorted(branches.items()):
+            flag = ""
+            if risk.get(n) == "high":
+                flag = _color("  ⚠ ratchet", C_R)
+            elif risk.get(n) == "medium":
+                flag = _color("  ~ diverged", C_Y)
+            lines.append(f"{'* ' if n == current else '  '}{n} "
+                         f"{_color(_short(o), C_DIM)}{flag}")
+        for w in rt.get("warnings", []):
+            lines.append(_color(f"  ⚠ {w}", C_Y))
         _out(args, data, "\n".join(lines))
         return
     oid = repo.branch(args.name)
@@ -994,6 +1009,57 @@ def cmd_fleet(args):
     _out(args, result, "\n".join(lines))
 
 
+def cmd_price(args):
+    """Price-equation decomposition over the commit graph: how much improvement came
+    from selecting between branches vs editing within a lineage, + Eigen threshold."""
+    from . import dynamics
+    repo = Repository.open()
+    r = dynamics.price(repo, since=args.since, trait=args.trait)
+    if r.get("insufficient"):
+        _out(args, r, f"price[{r['trait']}]: {r['message']}")
+        return
+    th = r["threshold"]
+    dz = _color(f"{r['delta_zbar']:+g}", C_G if r["delta_zbar"] >= 0 else C_R)
+    tr = _color(f"{r['transmission']:+g}", C_R if r["transmission"] < 0 else C_G)
+    reading = _color("→ " + r["reading"], C_Y if th["crossed"] else C_DIM)
+    lines = [
+        f"{_color('price', C_B)}[{r['trait']}]  Δz̄ = {dz}"
+        f"  over {r['n_parents']} branch points",
+        f"  selection   Cov(w,z) = {r['selection']:+g}"
+        f"   (contrib {r['selection_contrib']:+g})",
+        f"  transmission E[w·Δz] = {tr}   (contrib {r['transmission_contrib']:+g})",
+        f"  {reading}",
+    ]
+    if r.get("l_effective") is not None:
+        lines.append(f"  editable surface L_eff = {r['l_effective']} / {r['l_total']} files")
+    _out(args, r, "\n".join(lines))
+
+
+def cmd_health(args):
+    """Rollup: Price verdict + critical-slowing-down signal + Muller's-ratchet load."""
+    from . import dynamics
+    repo = Repository.open()
+    r = dynamics.health(repo)
+    pr, sl = r["price"], r["slowing"]
+    mark = _color("✓ healthy", C_G) if r["healthy"] else _color("⚠ attention", C_R)
+    lines = [f"{_color('evolution health', C_B)}: {mark}"]
+    if pr.get("insufficient"):
+        lines.append(f"  price:   {pr['message']}")
+    else:
+        lines.append(f"  price:   Δz̄ {pr['delta_zbar']:+g} — {pr['reading']}")
+    if sl.get("insufficient"):
+        lines.append(f"  slowing: {sl['message']}")
+    else:
+        lines.append(f"  slowing: {sl['warning']} (lag1 {sl['lag1_autocorr']:+g}, "
+                     f"variance {sl['variance_trend']})")
+    rt = r["ratchet"]
+    if rt.get("branches"):
+        lines.append(f"  ratchet: {len(rt['branches'])} branch(es) vs '{rt['trunk']}'")
+    for w in r["warnings"]:
+        lines.append(_color(f"  ⚠ {w}", C_Y))
+    _out(args, r, "\n".join(lines))
+
+
 # ------------------------------------------------------------------- parser
 def build_parser() -> argparse.ArgumentParser:
     common = argparse.ArgumentParser(add_help=False)
@@ -1156,6 +1222,17 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--discount", type=float, default=1.0,
                     help="correlation-discount strength (0=ignore overlap, 1=DeSoc default)")
     sp.set_defaults(func=cmd_fleet)
+
+    sp = add("price", help="Price-equation decomposition: selection (between branches) "
+             "vs transmission (within a lineage), + Eigen error-catastrophe verdict")
+    sp.add_argument("--since", metavar="REF",
+                    help="only decompose commits descended from REF")
+    sp.add_argument("--trait", choices=["score", "size", "cost"], default="score",
+                    help="the trait z to track (default: eval score)")
+    sp.set_defaults(func=cmd_price)
+
+    add("health", help="evolution-health rollup: Price verdict + critical-slowing-down "
+        "signal + Muller's-ratchet load on unmerged branches").set_defaults(func=cmd_health)
 
     add("runtime", help="show the operational frame your runtime hides "
         "(budget/context/routing/tools/subagents)").set_defaults(func=cmd_runtime)
