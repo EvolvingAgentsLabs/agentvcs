@@ -55,6 +55,8 @@ elif cmd == "status":
 elif cmd == "rollback":
     print(f"  ↩ rolled back to {s(d['restored_to'])} (was {s(d['previous_head'])})")
     print(f"      goal now: {d['goal']!r}")
+    if d.get("reason"):
+        print(f"      reason (logged): {d['reason']!r}")
 elif cmd == "freeze":
     print(f"  ❄ crystallized {s(d['commit'])} from {s(d['source'])}")
     print(f"      deterministic recipe: {d['recipe_path']}")

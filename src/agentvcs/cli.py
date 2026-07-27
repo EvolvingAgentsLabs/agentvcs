@@ -670,10 +670,13 @@ def cmd_checkout(args):
 
 def cmd_rollback(args):
     repo = Repository.open()
-    result = repo.rollback(args.ref)
+    reason = getattr(args, "reason", None)
+    result = repo.rollback(args.ref, reason=reason)
+    result["reason"] = reason if reason is not None else result["goal"]
     human = (f"Rolled back to {_color(_short(result['restored_to']), C_G)} "
              f"(was {_short(result['previous_head'])})\n"
-             f"  goal:  {result['goal']}\n"
+             f"  goal:   {result['goal']}\n"
+             f"  reason: {result['reason']}\n"
              f"  undo this with: agentvcs checkout {_short(result['previous_head'])}")
     _out(args, result, human)
 
@@ -1224,6 +1227,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     sp = add("rollback", help="undo: restore full prior state (default: HEAD's parent)")
     sp.add_argument("ref", nargs="?")
+    sp.add_argument("--reason", metavar="TEXT",
+                    help="record WHY you rolled back in the durable ledger "
+                         "(e.g. 'eval regression: success_rate 0.4 < 0.75'); "
+                         "defaults to the restored commit's goal")
     sp.set_defaults(func=cmd_rollback)
 
     sp = add("eval", help="run agent.json's eval and record the score for a commit")

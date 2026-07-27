@@ -109,6 +109,21 @@ def test_rollback_reason_defaults_to_goal(tmp_path):
     assert repo.read_rollbacks()[-1]["reason"] == "goal A"
 
 
+def test_cli_rollback_reason_flag(tmp_path, capsys):
+    """`agentvcs rollback --reason` records the justification end-to-end (CLI)."""
+    from agentvcs.cli import main
+    repo = setup_repo(tmp_path)
+    commit_with(repo, tmp_path, goal="goal A", message="A")
+    commit_with(repo, tmp_path, goal="goal B", file_content="v2\n", message="B")
+
+    main(["-C", str(tmp_path), "rollback", "--reason",
+          "eval regression: success_rate 0.4 < 0.75", "--json"])
+    out = json.loads(capsys.readouterr().out)
+    assert out["ok"] is True
+    assert out["reason"] == "eval regression: success_rate 0.4 < 0.75"
+    assert repo.read_rollbacks()[-1]["reason"] == "eval regression: success_rate 0.4 < 0.75"
+
+
 # ------------------------------------------------------------------ log --reasoning JSON
 
 def _run_log_reasoning(tmp_path, extra_args=None):

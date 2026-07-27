@@ -107,9 +107,10 @@ av commit -m "v3: collapse routing (experimental)"
 note "Agent runs its eval... billing tickets now misrouted. Accuracy dropped."
 
 ############################################################################
-step "Iteration 3 ↩ — ROLLBACK the regression"
-note "Agent: that made it worse. Restore the full prior state (code + goal + trace)."
-av rollback
+step "Iteration 3 ↩ — ROLLBACK the regression (with a recorded reason)"
+note "Agent: that made it worse. Restore the full prior state (code + goal + trace),"
+note "and record WHY in the durable ledger so the regression is auditable later."
+av rollback --reason "eval regressed: billing tickets misrouted after collapsing routing"
 note "Verify the good code is back:"
 grep -q 'queue = "billing"' router.py && note "router.py restored to v2 logic ✓"
 

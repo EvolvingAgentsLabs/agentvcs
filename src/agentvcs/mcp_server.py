@@ -107,7 +107,7 @@ def tool_freeze(args):
 
 
 def tool_rollback(args):
-    return _repo().rollback(args.get("ref"))
+    return _repo().rollback(args.get("ref"), reason=args.get("reason"))
 
 
 def tool_replay(args):
@@ -207,8 +207,9 @@ TOOLS = [
      "inputSchema": {"type": "object", "properties": {
          "commit": _REF, "exec": {"type": "string", "description": "command to pipe each step JSON to"}}},
      "_fn": tool_replay},
-    {"name": "avcs_rollback", "description": "Undo: restore the full prior state. Defaults to HEAD's parent. Reversible.",
-     "inputSchema": {"type": "object", "properties": {"ref": _REF}}, "_fn": tool_rollback},
+    {"name": "avcs_rollback", "description": "Undo: restore the full prior state. Defaults to HEAD's parent. Reversible. Pass 'reason' to record WHY in the durable rollback ledger (e.g. an eval regression) — it shows up in `log --reasoning`.",
+     "inputSchema": {"type": "object", "properties": {"ref": _REF,
+         "reason": {"type": "string", "description": "why you rolled back (recorded in the ledger)"}}}, "_fn": tool_rollback},
     {"name": "avcs_branch", "description": "List branches, or create a live branch when 'name' is given.",
      "inputSchema": {"type": "object", "properties": {"name": {"type": "string"}}}, "_fn": tool_branch},
     {"name": "avcs_checkout", "description": "Restore the working tree from a branch or commit.",

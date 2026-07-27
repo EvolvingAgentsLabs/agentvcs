@@ -3,6 +3,12 @@
 Each folder is a self-contained, runnable example. They progress from "what is
 this" to "version a real agent in your stack".
 
+> **New here / "why not just git + LangSmith + MLflow?"** These examples show the one
+> thing those three separate tools can't do together: version an agent's code, goal,
+> model and reasoning as **one** record, and reconcile its run-time evolution back into a
+> release. See [`../docs/COMPARISON.md`](../docs/COMPARISON.md) for where agentvcs fits
+> alongside your existing stack.
+
 ## Start here
 
 | Example | What it shows | Run |
