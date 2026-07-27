@@ -83,6 +83,7 @@
   <nav>
     <a href="#problem">Problem</a>
     <a href="#how">How</a>
+    <a href="demos/">Demos</a>
     <a href="#agents">For agents</a>
     <a href="https://github.com/EvolvingAgentsLabs/agentvcs">GitHub ↗</a>
   </nav>
@@ -97,6 +98,7 @@
   <p class="sub">The open-source core — the “git for agents”. Zero dependencies, fully auditable, Apache-2.0.</p>
   <div class="cta">
     <a class="btn primary" href="#waitlist">Join the cloud waitlist</a>
+    <a class="btn" href="demos/">▶ See the demos</a>
     <a class="btn" href="https://github.com/EvolvingAgentsLabs/agentvcs">★ Star on GitHub</a>
   </div>
 </div></section>
@@ -143,6 +145,33 @@
       <p class="sub">A solution you trust, frozen: models pinned to temperature&nbsp;0 and the trace compiled into a replayable recipe. Cheap, stable, reproducible.</p>
     </div>
   </div>
+</div></section>
+
+<section id="demos"><div class="wrap">
+  <h2>See it work</h2>
+  <h3>Is your agent’s self-modification actually working?</h3>
+  <p>Because agentvcs keeps an agent’s whole history — every iteration with a quality score —
+    it can answer what a live runtime can’t: is the loop improving or quietly rotting? Two
+    narrated, runnable walkthroughs, both on real evaluations.</p>
+  <div class="grid" style="margin-top:8px">
+    <div class="card">
+      <span class="k">Start here · plain English</span>
+      <h3 style="margin-top:8px">Business cases</h3>
+      <p class="sub">A support bot that gets worse every week, a fork nobody merged, wasted
+        context, a poisoned shared memory — each ending in a one-line call, no math on screen.</p>
+      <a class="btn primary" href="demos/business-cases.html">Read the five stories →</a>
+    </div>
+    <div class="card">
+      <span class="k">The technical companion</span>
+      <h3 style="margin-top:8px">Evolution diagnostics</h3>
+      <p class="sub">The same five, with the real numbers and the theory — the Price equation,
+        Muller’s ratchet, context value in bits, containment — every claim asserted.</p>
+      <a class="btn" href="demos/evolution-diagnostics.html">Read the five acts →</a>
+    </div>
+  </div>
+  <p class="agent-note" style="margin-top:22px">Reproduce locally:
+    <span class="dim">bash examples/business-cases/run.sh</span> — full guide in
+    <a href="https://github.com/EvolvingAgentsLabs/agentvcs/blob/main/docs/DEMOS.md">docs/DEMOS.md</a>.</p>
 </div></section>
 
 <section id="agents"><div class="wrap">

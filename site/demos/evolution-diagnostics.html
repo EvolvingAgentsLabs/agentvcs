@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>agentvcs — evolution diagnostics (the technical companion)</title>
+<meta name="description" content="The math behind the calls: the Price equation catching an error catastrophe, Muller's ratchet, the information value of context in bits, and branching-process containment — every claim asserted against --json.">
+<link rel="canonical" href="https://evolvingagentslabs.github.io/agentvcs/demos/evolution-diagnostics.html">
+<meta property="og:title" content="agentvcs — evolution diagnostics">
+<meta property="og:description" content="Five self-asserting acts over real evals: price, ratchet, infobits, contain.">
+<meta property="og:type" content="article">
+<style>
+  :root{--bg:#0b0e14;--panel:#0f131b;--border:#1d2430;--fg:#c9d1d9;--dim:#6e7681;
+    --fluid:#39c5cf;--crystal:#3fb950;--accent:#e3b341;--red:#f85149;
+    --mono:"SF Mono",SFMono-Regular,ui-monospace,"JetBrains Mono","Cascadia Code",Menlo,Consolas,monospace;}
+  *{box-sizing:border-box}html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--mono);line-height:1.65;font-size:16px;-webkit-font-smoothing:antialiased}
+  a{color:var(--fluid);text-decoration:none}a:hover{text-decoration:underline}
+  .wrap{max-width:820px;margin:0 auto;padding:0 24px}
+  header{padding:14px 0;border-bottom:1px solid var(--border);position:sticky;top:0;background:rgba(11,14,20,.85);backdrop-filter:blur(8px);z-index:10}
+  header .wrap{display:flex;align-items:center;justify-content:space-between}
+  .logo{font-weight:700}.logo a{color:#fff}.logo .p{color:var(--crystal)}
+  nav a{color:var(--dim);margin-left:18px;font-size:14px}nav a:hover{color:var(--fg)}
+  h1{font-size:clamp(27px,5vw,42px);line-height:1.14;margin:0 0 16px;color:#fff;letter-spacing:-.5px}
+  h2{font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin:0 0 10px;font-weight:600}
+  h3{color:#fff;font-size:21px;margin:0 0 8px}
+  p{margin:0 0 16px}.lead{font-size:clamp(17px,2.4vw,20px)}.sub{color:var(--dim)}
+  .hero{padding:64px 0 40px;border-bottom:1px solid var(--border)}
+  section{padding:44px 0;border-bottom:1px solid var(--border)}
+  .num{color:var(--dim);font-size:13px;letter-spacing:.1em}
+  .theory{border-left:2px solid var(--border);padding-left:14px;color:var(--dim);font-size:14px;margin:14px 0}
+  .term{background:#06080d;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:18px 0}
+  .term .bar{display:flex;gap:7px;padding:10px 14px;border-bottom:1px solid var(--border);align-items:center}
+  .dot{width:11px;height:11px;border-radius:50%}.dot.r{background:#ff5f56}.dot.y{background:#ffbd2e}.dot.g{background:#27c93f}
+  .term .ttl{color:var(--dim);font-size:12px;margin-left:8px}
+  .term pre{margin:0;padding:16px 18px;overflow-x:auto;font-size:13px;line-height:1.7;white-space:pre-wrap}
+  .c{color:var(--dim)}.cmd{color:#fff}.g{color:var(--crystal)}.a{color:var(--accent)}.r{color:var(--red)}.b{color:var(--fluid)}
+  .ok{color:var(--crystal)}
+  .btn{display:inline-block;padding:10px 16px;border-radius:7px;font-size:14px;border:1px solid var(--border);color:var(--fg);background:#06080d}
+  .btn:hover{border-color:var(--fluid);text-decoration:none}
+  .nav-prev-next{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  code{background:#06080d;border:1px solid var(--border);border-radius:5px;padding:1px 6px;font-size:13px;color:#fff}
+  footer{padding:36px 0;color:var(--dim);font-size:14px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <span class="logo"><a href="/agentvcs/">agent<span class="p">vcs</span></a></span>
+  <nav>
+    <a href="index.html">Demos</a>
+    <a href="business-cases.html">Plain English</a>
+    <a href="https://github.com/EvolvingAgentsLabs/agentvcs">GitHub ↗</a>
+  </nav>
+</div></header>
+
+<section class="hero"><div class="wrap">
+  <h2>Demos · the technical companion</h2>
+  <h1>The math behind the calls.</h1>
+  <p class="lead">The same five capabilities as the <a href="business-cases.html">plain-English
+    stories</a>, shown with the real numbers and the theory. Everything runs on real
+    evaluations, and every claim the narration makes is <b>asserted</b> against
+    <code>--json</code> — the demo fails loudly if a tool ever stops earning it.</p>
+  <p class="sub">Reproduce it: <code>bash examples/evolution-diagnostics/run.sh</code></p>
+</div></section>
+
+<section><div class="wrap">
+  <span class="num">ACT 1 · the Price equation & the Eigen error threshold</span>
+  <h3>The self-improvement loop that was quietly rotting</h3>
+  <p>An agent tunes a router by editing one file — it <b>never branches</b>. All five commits
+    pass their eval, so nothing commit-to-commit looks wrong.</p>
+  <div class="theory">Price’s identity splits a trait’s change into <b>selection</b>
+    (<code>Cov(w,z)</code>, choosing between branches) and <b>transmission</b>
+    (<code>E[w·Δz]</code>, editing within a lineage). With no branches, selection is 0 <em>by
+    construction</em> — an asexual lineage — and net-negative editing is the Eigen error
+    catastrophe.</div>
+  <div class="term">
+    <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="ttl">$ agentvcs price</span></div>
+<pre>price[score]  Δz̄ = <span class="r">-0.1</span>  over 4 branch points
+  selection    Cov(w,z) = <span class="dim">+0</span>       <span class="c">(contrib +0)</span>
+  transmission E[w·Δz] = <span class="r">-0.1</span>     <span class="c">(contrib -0.1)</span>
+  <span class="a">→ ERROR CATASTROPHE: within-lineage editing is losing trait value</span>
+  <span class="a">  faster than selection recovers it — freeze or raise eval coverage</span>
+
+<span class="ok">✓ d['threshold']['crossed'] is True</span>
+<span class="ok">✓ d['selection'] == 0.0</span>
+<span class="ok">✓ d['transmission'] &lt; 0</span></pre>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <span class="num">ACT 2 · recombination beats editing</span>
+  <h3>The cure is branch-and-select</h3>
+  <p>Same agent, same benchmark — now it <b>forks</b> two variants each round, keeps the better,
+    and invests exploration in the winner. Selection starts doing real work.</p>
+  <div class="term">
+    <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="ttl">$ agentvcs price</span></div>
+<pre>price[score]  Δz̄ = <span class="g">+0.133333</span>  over 3 branch points
+  selection    Cov(w,z) = <span class="g">+0.033333</span>   <span class="c">(contrib +0.016667)</span>
+  transmission E[w·Δz] = <span class="g">+0.233333</span>   <span class="c">(contrib +0.116667)</span>
+  <span class="c">→ improvement is transmission-driven (editing well within a lineage)</span>
+
+<span class="ok">✓ d['threshold']['crossed'] is False</span>
+<span class="ok">✓ d['selection'] &gt; 0</span>
+<span class="ok">✓ d['transmission'] &gt; 0</span>
+<span class="ok">✓ d['healthy'] is True</span></pre>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <span class="num">ACT 3 · Muller’s ratchet</span>
+  <h3>A lineage editing alone is doomed</h3>
+  <p>A feature branch evolves in isolation and slowly loses fitness. An asexual lineage can’t
+    purge deleterious edits — and <code>merge --reconcile</code> is the recombination operator.</p>
+  <div class="term">
+    <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="ttl">$ agentvcs branch  →  $ agentvcs merge feature</span></div>
+<pre>  feature 4a2019e6fbc6  <span class="a">⚠ ratchet</span>
+* main    3747f1d1a540
+<span class="a">⚠ branch 'feature' is a long unmerged lineage (5 commits, 4 deleterious</span>
+<span class="a">  step(s)) losing fitness — merge it back into 'main' to reconstitute</span>
+<span class="a">  the least-loaded class</span>
+
+<span class="ok">✓ any(b['name']=='feature' and b['ratchet']=='high' for b in d['branches'])</span>
+
+<span class="c"># recombine — the ratchet clears</span>
+   merge status: <span class="b">fast_forward</span>
+<span class="ok">✓ all(b.get('ratchet')=='none' for b in d['branches'])</span></pre>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <span class="num">ACT 4 · Kelly / channel capacity</span>
+  <h3>How many bits does your context actually buy?</h3>
+  <p>Two agents, 30 tool calls each. The value of context is bounded by the bits it adds to the
+    decision — so a near-deterministic agent can’t be helped much by more of it.</p>
+  <div class="term">
+    <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="ttl">$ agentvcs infobits</span></div>
+<pre><span class="c"># low-entropy agent — a 40k-token context feeding a near-fixed decision</span>
+infobits  H(action) = <span class="a">0.42 bits</span>  over 30 decisions / 3 tools
+  I(prev; next) = 0.22 bits
+<span class="ok">✓ d['action_entropy_bits'] &lt; 1.0</span>
+
+<span class="c"># high-entropy agent — context genuinely drives the choice</span>
+infobits  H(action) = <span class="g">2.58 bits</span>  over 30 decisions / 6 tools
+  I(prev; next) = 2.58 bits
+<span class="ok">✓ d['action_entropy_bits'] &gt; 2.0</span></pre>
+  </div>
+  <p class="theory">The mutual information here uses the previous action as the context proxy — a
+    labeled lower bound on <code>I(full-context; action)</code>. The tool never overclaims what
+    it measured.</p>
+</div></section>
+
+<section><div class="wrap">
+  <span class="num">ACT 5 · branching-process containment</span>
+  <h3>Is shared-memory poisoning self-limiting?</h3>
+  <p>A fleet reads a shared memory. If a corrupt entry fans out to <code>n</code> readers and each
+    re-propagates with probability <code>p</code>, it dies out iff <code>R₀ = n·p &lt; 1</code>.</p>
+  <div class="term">
+    <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="ttl">$ agentvcs contain</span></div>
+<pre>contain  R₀ = n·p = <span class="r">2.40</span>  (n=6 via declared swarm nodes,
+                        p=0.4 via failed-eval fraction over 5 commits)
+  <span class="r">NOT contained</span> — need to verify ≥ <span class="a">58%</span> of reads
+  <span class="c">→ verify at least 58% of downstream reads (or cut fan-out /</span>
+  <span class="c">  escape rate) to contain it</span>
+<span class="ok">✓ d['contained'] is False and d['r0'] &gt; 1</span>
+
+<span class="c">$ agentvcs contain --fanout 2</span>   <span class="c"># a smaller fleet</span>
+contain  R₀ = n·p = <span class="g">0.80</span>   <span class="g">contained</span>
+<span class="ok">✓ d['contained'] is True</span></pre>
+  </div>
+  <p class="theory">A mean-field bound — the dispersion (tail) matters more than the mean, and the
+    output says so. A low average <code>R₀</code> with a heavy tail can still allow rare cascades.</p>
+</div></section>
+
+<section><div class="wrap">
+  <h2>Why this is the point of agentvcs</h2>
+  <p>None of these are harness features. They’re measurements over a recorded <b>population of
+    variants across time</b> — the one object a VCS owns and a live controller doesn’t. All of it
+    from data agentvcs already stores, standard-library-only, with <code>--json</code> for agents.
+    Full design and the honest scope boundary:
+    <a href="https://github.com/EvolvingAgentsLabs/agentvcs/blob/main/docs/EVOLUTIONARY_DYNAMICS.md">EVOLUTIONARY_DYNAMICS.md</a>.</p>
+  <div class="nav-prev-next">
+    <a class="btn" href="business-cases.html">← Plain-English version</a>
+    <a class="btn" href="index.html">All demos →</a>
+  </div>
+</div></section>
+
+<footer><div class="wrap" style="display:flex;justify-content:space-between;width:100%">
+  <span>agent<span style="color:var(--crystal)">vcs</span> · Apache-2.0</span>
+  <span><a href="/agentvcs/">Home</a> · <a href="https://github.com/EvolvingAgentsLabs/agentvcs/tree/main/examples/evolution-diagnostics">Source</a></span>
+</div></footer>
+</body>
+</html>

@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>agentvcs — demos</title>
+<meta name="description" content="Runnable, narrated demos of agentvcs: is your agent's self-modification actually working? Business stories in plain English, plus the technical companion.">
+<link rel="canonical" href="https://evolvingagentslabs.github.io/agentvcs/demos/">
+<meta property="og:title" content="agentvcs — demos">
+<meta property="og:description" content="See agentvcs catch a self-improving agent quietly getting worse — in plain English, and in the math.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://evolvingagentslabs.github.io/agentvcs/demos/">
+<style>
+  :root{--bg:#0b0e14;--panel:#0f131b;--border:#1d2430;--fg:#c9d1d9;--dim:#6e7681;
+    --fluid:#39c5cf;--crystal:#3fb950;--accent:#e3b341;--red:#f85149;
+    --mono:"SF Mono",SFMono-Regular,ui-monospace,"JetBrains Mono","Cascadia Code",Menlo,Consolas,monospace;}
+  *{box-sizing:border-box}html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--mono);line-height:1.65;font-size:16px;-webkit-font-smoothing:antialiased}
+  a{color:var(--fluid);text-decoration:none}a:hover{text-decoration:underline}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  header{padding:14px 0;border-bottom:1px solid var(--border);position:sticky;top:0;background:rgba(11,14,20,.85);backdrop-filter:blur(8px);z-index:10}
+  header .wrap{display:flex;align-items:center;justify-content:space-between}
+  .logo{font-weight:700;color:#fff}.logo .p{color:var(--crystal)}
+  nav a{color:var(--dim);margin-left:18px;font-size:14px}nav a:hover{color:var(--fg)}
+  h1{font-size:clamp(28px,5.5vw,46px);line-height:1.12;margin:0 0 16px;color:#fff;letter-spacing:-.5px}
+  h2{font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin:0 0 18px;font-weight:600}
+  h3{color:#fff;font-size:20px;margin:0 0 6px}
+  p{margin:0 0 16px}.lead{font-size:clamp(17px,2.4vw,20px)}.sub{color:var(--dim)}
+  section{padding:56px 0;border-bottom:1px solid var(--border)}.hero{padding:72px 0 56px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  @media(max-width:680px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:24px;display:flex;flex-direction:column}
+  .card:hover{border-color:var(--fluid)}
+  .card .tag{font-size:12px;letter-spacing:.05em;color:var(--accent);text-transform:uppercase}
+  .card h3{margin-top:8px}.card p{flex:1}
+  .btn{display:inline-block;padding:10px 16px;border-radius:7px;font-size:14px;border:1px solid var(--border);color:var(--fg);background:#06080d;margin-top:6px;align-self:flex-start}
+  .btn:hover{border-color:var(--fluid);text-decoration:none}
+  .btn.primary{background:var(--crystal);color:#06210f;border-color:var(--crystal);font-weight:600}
+  table{width:100%;border-collapse:collapse;font-size:14px;margin:8px 0}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+  th{color:var(--accent);font-weight:600;font-size:12px;letter-spacing:.05em;text-transform:uppercase}
+  code{background:#06080d;border:1px solid var(--border);border-radius:5px;padding:1px 6px;font-size:13px;color:#fff}
+  footer{padding:36px 0;color:var(--dim);font-size:14px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <span class="logo"><a href="/agentvcs/" style="color:#fff">agent<span class="p">vcs</span></a></span>
+  <nav>
+    <a href="/agentvcs/">Home</a>
+    <a href="business-cases.html">Business cases</a>
+    <a href="evolution-diagnostics.html">Technical</a>
+    <a href="https://github.com/EvolvingAgentsLabs/agentvcs">GitHub ↗</a>
+  </nav>
+</div></header>
+
+<section class="hero"><div class="wrap">
+  <h2>Demos</h2>
+  <h1>Is your agent’s self-modification<br>actually working?</h1>
+  <p class="lead">agentvcs holds an agent’s whole <b>history</b> — every iteration, with a
+    quality score attached. That lets it answer things a live runtime can’t: is the loop
+    improving or quietly rotting? Is a branch worth keeping? Is a shared memory safe?</p>
+  <p class="sub">Two narrated, runnable walkthroughs. Both use real evaluations under the hood —
+    nothing here is faked.</p>
+</div></section>
+
+<section><div class="wrap">
+  <div class="grid">
+    <div class="card">
+      <span class="tag">Start here · plain English</span>
+      <h3>Business cases</h3>
+      <p>Five everyday situations anyone running an AI product recognizes — a support bot that
+        gets a little worse every week, a client fork nobody merged back, paying for context
+        that changes nothing, one bad fact poisoning a fleet. Each ends in a one-line
+        recommendation, with <b>no math on screen</b>.</p>
+      <a class="btn primary" href="business-cases.html">Read the five stories →</a>
+    </div>
+    <div class="card">
+      <span class="tag">The technical companion</span>
+      <h3>Evolution diagnostics</h3>
+      <p>The same five capabilities, shown with the real numbers and the theory behind them:
+        the Price equation catching an error catastrophe, Muller’s ratchet on an isolated
+        branch, the information value of context in bits, and branching-process containment.
+        Every claim is asserted against <code>--json</code>.</p>
+      <a class="btn" href="evolution-diagnostics.html">Read the five acts →</a>
+    </div>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <h2>What each demo shows</h2>
+  <table>
+    <tr><th>Situation</th><th>Command</th><th>The call it makes</th></tr>
+    <tr><td>A self-updating agent quietly getting worse</td><td><code>agentvcs price</code></td><td>Stop — the loop is net-negative; roll back</td></tr>
+    <tr><td>The same agent, branch-and-keep-the-best</td><td><code>agentvcs price</code></td><td>Keep going — it’s genuinely improving</td></tr>
+    <tr><td>A fork maintained alone for too long</td><td><code>agentvcs branch</code></td><td>Merge it back before it rots further</td></tr>
+    <tr><td>A prompt stuffed with context that changes nothing</td><td><code>agentvcs infobits</code></td><td>Trim the context — cut cost & latency</td></tr>
+    <tr><td>A shared memory that could spread a mistake</td><td><code>agentvcs contain</code></td><td>Verify N% of reads, or shrink the fleet</td></tr>
+  </table>
+  <p class="sub" style="margin-top:20px">Run them yourself:
+    <code>bash examples/business-cases/run.sh</code> ·
+    <code>bash examples/evolution-diagnostics/run.sh</code> —
+    full guide in <a href="https://github.com/EvolvingAgentsLabs/agentvcs/blob/main/docs/DEMOS.md">docs/DEMOS.md</a>.</p>
+</div></section>
+
+<footer><div class="wrap" style="display:flex;justify-content:space-between;width:100%">
+  <span>agent<span style="color:var(--crystal)">vcs</span> · Apache-2.0 · by EvolvingAgentsLabs</span>
+  <span>
+    <a href="/agentvcs/">Home</a> ·
+    <a href="https://github.com/EvolvingAgentsLabs/agentvcs">GitHub</a> ·
+    <a href="/agentvcs/llms.txt">llms.txt</a>
+  </span>
+</div></footer>
+</body>
+</html>

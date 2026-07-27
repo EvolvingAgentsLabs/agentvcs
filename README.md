@@ -186,6 +186,12 @@ asexual lineage — `merge` is the recombination that reconstitutes it). Declare
 computed against *that* size, not the whole spec — the engineering answer to "how
 much can I let the agent rewrite itself?".
 
+> **See it, no math required.** Five everyday business stories — a support bot that
+> quietly gets worse every week, a fork nobody merged back, wasted context, a poisoned
+> shared memory — each ending in a one-line call:
+> **[live demos](https://evolvingagentslabs.github.io/agentvcs/demos/)** ·
+> `bash examples/business-cases/run.sh` · guide in [`docs/DEMOS.md`](docs/DEMOS.md).
+
 Two more diagnostics fall out of the same recorded lineage. `agentvcs infobits`
 estimates how many **bits** your decisions actually carry (`H(action)` and
 `I(prev; next)` over the trace's tool selections) — the Kelly/Kussell-Leibler ceiling
@@ -245,6 +251,9 @@ recover programmatically. An **MCP server** ships too: `claude mcp add agentvcs 
 
 ## Learn more
 
+- **Demos** — five business stories in plain English + the technical companion, both
+  runnable and on the web: [live demos](https://evolvingagentslabs.github.io/agentvcs/demos/)
+  · reproduction guide [`docs/DEMOS.md`](docs/DEMOS.md)
 - **Tutorial** — build a tiny bot with Claude Code and version every iteration:
   [`docs/TUTORIAL.md`](docs/TUTORIAL.md)
 - **Spec** — the on-disk format (content-addressed objects, like git's, with `commit` /
