@@ -123,6 +123,19 @@ def render_panel(repo: Repository, color: bool = False, width: int = 72) -> str:
         lines.append(f" {_c('eval   ', 'b', color)} "
                      + _c("· not run yet — `agentvcs eval` before you freeze", "warn", color))
 
+    # health — critical-slowing-down early warning over the eval-score series
+    try:
+        from .dynamics import slowing
+        sl = slowing(repo)
+        if not sl.get("insufficient"):
+            stone = {"approaching_instability": "bad", "watch": "warn"}.get(
+                sl["warning"], "ok")
+            lines.append(f" {_c('health ', 'b', color)} "
+                         + _c(f"{sl['warning']}  lag1 {sl['lag1_autocorr']:+.2f}"
+                              f"  variance {sl['variance_trend']}", stone, color))
+    except Exception:
+        pass
+
     # recall — the reflex the runtime doesn't have (verified recipes first)
     hits = recall(repo, goal, limit=3, min_score=0.1) if goal else []
     if hits:

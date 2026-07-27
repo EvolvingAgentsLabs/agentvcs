@@ -1,10 +1,21 @@
 # Landing page
 
-A single, dependency-free `index.html` (dark / terminal aesthetic) deployed to
-GitHub Pages by [`.github/workflows/pages.yml`](../.github/workflows/pages.yml).
+Dependency-free static HTML (dark / terminal aesthetic) deployed to GitHub Pages by
+[`.github/workflows/pages.yml`](../.github/workflows/pages.yml). The whole `site/`
+directory is published, so anything added under it ships automatically.
 
 Default URL once Pages is enabled (Settings → Pages → Source: **GitHub Actions**):
 **https://evolvingagentslabs.github.io/agentvcs/**
+
+## Pages
+
+- `index.html` — the landing page.
+- `demos/index.html` — the demos hub (linked from the landing nav and hero).
+- `demos/business-cases.html` — the five diagnostics as plain-English business stories.
+- `demos/evolution-diagnostics.html` — the technical companion (the math, asserted).
+
+The demo pages mirror the runnable examples under [`../examples/`](../examples/); the
+reproduction guide is [`../docs/DEMOS.md`](../docs/DEMOS.md).
 
 ## Before it captures emails
 

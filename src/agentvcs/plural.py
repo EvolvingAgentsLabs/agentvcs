@@ -17,6 +17,14 @@ fixed budget of N agents covers the most ground.
 
 Pure functions over plain dicts — no crypto, no I/O. Feed it
 ``[{"soul": id, "profile": {tag: weight}}, ...]``.
+
+Population-genetics note: correlation discounting is the *spatial* half of variant
+diversity (who is in the fleet right now). Its *temporal* half — how variant
+frequencies evolve as they compete for a shared task pool — is replicator dynamics,
+``ẋᵢ = xᵢ(fᵢ − φ̄)``. agentvcs already measures the fitness differential that drives it
+(``dynamics.price``: the selection term ``Cov(w, z)`` over sibling variants). If
+variants ever start competing over one pool, this module's diversity score and that
+selection term are the two inputs a replicator step would need.
 """
 from __future__ import annotations
 

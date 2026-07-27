@@ -9,6 +9,8 @@ this" to "version a real agent in your stack".
 | --- | --- | --- |
 | [`refund-agent/`](refund-agent/) | The smallest thing: a fluid agent you `commit`, `eval`, and `crystallize` into a deterministic recipe. | see its README |
 | [`agent-loop-demo/`](agent-loop-demo/) | The "fire test" — a simulated autonomous coding agent driving agentvcs end-to-end (commit → eval → rollback → freeze). | `bash run.sh` |
+| [`business-cases/`](business-cases/) | **The same power, in plain English** — five everyday situations (a bot that quietly gets worse, a fork nobody merged, wasted context, a poisoned shared memory) that each end in a one-line recommendation, with no math on screen. Start here for the "why". | `bash run.sh` |
+| [`evolution-diagnostics/`](evolution-diagnostics/) | **Is the self-modification actually working?** The technical companion to `business-cases/`: five self-asserting acts over real evals — `price` catches an error catastrophe git can't see, branch-and-select cures it, `branch` flags Muller's ratchet, `infobits` bounds the value of context, `contain` sizes a poisoned-memory's verification rate. | `bash run.sh` |
 
 ## Zero-friction trace capture (passive providers)
 

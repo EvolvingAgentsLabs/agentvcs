@@ -163,6 +163,26 @@ def tool_merge(args):
     return result
 
 
+def tool_price(args):
+    from .dynamics import price
+    return price(_repo(), since=args.get("since"), trait=args.get("trait", "score"))
+
+
+def tool_health(args):
+    from .dynamics import health
+    return health(_repo())
+
+
+def tool_infobits(args):
+    from .dynamics import infobits
+    return infobits(_repo())
+
+
+def tool_contain(args):
+    from .dynamics import contain
+    return contain(_repo(), fanout=args.get("fanout"), prob=args.get("prob"))
+
+
 _REF = {"type": "string", "description": "branch name, full id, or short prefix"}
 TOOLS = [
     {"name": "avcs_log", "description": "List the evolution history (commits with state, goal, message).",
@@ -212,6 +232,19 @@ TOOLS = [
          "reconcile": {"type": "string", "description": "command to pipe reconciliation bundle to"},
          "force": {"type": "boolean", "description": "commit even when conflicts exist"}},
          "required": ["branch"]}, "_fn": tool_merge},
+    {"name": "avcs_price", "description": "Is my self-improvement loop working? Price-equation decomposition over the commit graph: how much of the trait change came from selecting between branches (Cov(w,z)) vs editing within a lineage (E[w·Δz]), plus the Eigen error-catastrophe verdict (degradation outrunning selection). trait = score | size | cost.",
+     "inputSchema": {"type": "object", "properties": {
+         "since": {**_REF, "description": "only decompose commits descended from this ref"},
+         "trait": {"type": "string", "enum": ["score", "size", "cost"],
+                   "description": "the trait to track (default: eval score)"}}}, "_fn": tool_price},
+    {"name": "avcs_health", "description": "Evolution-health rollup: Price verdict + critical-slowing-down early warning (rising variance/autocorrelation in the eval-score series) + Muller's-ratchet load on long unmerged branches. Returns a flat warnings[] to act on.",
+     "inputSchema": {"type": "object", "properties": {}}, "_fn": tool_health},
+    {"name": "avcs_infobits", "description": "How many bits do my decisions actually carry? Estimates the decision channel from recorded traces: H(action) over tool selections and I(previous action; next action), the Kelly/Kussell-Leibler bound on the value of context. A low figure bounds what more retrieval can buy and justifies compressing context. (A lower-bound proxy — context = previous action — not a full I(context;action) measurement.)",
+     "inputSchema": {"type": "object", "properties": {}}, "_fn": tool_infobits},
+    {"name": "avcs_contain", "description": "Is shared-memory poisoning self-limiting? Branching-process test R0 = n·p (n downstream readers, p per-read escape probability) with n measured from subagents/swarm and p from the empirical failed-eval rate; returns whether corruption is contained and the verification rate needed to contain it. Override with fanout/prob.",
+     "inputSchema": {"type": "object", "properties": {
+         "fanout": {"type": "number", "description": "downstream readers n (default: measured)"},
+         "prob": {"type": "number", "description": "per-read escape probability p (default: failed-eval rate)"}}}, "_fn": tool_contain},
 ]
 _TOOL_FNS = {t["name"]: t["_fn"] for t in TOOLS}
 _PUBLIC_TOOLS = [{k: v for k, v in t.items() if not k.startswith("_")} for t in TOOLS]

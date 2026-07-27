@@ -24,6 +24,16 @@ Two things consume the measurement:
     forced) — and stamps the frozen recipe with its proof.
   * ``recall`` surfaces ``verified`` recipes first, so an agent replays a solution
     that is *known* to work, not merely one that looks similar.
+
+Why the gate must *reject*, not just *score* (kinetic proofreading). Hopfield/Ninio
+proofreading lowers an error rate only when the intermediate is **discarded
+irreversibly** between stages; a stage that merely re-scores and lets the candidate
+proceed buys nothing. ``freeze``'s hard ``EVAL_FAILED`` is exactly that irreversible
+discard, which is what makes a crystallized recipe trustworthy. It also means
+per-edit verification is the high-leverage knob: chaining ``n`` independent
+reject-capable evals drives the break-rate ``μ`` down like ``εⁿ``, and in the Eigen
+bound ``μL < ln σ`` (see ``dynamics.price``) halving ``μ`` roughly doubles the spec
+size you can safely self-modify — a far better return than sharpening ``σ``.
 """
 from __future__ import annotations
 

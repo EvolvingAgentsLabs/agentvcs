@@ -61,6 +61,7 @@ versions; messages may change.
 | `UNKNOWN_TRACE_PROVIDER` | `agent.json`'s `trace.provider` is not registered | fix the provider name (known: `claude-code`) |
 | `BAD_TRACE` | `agent.json`'s `trace` is neither a path nor a provider object | set it to a path string or `{ "provider": ... }` |
 | `PORT_IN_USE` | `ui` could not bind any port in the probed range | pass a free `--port`, or stop the other server |
+| `BAD_TRAIT` | `price --trait` got a value other than `score`/`size`/`cost` | pick a valid trait |
 | `INTERNAL` | unexpected error (MCP tools / UI API only) | report; do not retry blindly |
 
 ## Command output fields (success)
@@ -78,6 +79,11 @@ versions; messages may change.
 - `freeze` → `commit`, `source`, `state`, `recipe_path`
 - `replay` → `commit`, `source_commit`, `goal`, `models`, `executed`, `steps[]` (each `{index, step[, exit_code, output]}`)
 - `ui` → `url`, `host`, `port` (printed once when the dashboard binds, then it keeps serving until interrupted)
+- `price` → `trait`, `n_parents`, `selection` (`Cov(w,z)`), `transmission` (`E[w·Δz]`), `selection_contrib`, `transmission_contrib`, `delta_zbar`, `reading`, `threshold{crossed, code, degrading}`, `l_total`/`l_effective` (editable-surface size); `insufficient:true` + `message` when there are `<2` eval'd branch points
+- `health` → `healthy` (bool), `warnings[]` (flat, act on these), plus the full `price`, `slowing` (`{lag1_autocorr, variance_trend, warning, signal}`), and `ratchet` (`{trunk, branches[], warnings[]}`) sub-objects
+- `branch` (list form) also carries `ratchet` per branch (`none`/`medium`/`high`) and a top-level `warnings[]` for long unmerged lineages
+- `infobits` → `n_decisions`, `distinct_actions`, `action_entropy_bits` (`H(A)`), `transition_mi_bits` (`I(prev;next)`, a lower-bound proxy), `context_tokens`, `bits_per_ktok`, `reading`; `insufficient:true` when the traces hold no tool-use decisions
+- `contain` → `fanout` (n), `prob` (p), their `*_source`, `r0` (`n·p`), `contained` (bool), `critical_prob` (`1/n`), `required_verification_rate`, `reading`; `insufficient:true` when neither a measured/`--fanout` n nor a measured/`--prob` p is available
 
 The `diff` object is `{code:{added,removed,modified}, goal, models, trace, state}`;
 every non-code dimension is `null` when unchanged, so an agent can cheaply detect
@@ -101,9 +107,10 @@ claude mcp add agentvcs -- agentvcs-mcp
 It exposes one tool per operation: `avcs_log`, `avcs_show`, `avcs_trace`,
 `avcs_diff`, `avcs_status`, `avcs_commit`, `avcs_freeze`, `avcs_replay`,
 `avcs_rollback`, `avcs_branch`, `avcs_checkout`, `avcs_merge`, `avcs_eval`,
-`avcs_recall`, `avcs_runtime`, `avcs_budget`, `avcs_context`. Each tool result is a
-single text-content item whose text is the same `{"ok": ...}` JSON described above;
-tool failures set `isError: true`.
+`avcs_recall`, `avcs_runtime`, `avcs_budget`, `avcs_context`, `avcs_price`,
+`avcs_health`, `avcs_infobits`, `avcs_contain`. Each tool result is a single
+text-content item whose text is the same `{"ok": ...}` JSON described above; tool
+failures set `isError: true`.
 
 The server operates on the repository discovered from its working directory.
 

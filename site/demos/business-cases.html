@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>agentvcs — business cases (in plain English)</title>
+<meta name="description" content="Five everyday AI-product situations where agentvcs makes the call — a support bot quietly getting worse, a fork nobody merged, wasted context, a poisoned shared memory — with no math on screen.">
+<link rel="canonical" href="https://evolvingagentslabs.github.io/agentvcs/demos/business-cases.html">
+<meta property="og:title" content="agentvcs — the diagnostics in plain English">
+<meta property="og:description" content="Five business stories, five clear recommendations, not one equation on screen.">
+<meta property="og:type" content="article">
+<style>
+  :root{--bg:#0b0e14;--panel:#0f131b;--border:#1d2430;--fg:#c9d1d9;--dim:#6e7681;
+    --fluid:#39c5cf;--crystal:#3fb950;--accent:#e3b341;--red:#f85149;
+    --mono:"SF Mono",SFMono-Regular,ui-monospace,"JetBrains Mono","Cascadia Code",Menlo,Consolas,monospace;}
+  *{box-sizing:border-box}html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--mono);line-height:1.65;font-size:16px;-webkit-font-smoothing:antialiased}
+  a{color:var(--fluid);text-decoration:none}a:hover{text-decoration:underline}
+  .wrap{max-width:820px;margin:0 auto;padding:0 24px}
+  header{padding:14px 0;border-bottom:1px solid var(--border);position:sticky;top:0;background:rgba(11,14,20,.85);backdrop-filter:blur(8px);z-index:10}
+  header .wrap{display:flex;align-items:center;justify-content:space-between}
+  .logo{font-weight:700}.logo a{color:#fff}.logo .p{color:var(--crystal)}
+  nav a{color:var(--dim);margin-left:18px;font-size:14px}nav a:hover{color:var(--fg)}
+  h1{font-size:clamp(27px,5vw,42px);line-height:1.14;margin:0 0 16px;color:#fff;letter-spacing:-.5px}
+  h2{font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin:0 0 10px;font-weight:600}
+  h3{color:#fff;font-size:21px;margin:0 0 8px}
+  p{margin:0 0 16px}.lead{font-size:clamp(17px,2.4vw,20px)}.sub{color:var(--dim)}
+  .hero{padding:64px 0 40px;border-bottom:1px solid var(--border)}
+  section{padding:44px 0;border-bottom:1px solid var(--border)}
+  .num{color:var(--dim);font-size:13px;letter-spacing:.1em}
+  .term{background:#06080d;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:18px 0}
+  .term .bar{display:flex;gap:7px;padding:10px 14px;border-bottom:1px solid var(--border);align-items:center}
+  .dot{width:11px;height:11px;border-radius:50%}.dot.r{background:#ff5f56}.dot.y{background:#ffbd2e}.dot.g{background:#27c93f}
+  .term .ttl{color:var(--dim);font-size:12px;margin-left:8px}
+  .term pre{margin:0;padding:16px 18px;overflow-x:auto;font-size:13px;line-height:1.7;white-space:pre-wrap}
+  .c{color:var(--dim)}.cmd{color:#fff}.g{color:var(--crystal)}.a{color:var(--accent)}.r{color:var(--red)}.b{color:var(--fluid)}
+  .verdict{border-left:3px solid var(--border);padding:2px 0 2px 16px;margin:6px 0}
+  .verdict.bad{border-color:var(--red)}.verdict.good{border-color:var(--crystal)}.verdict.warn{border-color:var(--accent)}
+  .nav-prev-next{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .btn{display:inline-block;padding:10px 16px;border-radius:7px;font-size:14px;border:1px solid var(--border);color:var(--fg);background:#06080d}
+  .btn:hover{border-color:var(--fluid);text-decoration:none}
+  code{background:#06080d;border:1px solid var(--border);border-radius:5px;padding:1px 6px;font-size:13px;color:#fff}
+  footer{padding:36px 0;color:var(--dim);font-size:14px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <span class="logo"><a href="/agentvcs/">agent<span class="p">vcs</span></a></span>
+  <nav>
+    <a href="index.html">Demos</a>
+    <a href="evolution-diagnostics.html">Technical</a>
+    <a href="https://github.com/EvolvingAgentsLabs/agentvcs">GitHub ↗</a>
+  </nav>
+</div></header>
+
+<section class="hero"><div class="wrap">
+  <h2>Demos · in plain English</h2>
+  <h1>Five everyday situations,<br>five clear calls.</h1>
+  <p class="lead">Anyone running an AI product will recognize these. Each ends in a one-line
+    recommendation — and there is <b>no math on screen</b>. Real evaluations run underneath;
+    a translator turns each result into the decision you actually need.</p>
+  <p class="sub">Reproduce it: <code>bash examples/business-cases/run.sh</code></p>
+</div></section>
+
+<section><div class="wrap">
+  <span class="num">STORY 1</span>
+  <h3>The support bot that got a little worse every week</h3>
+  <p>A support team lets its AI ticket-router “self-improve” each week. Every Monday it ships a
+    tweak, and every Monday the tweak <b>passes the weekly test</b>. So everyone is happy. Are
+    they right to be?</p>
+  <div class="term">
+    <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="ttl">the weekly rollout — every week is green</span></div>
+<pre>  Week 1 — first version            <span class="c">→ passed its test at</span> <span class="g">100%</span> <span class="c">quality ✓</span>
+  Week 2 — 'streamline billing'     <span class="c">→ passed its test at</span> <span class="g">90%</span>  <span class="c">quality ✓</span>
+  Week 3 — 'catch more tech'        <span class="c">→ passed its test at</span> <span class="a">80%</span>  <span class="c">quality ✓</span>
+  Week 4 — 'simplify the rules'     <span class="c">→ passed its test at</span> <span class="a">70%</span>  <span class="c">quality ✓</span>
+  Week 5 — 'clean up'               <span class="c">→ passed its test at</span> <span class="r">60%</span>  <span class="c">quality ✓</span>
+
+<span class="c">$ agentvcs price</span>   <span class="c"># now ask about the WHOLE story, not one week</span>
+<span class="r">🚨 BOTTOM LINE — the self-updates are BACKFIRING.</span>
+
+Left to keep editing itself, the agent is getting <span class="r">WORSE</span> over time, not
+better. Each weekly update passed its own test, so nothing looked wrong
+week to week — the decline only shows up across the whole history.
+
+→ Roll back to the best version and stop the unsupervised self-editing.</pre>
+  </div>
+  <p class="sub">The aha: five green checkmarks hid a slow slide from 100% to 60%. No single
+    week looked wrong — only the lineage did.</p>
+</div></section>
+
+<section><div class="wrap">
+  <span class="num">STORY 2</span>
+  <h3>The same bot, run the smart way</h3>
+  <p>Rewind. This time the team doesn’t let the bot rewrite itself in place. Each week it tries a
+    couple of options and <b>keeps the one that actually tests best</b>.</p>
+  <div class="term">
+    <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="ttl">try a few, keep the winner</span></div>
+<pre>  Start — modest baseline           <span class="c">→</span> <span class="a">60%</span>
+  Option A                          <span class="c">→</span> <span class="a">80%</span>   Option B <span class="c">→</span> <span class="a">70%</span>   <span class="c"># A wins</span>
+  A, improved <span class="c">→</span> <span class="g">90%</span>   A, improved further <span class="c">→</span> <span class="g">100%</span>
+
+<span class="c">$ agentvcs price</span>
+<span class="g">✅ BOTTOM LINE — the agent is genuinely improving.</span>
+
+Trying a few versions and keeping the best one is paying off: quality is
+trending <span class="g">UP</span> across the history, not just on any single test. Safe to continue.</pre>
+  </div>
+  <p class="sub">Same effort, opposite outcome. The fix for a rotting loop isn’t more editing —
+    it’s branch, test, and keep the winner.</p>
+</div></section>
+
+<section><div class="wrap">
+  <span class="num">STORY 3</span>
+  <h3>The custom version for a big client that nobody merged back</h3>
+  <p>For one important customer, the team forked a special version of the agent and kept patching
+    it on the side for months, separate from the main product.</p>
+  <div class="term">
+    <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="ttl">a fork drifting on its own</span></div>
+<pre>  Main product <span class="c">→</span> <span class="g">100%</span>
+  BigClient patch 1..5  <span class="c">→</span> <span class="a">90% 80% 70% 60% 60%</span>   <span class="c"># sliding, alone</span>
+
+<span class="c">$ agentvcs branch</span>
+  BigClient  <span class="a">⚠ ratchet</span>
+* main
+<span class="a">⚠️  BOTTOM LINE — the 'BigClient' version has drifted on its own too long.</span>
+
+It has been patched in isolation for several releases and its quality is
+sliding. Versions maintained alone tend to rot — small mistakes pile up
+with nothing to correct them.
+
+→ Merge it back into the main product before it drifts further.</pre>
+  </div>
+  <p class="sub">Isolated forks decay. agentvcs flags the one that has gone it alone too long and
+    tells you to fold it back in.</p>
+</div></section>
+
+<section><div class="wrap">
+  <span class="num">STORY 4</span>
+  <h3>Paying to stuff the prompt with context that changes nothing</h3>
+  <p>An assistant reads a huge pile of company documents on every single question. It is slow and
+    expensive. Is all that reading actually helping it answer?</p>
+  <div class="term">
+    <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="ttl">a lot of reading, almost always the same move</span></div>
+<pre><span class="c">$ agentvcs infobits</span>
+<span class="a">💸 BOTTOM LINE — you're paying for context the agent barely uses.</span>
+
+The agent reads a large amount of material on every request but almost
+always does the same thing regardless. That context is hardly changing its
+decisions — so you can trim it to cut cost and speed things up, with little
+to no quality loss.</pre>
+  </div>
+  <p class="sub">A quantified license to compress: if the context barely moves the decision,
+    trimming it saves money and latency without hurting quality.</p>
+</div></section>
+
+<section><div class="wrap">
+  <span class="num">STORY 5</span>
+  <h3>One wrong “fact” poisoned the whole fleet</h3>
+  <p>A fleet of customer-facing agents shares a memory of things they’ve “learned”. One of them
+    saves a wrong fact. Does it fade away — or spread to the others?</p>
+  <div class="term">
+    <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="ttl">shared memory across a fleet</span></div>
+<pre><span class="c">$ agentvcs contain</span>
+<span class="r">🦠 BOTTOM LINE — one bad memory entry will SPREAD across the fleet.</span>
+
+At the current fleet size and error rate, a single wrong 'fact' saved to the
+shared memory gets read and re-used by other agents faster than it dies out.
+
+→ Double-check at least <span class="a">58%</span> of what agents read from memory — or run a
+  smaller fleet — to keep a mistake from snowballing.
+
+<span class="c">$ agentvcs contain --fanout 2</span>   <span class="c"># a smaller team</span>
+<span class="g">✅ BOTTOM LINE — a bad memory entry fades out on its own here.</span></pre>
+  </div>
+  <p class="sub">A concrete safety knob: the verification rate that keeps a shared-memory mistake
+    from snowballing — or just run a smaller fleet.</p>
+</div></section>
+
+<section><div class="wrap">
+  <h2>The takeaway</h2>
+  <p>The value of agentvcs isn’t the equations — it’s the calls above. It watches your agents’
+    whole history and tells you, in plain terms: <em>stop, this is getting worse</em> ·
+    <em>keep going, this is working</em> · <em>merge that fork back</em> ·
+    <em>cut this context</em> · <em>your shared memory can spread a mistake</em>. The math is
+    real (see the <a href="evolution-diagnostics.html">technical companion</a>) — the
+    decision-maker never has to see it.</p>
+  <div class="nav-prev-next">
+    <a class="btn" href="index.html">← All demos</a>
+    <a class="btn" href="evolution-diagnostics.html">Technical companion →</a>
+  </div>
+</div></section>
+
+<footer><div class="wrap" style="display:flex;justify-content:space-between;width:100%">
+  <span>agent<span style="color:var(--crystal)">vcs</span> · Apache-2.0</span>
+  <span><a href="/agentvcs/">Home</a> · <a href="https://github.com/EvolvingAgentsLabs/agentvcs/tree/main/examples/business-cases">Source</a></span>
+</div></footer>
+</body>
+</html>
