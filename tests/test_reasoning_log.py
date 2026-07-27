@@ -1,11 +1,8 @@
 """Tests for agentvcs log --reasoning (Feature B)."""
 import json
-import time
 
-import pytest
 
 from agentvcs import Repository
-from agentvcs.cli import build_parser
 
 
 # ------------------------------------------------------------------ helpers
@@ -201,9 +198,9 @@ def test_log_reasoning_rollbacks_interleaved(tmp_path):
 def test_log_reasoning_two_rollbacks_in_json(tmp_path):
     """Two successive rollbacks both appear in log --reasoning --json."""
     repo = setup_repo(tmp_path)
-    a = commit_with(repo, tmp_path, goal="goal A", message="A")
-    b = commit_with(repo, tmp_path, goal="goal B", file_content="v2\n", message="B")
-    c = commit_with(repo, tmp_path, goal="goal C", file_content="v3\n", message="C")
+    commit_with(repo, tmp_path, goal="goal A", message="A")
+    commit_with(repo, tmp_path, goal="goal B", file_content="v2\n", message="B")
+    commit_with(repo, tmp_path, goal="goal C", file_content="v3\n", message="C")
 
     repo.rollback()  # C -> B
     repo.rollback()  # B -> A

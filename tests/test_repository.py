@@ -12,7 +12,7 @@ def write_manifest(path, goal, models, trace=None, state="fluid"):
 
 
 def test_init_creates_metadata_and_template(tmp_path):
-    repo = Repository.init(tmp_path)
+    Repository.init(tmp_path)
     assert (tmp_path / ".agentvcs" / "HEAD").exists()
     assert (tmp_path / "agent.json").exists()
     with pytest.raises(RepoError):

@@ -7,7 +7,7 @@ the rest of agentvcs never learns it came from eve.
 """
 import json
 
-from agentvcs import Repository, crystallize
+from agentvcs import Repository
 from agentvcs.traces import vercel_eve, pull_trace
 
 

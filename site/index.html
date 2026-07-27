@@ -75,21 +75,28 @@
   footer{padding:40px 0;color:var(--dim);font-size:14px;display:flex;
     justify-content:space-between;flex-wrap:wrap;gap:12px}
   .agent-note{font-size:13px;color:var(--dim);border-left:2px solid var(--border);padding-left:14px}
+  .hero-img{width:100%;border-radius:12px;border:1px solid var(--border);margin:0 0 30px;display:block}
+  table{width:100%;border-collapse:collapse;font-size:14px;margin:8px 0}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+  th{color:var(--accent);font-weight:600;font-size:12px;letter-spacing:.05em;text-transform:uppercase}
+  td code,p code{background:#06080d;border:1px solid var(--border);border-radius:5px;padding:1px 6px;font-size:12.5px;color:#fff}
+  .tbl-wrap{overflow-x:auto}
 </style>
 </head>
 <body>
 <header><div class="wrap">
   <span class="logo">agent<span class="p">vcs</span></span>
   <nav>
-    <a href="#problem">Problem</a>
+    <a href="#goal">Goal</a>
     <a href="#how">How</a>
     <a href="demos/">Demos</a>
-    <a href="#agents">For agents</a>
+    <a href="#math">Math</a>
     <a href="https://github.com/EvolvingAgentsLabs/agentvcs">GitHub ↗</a>
   </nav>
 </div></header>
 
 <section class="hero"><div class="wrap">
+  <img class="hero-img" src="img/agentvcs.jpg" alt="Two branches of an agent diverge and merge, sealed once the eval passes">
   <h1>Software is cultivated,<br>not written.</h1>
   <p class="lead">When a fleet of agents builds and runs software, four things change at once —
     the <span class="cy">code</span>, the <span class="ac">goal</span>, the <span class="ff">models</span>,
@@ -101,6 +108,16 @@
     <a class="btn" href="demos/">▶ See the demos</a>
     <a class="btn" href="https://github.com/EvolvingAgentsLabs/agentvcs">★ Star on GitHub</a>
   </div>
+</div></section>
+
+<section id="goal"><div class="wrap">
+  <h2>Goal</h2>
+  <h3>Make an agent’s run-time evolution first-class and trustworthy.</h3>
+  <p>Self-modifying agents are easy to build and hard to trust. agentvcs exists to
+    <b>capture</b> every iteration as one commit (code + goal + models + trace + swarm),
+    <b>prove &amp; freeze</b> what works into a deterministic recipe, <b>reconcile</b> the
+    agent’s run-time line back into your git releases, and <b>measure</b> whether the
+    self-modification is actually improving — not just changing.</p>
 </div></section>
 
 <section id="problem"><div class="wrap">
@@ -176,6 +193,28 @@
   <p class="agent-note" style="margin-top:22px">Reproduce locally:
     <span class="dim">bash examples/business-cases/run.sh</span> — full guide in
     <a href="https://github.com/EvolvingAgentsLabs/agentvcs/blob/main/docs/DEMOS.md">docs/DEMOS.md</a>.</p>
+</div></section>
+
+<section id="math"><div class="wrap">
+  <h2>The math &amp; models behind it</h2>
+  <h3>Exact measurements over the recorded lineage — not vibes.</h3>
+  <p>Because agentvcs owns the whole history (a population of variants over time, each with an
+    eval score), it can measure things a code VCS can’t. Each diagnostic is an exact,
+    standard-library computation over the commit graph.</p>
+  <div class="tbl-wrap"><table>
+    <tr><th>Diagnostic</th><th>Model</th><th>Question it answers</th></tr>
+    <tr><td><code>price</code></td><td>Price equation <code>w̄·Δz̄ = Cov(w,z) + E[w·Δz]</code></td><td>Is improvement from <em>selecting</em> between branches, or <em>editing</em> within a lineage?</td></tr>
+    <tr><td><code>price</code></td><td>Eigen error catastrophe (<code>μL &lt; ln σ</code>)</td><td>Is self-editing losing information faster than selection recovers it?</td></tr>
+    <tr><td><code>health</code></td><td>Critical slowing down (autocorrelation + variance)</td><td>Is a collapse coming <em>before</em> the mean score moves?</td></tr>
+    <tr><td><code>health</code>/<code>branch</code></td><td>Muller’s ratchet</td><td>Is an unmerged branch a decaying lineage that needs recombination (<code>merge</code>)?</td></tr>
+    <tr><td><code>infobits</code></td><td>Kelly / channel capacity (<code>I(context; action)</code> in bits)</td><td>How much can more context buy — where’s the compression headroom?</td></tr>
+    <tr><td><code>contain</code></td><td>Branching process <code>R₀ = n·p</code></td><td>Will a poisoned shared-memory entry spread, or die out?</td></tr>
+  </table></div>
+  <p class="sub">The data model underneath is a git-style content-addressed store with a
+    <span class="state fluid">fluid</span> ↔ <span class="state crystal">crystallized</span>
+    state machine and a three-way <em>semantic</em> merge. Model pins are provider-agnostic.
+    Derivations and the honest scope boundary:
+    <a href="https://github.com/EvolvingAgentsLabs/agentvcs/blob/main/docs/EVOLUTIONARY_DYNAMICS.md">EVOLUTIONARY_DYNAMICS.md</a>.</p>
 </div></section>
 
 <section id="agents"><div class="wrap">

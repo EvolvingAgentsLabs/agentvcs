@@ -1,7 +1,6 @@
 """Tests for agentvcs merge (Feature A)."""
 import json
 import sys
-import textwrap
 
 import pytest
 
@@ -61,7 +60,7 @@ def test_merge_base_linear(tmp_path):
     """Linear chain: A -> B -> C. merge_base(A, C) == A."""
     repo = setup_repo(tmp_path)
     a = commit_with(repo, tmp_path, message="A")
-    b = commit_with(repo, tmp_path, file_content="v2\n", message="B")
+    commit_with(repo, tmp_path, file_content="v2\n", message="B")
     c = commit_with(repo, tmp_path, file_content="v3\n", message="C")
 
     lca = merge_base(repo, a, c)
@@ -96,17 +95,17 @@ def test_merge_base_no_common(tmp_path):
 def test_clean_merge_theirs_only_change(tmp_path):
     """File changed only on theirs → taken in merge."""
     repo = setup_repo(tmp_path, file_content="shared\n")
-    base = commit_with(repo, tmp_path, message="base")
+    commit_with(repo, tmp_path, message="base")
 
     # Create theirs branch
     repo.branch("feature")
     repo.checkout("feature")
-    theirs = commit_with(repo, tmp_path, file_content="shared\ntheirs added\n",
+    commit_with(repo, tmp_path, file_content="shared\ntheirs added\n",
                          message="theirs")
 
     # Back to main — make a commit that doesn't touch main.py so ours diverges
     repo.checkout("main")
-    ours = commit_with(repo, tmp_path, goal="ours goal", message="ours")
+    commit_with(repo, tmp_path, goal="ours goal", message="ours")
 
     result = merge(repo, "feature")
     assert result["status"] == "merged"
@@ -118,17 +117,17 @@ def test_clean_merge_theirs_only_change(tmp_path):
 def test_clean_merge_ours_only_change(tmp_path):
     """File changed only on ours → kept in merge."""
     repo = setup_repo(tmp_path, file_content="shared\n")
-    base = commit_with(repo, tmp_path, message="base")
+    commit_with(repo, tmp_path, message="base")
 
     # Create theirs branch (no change to main.py)
     repo.branch("feature")
     repo.checkout("feature")
     (tmp_path / "other.py").write_text("other\n")
-    theirs = commit_with(repo, tmp_path, message="theirs adds other.py")
+    commit_with(repo, tmp_path, message="theirs adds other.py")
 
     # Back to main, change main.py
     repo.checkout("main")
-    ours = commit_with(repo, tmp_path, file_content="shared\nours added\n",
+    commit_with(repo, tmp_path, file_content="shared\nours added\n",
                        message="ours")
 
     result = merge(repo, "feature")
@@ -144,12 +143,12 @@ def test_clean_merge_ours_only_change(tmp_path):
 def test_conflict_no_force_no_commit(tmp_path):
     """Conflicting edit → markers present, status==conflict, no new commit."""
     repo = setup_repo(tmp_path, file_content="line1\nline2\nline3\n")
-    base = commit_with(repo, tmp_path, message="base")
-    head_before = repo.head_commit()
+    commit_with(repo, tmp_path, message="base")
+    repo.head_commit()
 
     repo.branch("feature")
     repo.checkout("feature")
-    theirs = commit_with(repo, tmp_path,
+    commit_with(repo, tmp_path,
                          file_content="line1\nTHEIRS changed line2\nline3\n",
                          message="theirs")
 
