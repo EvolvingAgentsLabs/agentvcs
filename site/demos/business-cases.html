@@ -9,39 +9,10 @@
 <meta property="og:title" content="agentvcs — the diagnostics in plain English">
 <meta property="og:description" content="Five business stories, five clear recommendations, not one equation on screen.">
 <meta property="og:type" content="article">
-<style>
-  :root{--bg:#0b0e14;--panel:#0f131b;--border:#1d2430;--fg:#c9d1d9;--dim:#6e7681;
-    --fluid:#39c5cf;--crystal:#3fb950;--accent:#e3b341;--red:#f85149;
-    --mono:"SF Mono",SFMono-Regular,ui-monospace,"JetBrains Mono","Cascadia Code",Menlo,Consolas,monospace;}
-  *{box-sizing:border-box}html{scroll-behavior:smooth}
-  body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--mono);line-height:1.65;font-size:16px;-webkit-font-smoothing:antialiased}
-  a{color:var(--fluid);text-decoration:none}a:hover{text-decoration:underline}
-  .wrap{max-width:820px;margin:0 auto;padding:0 24px}
-  header{padding:14px 0;border-bottom:1px solid var(--border);position:sticky;top:0;background:rgba(11,14,20,.85);backdrop-filter:blur(8px);z-index:10}
-  header .wrap{display:flex;align-items:center;justify-content:space-between}
-  .logo{font-weight:700}.logo a{color:#fff}.logo .p{color:var(--crystal)}
-  nav a{color:var(--dim);margin-left:18px;font-size:14px}nav a:hover{color:var(--fg)}
-  h1{font-size:clamp(27px,5vw,42px);line-height:1.14;margin:0 0 16px;color:#fff;letter-spacing:-.5px}
-  h2{font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin:0 0 10px;font-weight:600}
-  h3{color:#fff;font-size:21px;margin:0 0 8px}
-  p{margin:0 0 16px}.lead{font-size:clamp(17px,2.4vw,20px)}.sub{color:var(--dim)}
-  .hero{padding:64px 0 40px;border-bottom:1px solid var(--border)}
-  section{padding:44px 0;border-bottom:1px solid var(--border)}
-  .num{color:var(--dim);font-size:13px;letter-spacing:.1em}
-  .term{background:#06080d;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:18px 0}
-  .term .bar{display:flex;gap:7px;padding:10px 14px;border-bottom:1px solid var(--border);align-items:center}
-  .dot{width:11px;height:11px;border-radius:50%}.dot.r{background:#ff5f56}.dot.y{background:#ffbd2e}.dot.g{background:#27c93f}
-  .term .ttl{color:var(--dim);font-size:12px;margin-left:8px}
-  .term pre{margin:0;padding:16px 18px;overflow-x:auto;font-size:13px;line-height:1.7;white-space:pre-wrap}
-  .c{color:var(--dim)}.cmd{color:#fff}.g{color:var(--crystal)}.a{color:var(--accent)}.r{color:var(--red)}.b{color:var(--fluid)}
-  .verdict{border-left:3px solid var(--border);padding:2px 0 2px 16px;margin:6px 0}
-  .verdict.bad{border-color:var(--red)}.verdict.good{border-color:var(--crystal)}.verdict.warn{border-color:var(--accent)}
-  .nav-prev-next{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
-  .btn{display:inline-block;padding:10px 16px;border-radius:7px;font-size:14px;border:1px solid var(--border);color:var(--fg);background:#06080d}
-  .btn:hover{border-color:var(--fluid);text-decoration:none}
-  code{background:#06080d;border:1px solid var(--border);border-radius:5px;padding:1px 6px;font-size:13px;color:#fff}
-  footer{padding:36px 0;color:var(--dim);font-size:14px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
-</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;1,6..72,300&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/site.css">
 </head>
 <body>
 <header><div class="wrap">
@@ -192,7 +163,7 @@ shared memory gets read and re-used by other agents faster than it dies out.
 </div></section>
 
 <footer><div class="wrap" style="display:flex;justify-content:space-between;width:100%">
-  <span>agent<span style="color:var(--crystal)">vcs</span> · Apache-2.0</span>
+  <span>agent<span class="p">vcs</span> · Apache-2.0</span>
   <span><a href="/agentvcs/">Home</a> · <a href="https://github.com/EvolvingAgentsLabs/agentvcs/tree/main/examples/business-cases">Source</a></span>
 </div></footer>
 </body>
