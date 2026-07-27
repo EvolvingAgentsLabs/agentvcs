@@ -34,6 +34,9 @@ Honesty caveats worth carrying in the output, not just the docs:
 """
 from __future__ import annotations
 
+import math
+from collections import Counter
+
 from .merge import merge_base
 from .repository import Repository, RepoError
 
@@ -436,3 +439,197 @@ def health(repo: Repository, trait: str = "score") -> dict:
     healthy = not warnings
     return {"healthy": healthy, "price": pr, "slowing": sl, "ratchet": rt,
             "warnings": warnings}
+
+
+# ------------------------------------------------- information value of context
+def _tool_sequence(messages) -> list:
+    seq = []
+    for m in messages:
+        content = m.get("content")
+        if isinstance(content, list):
+            for b in content:
+                if isinstance(b, dict) and b.get("type") == "tool_use":
+                    seq.append(b.get("name") or "?")
+    return seq
+
+
+def _all_tool_sequences(repo: Repository) -> list:
+    """Ordered tool-selection sequences, one per distinct recorded trace (traces are
+    content-addressed, so identical ones shared across commits are counted once)."""
+    seqs, seen = [], set()
+    for oid, commit in _reachable(repo).items():
+        t = commit.get("trace")
+        if not t or t in seen:
+            continue
+        seen.add(t)
+        try:
+            msgs = repo.objects.read_obj(t).get("messages", [])
+        except Exception:
+            continue
+        s = _tool_sequence(msgs)
+        if s:
+            seqs.append(s)
+    return seqs
+
+
+def _entropy(counts: Counter) -> float:
+    total = sum(counts.values())
+    if total == 0:
+        return 0.0
+    return -sum((c / total) * math.log2(c / total) for c in counts.values() if c)
+
+
+def _transition_mi(seqs: list):
+    """Mutual information I(prev action; next action) in bits, over consecutive
+    tool selections *within* a trace (transitions never cross trace boundaries)."""
+    joint: Counter = Counter()
+    for s in seqs:
+        for i in range(1, len(s)):
+            joint[(s[i - 1], s[i])] += 1
+    total = sum(joint.values())
+    if total == 0:
+        return None
+    px, py = Counter(), Counter()
+    for (x, y), c in joint.items():
+        px[x] += c
+        py[y] += c
+    mi = 0.0
+    for (x, y), c in joint.items():
+        pxy = c / total
+        mi += pxy * math.log2(pxy / ((px[x] / total) * (py[y] / total)))
+    return max(0.0, mi)
+
+
+def infobits(repo: Repository) -> dict:
+    """How many *bits* the pipeline actually spends on decisions — the Kelly /
+    Kussell–Leibler bound on the value of context.
+
+    The log-growth gain from side information is bounded by ``I(context; action)``:
+    if the decisions carry only a few bits, no amount of extra retrieval can buy
+    more than that, which is the quantitative case for aggressive context
+    compression (Cheong et al. measured a whole signalling pathway at ~1 bit).
+
+    Measured from the recorded traces agentvcs stores:
+      * ``action_entropy_bits`` = H(A) over tool selections — the channel the agent
+        actually exercises.
+      * ``transition_mi_bits`` = I(previous action; next action) — a concrete,
+        computable mutual information whose *context* variable is the preceding
+        action. This is a **lower-bound proxy** for I(full context; action), not the
+        whole thing; it is honest about what it measures.
+      * ``bits_per_ktok`` = action entropy per thousand context tokens (from the
+        current runtime frame, best-effort) — the compression-headroom signal.
+    """
+    seqs = _all_tool_sequences(repo)
+    actions = [a for s in seqs for a in s]
+    n = len(actions)
+    if n == 0:
+        return {"insufficient": True, "n_decisions": 0,
+                "message": "no tool-use decisions found in the recorded traces — "
+                           "commit with a trace that has tool_use blocks"}
+    counts = Counter(actions)
+    h = _entropy(counts)
+    mi = _transition_mi(seqs)
+
+    ctx_tokens = None
+    try:
+        ctx_tokens = (repo.runtime_frame().get("budget") or {}).get("tokens_total")
+    except Exception:
+        pass
+    bits_per_ktok = (round(h / (ctx_tokens / 1000), 4)
+                     if ctx_tokens else None)
+
+    reading = (f"the decision channel exercises {h:.2f} bits across "
+               f"{len(counts)} distinct tools over {n} decisions"
+               + (f"; the previous action carries {mi:.2f} bits about the next"
+                  if mi is not None else "")
+               + ". Under Kelly/Kussell–Leibler the value of extra context is "
+                 "bounded by the bits it adds to the decision — a low figure here "
+                 "bounds what more retrieval can buy and justifies compressing it.")
+
+    return {"insufficient": False, "n_decisions": n, "distinct_actions": len(counts),
+            "action_entropy_bits": _r(h, 4),
+            "transition_mi_bits": _r(mi, 4) if mi is not None else None,
+            "context_tokens": ctx_tokens, "bits_per_ktok": bits_per_ktok,
+            "reading": reading,
+            "note": "transition_mi uses the previous action as the context proxy — "
+                    "a lower bound on I(full-context; action), not a measurement of "
+                    "it; treat as a floor on how few bits the decisions carry"}
+
+
+# ----------------------------------------------- shared-memory containment (R0)
+def _measured_fanout(repo: Repository):
+    try:
+        subs = repo.runtime_frame().get("subagents") or []
+    except Exception:
+        subs = []
+    n = sum(int(s.get("count") or 0) for s in subs)
+    if n:
+        return float(n), "runtime subagents"
+    swarm = repo.read_manifest().get("swarm") or {}
+    if swarm:
+        return float(len(swarm)), "declared swarm nodes"
+    return None, None
+
+
+def _eval_fail_fraction(repo: Repository):
+    graded = failed = 0
+    for oid in _reachable(repo):
+        ev = repo.read_eval(oid)
+        if ev is not None and "ok" in ev:
+            graded += 1
+            failed += int(not ev.get("ok"))
+    if graded == 0:
+        return None, 0
+    return failed / graded, graded
+
+
+def contain(repo: Repository, fanout=None, prob=None) -> dict:
+    """Is shared-memory poisoning self-limiting? The branching-process test.
+
+    A corrupted artifact read by ``n`` downstream agents, each propagating the
+    corruption with probability ``p``, dies out iff ``R₀ = n·p < 1``. That directly
+    yields the **verification rate you need**: verify enough reads that the effective
+    ``n·p`` drops below 1.
+
+    Inputs are measured when possible and overridable:
+      * ``n`` (fan-out) — from the runtime subagent count, else the declared swarm
+        size, else ``--fanout``.
+      * ``p`` (escape probability) — the empirical failed-eval fraction over graded
+        commits (a proxy for how often an unchecked bad state slips through), else
+        ``--prob``.
+    """
+    if fanout is None:
+        fanout, fsrc = _measured_fanout(repo)
+    else:
+        fanout, fsrc = float(fanout), "override"
+    if prob is None:
+        prob, graded = _eval_fail_fraction(repo)
+        psrc = (f"empirical failed-eval fraction over {graded} graded commits"
+                if prob is not None else None)
+    else:
+        prob, psrc = float(prob), "override"
+
+    out = {"fanout": fanout, "prob": _r(prob, 4) if prob is not None else None,
+           "fanout_source": fsrc, "prob_source": psrc}
+    if fanout is None or prob is None:
+        return {**out, "insufficient": True,
+                "message": "need a fan-out n and an escape probability p — measured "
+                           "from subagents/swarm and the failed-eval rate, or pass "
+                           "--fanout / --prob"}
+
+    r0 = fanout * prob
+    contained = r0 < 1.0
+    req_v = max(0.0, 1.0 - 1.0 / r0) if r0 > 0 else 0.0
+    if contained:
+        reading = (f"R₀ = n·p = {r0:.2f} < 1 — shared-memory corruption is "
+                   f"self-limiting at this fan-out and escape rate")
+    else:
+        reading = (f"R₀ = n·p = {r0:.2f} ≥ 1 — corruption can propagate; verify at "
+                   f"least {req_v * 100:.0f}% of downstream reads (or cut fan-out / "
+                   f"escape rate) to contain it")
+    return {**out, "insufficient": False, "r0": _r(r0, 4), "contained": contained,
+            "critical_prob": _r(1.0 / fanout, 4) if fanout else None,
+            "required_verification_rate": _r(req_v, 4), "reading": reading,
+            "note": "mean-field bound: the dispersion (tail) matters more than the "
+                    "mean — a low average R₀ with a heavy tail still permits rare "
+                    "large cascades, so watch the tail, not just this number"}

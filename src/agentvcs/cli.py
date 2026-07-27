@@ -18,6 +18,8 @@ machine ``code`` (see docs/AGENT_MODE.md).
     agentvcs rollback [<ref>]     undo: restore full prior state (the panic button)
     agentvcs freeze [<commit>]    crystallize a fluid commit into a deterministic recipe
     agentvcs replay [<commit>]    re-execute a crystallized recipe deterministically
+    agentvcs price / health       is the self-improvement loop net-positive? (Price + Eigen threshold)
+    agentvcs infobits / contain   bits of context value (Kelly) · shared-memory containment (R0)
     agentvcs ui                   serve a local web dashboard to visualize the evolution
 """
 from __future__ import annotations
@@ -1060,6 +1062,58 @@ def cmd_health(args):
     _out(args, r, "\n".join(lines))
 
 
+def cmd_infobits(args):
+    """I(context; action) in bits from the recorded traces — the Kelly/Kussell-Leibler
+    bound on the value of context (justifies aggressive context compression)."""
+    from . import dynamics
+    repo = Repository.open()
+    r = dynamics.infobits(repo)
+    if r.get("insufficient"):
+        _out(args, r, f"infobits: {r['message']}")
+        return
+    hbits = _color(f"{r['action_entropy_bits']:.2f} bits", C_C)
+    lines = [
+        f"{_color('infobits', C_B)}  H(action) = {hbits}"
+        f"  over {r['n_decisions']} decisions / {r['distinct_actions']} tools",
+    ]
+    if r["transition_mi_bits"] is not None:
+        lines.append(f"  I(prev; next) = {r['transition_mi_bits']:.2f} bits")
+    if r["bits_per_ktok"] is not None:
+        lines.append(f"  {r['bits_per_ktok']:.3f} bits / 1k context tokens "
+                     f"({_human_tok(r['context_tokens'])} tok)")
+    lines.append(_color("  → " + r["reading"], C_DIM))
+    _out(args, r, "\n".join(lines))
+
+
+def cmd_contain(args):
+    """Branching-process containment for shared-memory poisoning: R0 = n·p and the
+    verification rate needed to keep it self-limiting."""
+    from . import dynamics
+    repo = Repository.open()
+    r = dynamics.contain(repo, fanout=args.fanout, prob=args.prob)
+    if r.get("insufficient"):
+        _out(args, r, f"contain: {r['message']}")
+        return
+    tone = C_G if r["contained"] else C_R
+    r0 = _color(f"{r['r0']:.2f}", tone)
+    verdict = _color("contained" if r["contained"] else "NOT contained", tone)
+    lines = [
+        f"{_color('contain', C_B)}  R₀ = n·p = {r0}  "
+        f"(n={r['fanout']:g} via {r['fanout_source']}, "
+        f"p={r['prob']:g} via {r['prob_source']})",
+        f"  {verdict} — need to verify ≥ "
+        f"{r['required_verification_rate'] * 100:.0f}% of reads",
+        _color("  → " + r["reading"], C_DIM),
+    ]
+    _out(args, r, "\n".join(lines))
+
+
+def _human_tok(n):
+    if not isinstance(n, (int, float)):
+        return "?"
+    return f"{n / 1000:.1f}k" if n >= 1000 else str(int(n))
+
+
 # ------------------------------------------------------------------- parser
 def build_parser() -> argparse.ArgumentParser:
     common = argparse.ArgumentParser(add_help=False)
@@ -1233,6 +1287,18 @@ def build_parser() -> argparse.ArgumentParser:
 
     add("health", help="evolution-health rollup: Price verdict + critical-slowing-down "
         "signal + Muller's-ratchet load on unmerged branches").set_defaults(func=cmd_health)
+
+    add("infobits", help="I(context; action) in bits from the recorded traces — the "
+        "Kelly/Kussell-Leibler bound on the value of context (compression headroom)"
+        ).set_defaults(func=cmd_infobits)
+
+    sp = add("contain", help="branching-process containment for shared-memory "
+             "poisoning: R0 = n·p and the verification rate that keeps it self-limiting")
+    sp.add_argument("--fanout", type=float, default=None,
+                    help="downstream readers n (default: measured from subagents/swarm)")
+    sp.add_argument("--prob", type=float, default=None,
+                    help="per-read escape probability p (default: empirical failed-eval rate)")
+    sp.set_defaults(func=cmd_contain)
 
     add("runtime", help="show the operational frame your runtime hides "
         "(budget/context/routing/tools/subagents)").set_defaults(func=cmd_runtime)

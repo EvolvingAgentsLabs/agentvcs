@@ -178,25 +178,36 @@ is only the *editable* region.
 
 ---
 
-## Tier 3 — Adjacent / measurement-only. Document; expose opportunistically.
+## Tier 3 — Measurement-only diagnostics (shipped, clearly labeled as estimates)
 
-- **Kelly / Kussell–Leibler + channel capacity (#H, #9).** The value of retrieving
-  more context is bounded by `I(context; action)` bits. agentvcs *can* estimate this
-  from stored traces (tool-selection decisions vs. context present), giving a
-  quantitative justification for aggressive context compression. But the *action* of
-  compressing belongs to the harness/retrieval layer, not the VCS. **Plan:** an
-  optional `agentvcs infobits` diagnostic that reports the estimate from traces; do not
-  build any compression behavior into agentvcs.
+These report numbers *about* the harness/memory layers from the lineage agentvcs
+stores; they deliberately trigger **no** behavior (no compression, no auto-verify).
+Each is honest about being a proxy.
+
+- **Kelly / Kussell–Leibler + channel capacity (#H, #9) → `agentvcs infobits`.** The
+  log-growth value of side information is bounded by `I(context; action)` bits.
+  `infobits` measures the decision channel from the recorded traces: `H(action)` over
+  tool selections (the bits actually exercised) and `I(prev action; next action)` — a
+  *concrete, computable* mutual information whose context variable is the preceding
+  action. That MI is an explicit **lower-bound proxy** for `I(full-context; action)`,
+  not the whole thing, and the output says so. A low figure bounds what more retrieval
+  can buy — the quantitative case for compression — but agentvcs never compresses
+  anything itself; that stays in the harness/retrieval layer.
+- **Branching process R₀ + dispersion k (#G) → `agentvcs contain`.** For shared-memory
+  poisoning, corruption is self-limiting iff `R₀ = n·p < 1`. `contain` measures the
+  fan-out `n` from the subagent/swarm topology and the escape probability `p` from the
+  empirical failed-eval fraction (both overridable via `--fanout`/`--prob`), then
+  reports `R₀`, whether it's contained, and the **required verification rate**
+  `1 − 1/R₀`. The output carries the honest caveat that this is a mean-field bound —
+  the dispersion (tail) matters more than the mean, so a low average `R₀` with a heavy
+  tail still permits rare large cascades.
 - **Replicator dynamics / DeSoc correlation discounting (#6).** Already partially
   present: `plural.py` selects maximally-diverse fleets by discounting Soul correlation
   (facility-location over skill profiles). Frequency-dependent replicator dynamics is
-  the continuous-time generalization. **Plan:** note the connection in `plural.py`
-  docs; no new build unless variants start competing for a shared task pool.
-- **Branching process R₀ + dispersion k (#G).** For shared-memory poisoning:
-  `n·p < 1` gives the verification rate that makes corruption self-limiting, and the
-  *tail* (k) matters more than the mean. This is a real result but it governs the
-  **memory/harness** layer, not the commit graph. **Plan:** document as future work for
-  the evolving-memory component, out of scope for the VCS core.
+  the continuous-time generalization; the connection is noted in `plural.py`'s
+  docstring. No new build unless variants start competing for a shared task pool — at
+  which point `plural`'s diversity score and `price`'s selection term are the two
+  inputs a replicator step needs.
 
 ---
 
@@ -264,9 +275,15 @@ stored-object shapes, `--json` throughout):
 - Architecture notes landed where they belong: the kinetic-proofreading / hard-reject
   argument in `eval.py`, the replicator connection in `plural.py`.
 
-**Deferred by design (Tier 3, not shipped):** an `infobits` estimator of
-`I(context; action)` and the branching-process `R₀` memory-poisoning bound. Both
-govern the harness/retrieval/memory layers rather than the commit graph, and shipping
-a soft mutual-information number computed from heterogeneous traces would mislead more
-than it informs. They stay documented as future work for the sibling components, per
-the scope boundary above — not built into the VCS core.
+Tier 3 is also shipped, as measurement-only diagnostics that trigger no behavior:
+
+- **`agentvcs infobits`** (MCP `avcs_infobits`) — `H(action)` + `I(prev; next)` bits
+  over the recorded tool selections; the Kelly/Kussell–Leibler bound on the value of
+  context, labeled as a lower-bound proxy.
+- **`agentvcs contain [--fanout N] [--prob P]`** (MCP `avcs_contain`) — the
+  branching-process test `R₀ = n·p` for shared-memory poisoning, with `n`/`p` measured
+  from the subagent/swarm topology and the failed-eval fraction, returning the required
+  verification rate and a mean-field/tail caveat.
+
+The controller/fleet math in the table above stays out of scope — those regulate a
+live harness, not a version control system.

@@ -16,11 +16,11 @@ from .eval import run_eval
 from .sbt import issue_sbt, read_sbts, verify_sbt, skill_profile
 from .plural import select_fleet, correlation
 from .soul import verify_commit
-from .dynamics import price, slowing, ratchet, health
+from .dynamics import price, slowing, ratchet, health, infobits, contain
 
 __version__ = "0.4.0"
 __all__ = ["Repository", "RepoError", "Snapshot", "crystallize", "diff_commits",
            "merge", "replay", "recall", "build_frame", "run_eval",
            "issue_sbt", "read_sbts", "verify_sbt", "skill_profile",
            "select_fleet", "correlation", "verify_commit",
-           "price", "slowing", "ratchet", "health"]
+           "price", "slowing", "ratchet", "health", "infobits", "contain"]

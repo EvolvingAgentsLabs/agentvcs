@@ -177,6 +177,70 @@ def test_cli_branch_reports_ratchet(tmp_path, capsys):
     assert out["warnings"]
 
 
+# ------------------------------------------------------------------ infobits
+def _trace_repo(tmp_path, tools):
+    """A repo whose committed trace records the given ordered tool selections."""
+    repo = Repository.init(tmp_path)
+    (tmp_path / "agent.json").write_text(json.dumps(
+        {"goal": "g", "models": [], "trace": "run.jsonl", "state": "fluid"}))
+    msgs = [{"role": "assistant", "content": [{"type": "tool_use", "name": t}]}
+            for t in tools]
+    (tmp_path / "run.jsonl").write_text("\n".join(json.dumps(m) for m in msgs))
+    repo.commit("seed", timestamp=1)
+    return repo
+
+
+def test_infobits_measures_decision_channel(tmp_path):
+    repo = _trace_repo(tmp_path, ["read", "edit", "read", "bash", "read", "edit"])
+    r = dynamics.infobits(repo)
+    assert r["insufficient"] is False
+    assert r["n_decisions"] == 6 and r["distinct_actions"] == 3
+    assert r["action_entropy_bits"] > 0
+    assert r["transition_mi_bits"] is not None and r["transition_mi_bits"] >= 0
+
+
+def test_infobits_zero_entropy_for_single_tool(tmp_path):
+    repo = _trace_repo(tmp_path, ["read", "read", "read", "read"])
+    r = dynamics.infobits(repo)
+    assert r["action_entropy_bits"] == 0.0    # a deterministic channel carries 0 bits
+
+
+def test_infobits_insufficient_without_tools(tmp_path):
+    repo = _init(tmp_path)
+    _commit(repo, tmp_path, "x", 1, 0.5)
+    assert dynamics.infobits(repo)["insufficient"] is True
+
+
+# ------------------------------------------------------------------- contain
+def test_contain_verdict_and_required_rate(tmp_path):
+    repo = _init(tmp_path)
+    _commit(repo, tmp_path, "x", 1, 0.5)
+    # explicit params: n=10 readers, p=0.2 escape => R0=2.0, not contained
+    r = dynamics.contain(repo, fanout=10, prob=0.2)
+    assert r["insufficient"] is False and r["r0"] == 2.0
+    assert r["contained"] is False
+    assert r["required_verification_rate"] == pytest.approx(0.5)   # 1 - 1/2
+    # a small fan-out is self-limiting
+    r2 = dynamics.contain(repo, fanout=3, prob=0.2)               # R0 = 0.6
+    assert r2["contained"] is True
+
+
+def test_contain_uses_empirical_fail_rate(tmp_path):
+    repo = _init(tmp_path)
+    _commit(repo, tmp_path, "a", 1, 0.9)     # ok
+    _commit(repo, tmp_path, "b", 2, 0.3)     # fail (score < 0.5 -> ok False)
+    r = dynamics.contain(repo, fanout=4)     # p defaults to failed-eval fraction = 0.5
+    assert r["prob"] == 0.5 and r["r0"] == 2.0
+    assert "failed-eval" in r["prob_source"]
+
+
+def test_contain_insufficient_without_inputs(tmp_path):
+    repo = _init(tmp_path)                    # no subagents, no evals
+    _commit(repo, tmp_path, "x", 1, None)
+    r = dynamics.contain(repo)
+    assert r["insufficient"] is True
+
+
 # ---------------------------------------------------------------- mcp surface
 def test_mcp_price_and_health(tmp_path, monkeypatch):
     from agentvcs import mcp_server
@@ -192,3 +256,16 @@ def test_mcp_price_and_health(tmp_path, monkeypatch):
     assert price["ok"] is True and price["threshold"]["code"] == "ERROR_CATASTROPHE"
     health = _call("avcs_health")
     assert health["ok"] is True and health["healthy"] is False
+    contain = _call("avcs_contain", {"fanout": 10, "prob": 0.2})
+    assert contain["ok"] is True and contain["r0"] == 2.0
+
+
+def test_cli_infobits_and_contain_json(tmp_path, capsys):
+    _trace_repo(tmp_path, ["read", "edit", "read", "bash"])
+    main(["-C", str(tmp_path), "infobits", "--json"])
+    out = json.loads(capsys.readouterr().out)
+    assert out["ok"] is True and out["n_decisions"] == 4
+
+    main(["-C", str(tmp_path), "contain", "--fanout", "10", "--prob", "0.2", "--json"])
+    out = json.loads(capsys.readouterr().out)
+    assert out["ok"] is True and out["r0"] == 2.0 and out["contained"] is False

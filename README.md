@@ -184,7 +184,15 @@ the mean moves) and **Muller's ratchet** (a long, unmerged branch is a condemned
 asexual lineage — `merge` is the recombination that reconstitutes it). Declare an
 `"editable": ["skills/", "prompts/…"]` surface in `agent.json` and the error bound is
 computed against *that* size, not the whole spec — the engineering answer to "how
-much can I let the agent rewrite itself?". Design notes:
+much can I let the agent rewrite itself?".
+
+Two more diagnostics fall out of the same recorded lineage. `agentvcs infobits`
+estimates how many **bits** your decisions actually carry (`H(action)` and
+`I(prev; next)` over the trace's tool selections) — the Kelly/Kussell-Leibler ceiling
+on what extra context retrieval can buy, i.e. your compression headroom. `agentvcs
+contain` runs the branching-process test `R₀ = n·p` for shared-memory poisoning (fan-out
+`n` from the subagent/swarm topology, escape rate `p` from the failed-eval fraction) and
+tells you the **verification rate** that keeps corruption self-limiting. Design notes:
 [`docs/EVOLUTIONARY_DYNAMICS.md`](docs/EVOLUTIONARY_DYNAMICS.md).
 
 ## The runtime your agent can't see
@@ -217,6 +225,7 @@ and `anthropic-managed` sessions. Wire it into Claude Code once with
 | `agentvcs rollback [REF]` | undo: restore the full prior state (the panic button) |
 | `agentvcs eval` / `freeze` / `replay` / `recall` | the trust gate: prove → crystallize → re-run → find |
 | `agentvcs price` / `health` | is the evolution *working*: selection-vs-transmission + error-catastrophe & ratchet warnings |
+| `agentvcs infobits` / `contain` | information value of context (bits) · shared-memory poisoning containment (R₀) |
 | `agentvcs runtime` / `budget` / `context` / `statusline` / `watch` | the operational frame your runtime hides |
 | `agentvcs ui` | serve a local web dashboard to *watch* the evolution |
 | `agentvcs soul` / `verify` / `fleet` | optional Soul/DeSoc layer (see below) |
