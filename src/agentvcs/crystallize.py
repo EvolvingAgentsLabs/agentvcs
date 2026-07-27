@@ -16,14 +16,12 @@ from __future__ import annotations
 
 import json
 import time
-from pathlib import Path
 
 from .repository import Repository, RepoError
 
 
 def _check_no_conflict_markers(repo) -> None:
     """Raise RepoError if any tracked file contains git-style conflict markers."""
-    from .repository import DEFAULT_IGNORE
     patterns = repo._ignore_patterns()
     marker = b"<<<<<<< ours"
     for path in sorted(repo.workdir.rglob("*")):

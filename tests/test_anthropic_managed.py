@@ -3,7 +3,6 @@ session event stream, redaction, runtime-frame reconstruction from model_usage,
 the exported-file format variants, live auto_fetch (mocked), and E2E commit."""
 import json
 
-import pytest
 
 from agentvcs import Repository
 from agentvcs.traces import anthropic_managed as am

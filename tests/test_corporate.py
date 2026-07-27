@@ -3,7 +3,6 @@ agent.json, the reserved-matter policy gate, signed human authorizations, and th
 Soul-signed Libro de Actas Digital produced by `audit`."""
 import json
 
-import pytest
 
 from agentvcs import _ed25519 as ed
 from agentvcs import corporate, soul
