@@ -24,7 +24,7 @@ below stays the released one until the plan moves it to `legacy/`.
 
 ```bash
 cargo build --release                       # target/release/agentvcs
-python3 conformance/run.py --cli "$PWD/target/release/agentvcs"   # 102/102
+python3 conformance/run.py --cli "$PWD/target/release/agentvcs"   # 103/103
 cargo test --workspace
 ```
 
@@ -99,7 +99,7 @@ with avcs.run("manifest.json", store=".") as run:          # run_start ... run_e
 ```
 
 `python -m agentvcs` (and the `agentvcs` console script of the wheel) is the Rust
-CLI in-process; it passes the same 102/102 conformance cases. Model wrappers for
+CLI in-process; it passes the same 103/103 conformance cases. Model wrappers for
 OpenAI-compatible servers (llama.cpp, vLLM, Ollama) and Claude live in
 `agentvcs.integrations`; the end-to-end example is
 [`examples/toy_pipeline`](https://github.com/EvolvingAgentsLabs/agentvcs/blob/main/examples/toy_pipeline/README.md).
