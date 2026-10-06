@@ -96,3 +96,22 @@ agentvcs is built from `main` on the VM (rustup ≥ 1.89, maturin wheel for Linu
 Order: the 2-minute smoke first; if v1 recall is near 0 (unparseable JSON), stop and report.
 Then the Gate F2 run with `--docs` rescaled from the smoke's `harness.seconds` to ≈ 20 minutes,
 `--patch-after` at a quarter of the docs. One Colab session (≤ 60 min); falsifiers as above.
+
+## Result (2026-10-06, Colab T4; files in `runs/f2-real-2026-10-06/`)
+
+Qwen2.5-1.5B-Instruct Q4_K_M (SHA-256 `6a1a2eb6…407e`), llama.cpp b11443, temperature 0, seed 7.
+
+- **Smoke (60 docs):** gate 0.917 (n = 12) passed; patch applied at step 60 = `harness.reloads[0].at_step`;
+  blame on `extract.recall`: 0.417 → 0.825, one attribution naming exactly that patch, **delta +0.408**;
+  `verify` true.
+- **Gate F2 run (600 docs, 262 s — `--docs` was rescaled from the smoke's warm-up-inflated rate, so it
+  ran ~4.4 min instead of ~20):** the supervisor's gate scored **0.889 < 0.9** on the same 12 held-out
+  docs → not applied → one segment (mean 0.426), no attribution; `verify` true (1802 entries).
+- **Falsifier met: "the gate fails on held-out documents".** Gate F2 is **not passed**.
+
+**Why, read from the files.** The threshold is absolute (`extract.recall ≥ 0.9`) over 12 docs whose
+recall is in thirds, so the mean moves in steps of 1/36: 0.889 is one missed field below 0.917. And the
+same 12 docs gave 0.917 in the smoke and 0.889 here at temperature 0 — llama.cpp is not reproducible
+run to run, so the gate decided on one field's noise. Against v1's 0.40 the patch more than doubles
+recall either way. The check can fail while the capability works (CLAUDE.md); redefining it after this
+result is a change of instrument and needs the owner's sign-off before any rerun.
