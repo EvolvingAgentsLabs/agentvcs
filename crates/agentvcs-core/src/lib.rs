@@ -6,8 +6,10 @@ pub mod json;
 pub mod ledger;
 pub mod manifest;
 pub mod schema;
+pub mod store;
 #[doc(hidden)]
 pub mod testutil;
+pub mod time;
 
 pub use error::{Error, Result};
 
