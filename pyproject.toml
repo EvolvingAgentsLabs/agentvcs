@@ -18,13 +18,20 @@ classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: OS Independent",
     "Topic :: Software Development :: Version Control",
 ]
 dependencies = []  # zero runtime dependencies — stdlib only, auditable by anyone
 
 [project.urls]
 Homepage = "https://github.com/EvolvingAgentsLabs/agentvcs"
-Source = "https://github.com/EvolvingAgentsLabs/agentvcs"
+Source = "https://github.com/EvolvingAgentsLabs/agentvcs/tree/main"
+Documentation = "https://github.com/EvolvingAgentsLabs/agentvcs/tree/main/docs"
+Issues = "https://github.com/EvolvingAgentsLabs/agentvcs/issues"
 
 [project.scripts]
 agentvcs = "agentvcs.cli:main"
