@@ -1,0 +1,27 @@
+{
+  "id": "merge-015-commit-extra",
+  "group": "merge",
+  "description": "a resolution for a dimension that did not conflict",
+  "source": "generated",
+  "argv": [
+    "merge",
+    "commit",
+    "--base",
+    "base.json",
+    "--ours",
+    "ours.json",
+    "--theirs",
+    "theirs.json",
+    "--resolution",
+    "res.json"
+  ],
+  "expect": {
+    "exit": 3,
+    "json": {
+      "ok": false,
+      "error": {
+        "code": "E_MERGE_EXTRA"
+      }
+    }
+  }
+}

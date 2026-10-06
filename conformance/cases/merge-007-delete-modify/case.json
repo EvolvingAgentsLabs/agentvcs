@@ -1,0 +1,111 @@
+{
+  "id": "merge-007-delete-modify",
+  "group": "merge",
+  "description": "ours deleted a dimension theirs modified",
+  "source": "generated",
+  "argv": [
+    "merge",
+    "prepare",
+    "--base",
+    "base.json",
+    "--ours",
+    "ours.json",
+    "--theirs",
+    "theirs.json"
+  ],
+  "expect": {
+    "exit": 0,
+    "json": {
+      "ok": true,
+      "merge_id": "b3:194fa3d9ad5a238e9913475516c559b1df8d396d501aee208494b438eb687eaf",
+      "base": "b3:a0ddd7d70ce38a3e1751b29df11265770934a04ad434952bd4b640fb844e49d4",
+      "ours": "b3:1d05276e792087c8498118921ecbde6bf042d649cb4c72ea29f7b33880b726e6",
+      "theirs": "b3:183389a7cd3de0767868730ab23373a3b4b7087b65d975da1a0889d986276112",
+      "auto": [
+        {
+          "dimension": "extract.adapter",
+          "resolution": "same"
+        },
+        {
+          "dimension": "extract.model",
+          "resolution": "same"
+        },
+        {
+          "dimension": "extract.prompt",
+          "resolution": "same"
+        },
+        {
+          "dimension": "extract.sampling",
+          "resolution": "same"
+        },
+        {
+          "dimension": "run.config",
+          "resolution": "same"
+        },
+        {
+          "dimension": "segment.tool",
+          "resolution": "same"
+        }
+      ],
+      "conflicts": [
+        {
+          "dimension": "route",
+          "kind": "router",
+          "type": "delete/modify",
+          "base": {
+            "kind": "router",
+            "content": {
+              "rules": [
+                {
+                  "if": "len(doc) > 40000",
+                  "then": "extract.long"
+                }
+              ]
+            },
+            "content_hash": "b3:eb51fd2d6f1f20323a1f277605863a14d204068b6ace4102849e3d6888089c8d"
+          },
+          "ours": null,
+          "theirs": {
+            "kind": "router",
+            "content": {
+              "rules": []
+            },
+            "content_hash": "b3:26227c8bad9b585db276f160706a730e59682aee45e3e763c05a3bf72ae6a12c"
+          },
+          "diff_ours": {
+            "dimension": "route",
+            "kind": "router",
+            "op": "removed",
+            "details": {
+              "content_hash": "b3:eb51fd2d6f1f20323a1f277605863a14d204068b6ace4102849e3d6888089c8d"
+            }
+          },
+          "diff_theirs": {
+            "dimension": "route",
+            "kind": "router",
+            "op": "modified",
+            "details": {
+              "fields": [
+                {
+                  "path": "/rules",
+                  "op": "changed",
+                  "from": [
+                    {
+                      "if": "len(doc) > 40000",
+                      "then": "extract.long"
+                    }
+                  ],
+                  "to": []
+                }
+              ]
+            }
+          },
+          "evidence": {
+            "ours": [],
+            "theirs": []
+          }
+        }
+      ]
+    }
+  }
+}

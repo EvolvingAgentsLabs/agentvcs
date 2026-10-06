@@ -1,6 +1,6 @@
 # Conformance suite — agentvcs protocol v0.1
 
-83 golden cases that pin every observable behaviour of the protocol: canonical
+102 golden cases that pin every observable behaviour of the protocol: canonical
 hashing, manifest ids, semantic diff, ledger verification and blame.
 
 ```bash
@@ -15,6 +15,7 @@ python conformance/run.py --cli "agentvcs" --group verify --out results.jsonl
 | diff | 16 | `spec/SEMANTIC_DIFF.md` |
 | verify | 31 | `spec/LEDGER.md` — 6 valid ledgers, 25 broken one way each |
 | blame | 8 | `spec/BLAME.md` |
+| merge | 19 | `spec/MERGE.md` (v0.2 draft) — 11 prepare, 8 commit |
 
 Each case is a directory: `case.json` (`argv`, expected exit code, expected JSON
 subset, optional `first_violation`, `source`) plus its input files.

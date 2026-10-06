@@ -1,0 +1,70 @@
+{
+  "protocol": "agentvcs/0.1",
+  "type": "harness_manifest",
+  "name": "due-diligence v1",
+  "dimensions": {
+    "extract.prompt": {
+      "kind": "prompt",
+      "content": {
+        "template": "Find every {clause} clause.\nQuote it verbatim.",
+        "variables": [
+          "clause"
+        ]
+      }
+    },
+    "extract.model": {
+      "kind": "model",
+      "content": {
+        "provider": "llama.cpp",
+        "id": "gemma-4-12b",
+        "quantization": "Q4_K_M"
+      }
+    },
+    "extract.sampling": {
+      "kind": "sampling",
+      "content": {
+        "temperature": 0.2,
+        "top_p": 0.95,
+        "max_tokens": 512,
+        "grammar": null
+      }
+    },
+    "segment.tool": {
+      "kind": "tool",
+      "content": {
+        "name": "split_sections",
+        "signature": {
+          "type": "object",
+          "properties": {
+            "doc": {
+              "type": "string"
+            }
+          }
+        },
+        "code_hash": "b3:e219d02ced12f13e72d780956c683031087b621f7fd2c3fb41578c729927a4f3"
+      }
+    },
+    "extract.adapter": {
+      "kind": "adapter",
+      "content": {
+        "adapter_id": "cuad-lora-r16",
+        "weights_hash": "b3:65e53dd3bb313166f1ba7836f51c548d695c6fcd47d69bf130cdd886e7070fe3"
+      }
+    },
+    "route": {
+      "kind": "router",
+      "content": {
+        "rules": []
+      }
+    },
+    "run.config": {
+      "kind": "config",
+      "content": {
+        "value": {
+          "batch": 4,
+          "docs": 120
+        }
+      }
+    }
+  }
+}

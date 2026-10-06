@@ -11,7 +11,6 @@ Nothing here is implemented until it moves into the plan.
 - **LangSmith / Langfuse / W&B integrations** — consumers of the ledger, not v0.1.
 - **Pointer from `evolving-agents/packages/agentvcs` to this repo** — the monorepo copy now diverges (2026-10-06); out of this plan's scope.
 - **Version skew 0.3.0 (pyproject) vs 0.4.0 (`__version__`)** — moot once Rust replaces the package; fix only if a Python release happens first.
-- **Manifest merge semantics** — v0.1 represents multiple parents but defines no merge.
 - **Bisect golden cases** — need the toy pipeline's hooks (Gate F2). The Phase 2 toy pipeline records `checkpoint_ref`s but does not yet implement a `bisect --exec` probe.
 - **Legacy distribution rename** — at the `legacy/` move, rename the root distribution to `agentvcs-legacy` and point `release.yml` at the SDK wheel (ADR-0007 §2).
 - **Async SDK API** — `async with avcs.run(...)`; not needed by the toy pipeline.

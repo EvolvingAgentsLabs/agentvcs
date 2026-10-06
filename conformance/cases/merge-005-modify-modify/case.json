@@ -1,0 +1,121 @@
+{
+  "id": "merge-005-modify-modify",
+  "group": "merge",
+  "description": "both sides rewrote the same prompt differently: conflict",
+  "source": "generated",
+  "argv": [
+    "merge",
+    "prepare",
+    "--base",
+    "base.json",
+    "--ours",
+    "ours.json",
+    "--theirs",
+    "theirs.json"
+  ],
+  "expect": {
+    "exit": 0,
+    "json": {
+      "ok": true,
+      "merge_id": "b3:726058024857efaffa311cbd44eaa9861fe621711d7177c47fb199318c349620",
+      "base": "b3:a0ddd7d70ce38a3e1751b29df11265770934a04ad434952bd4b640fb844e49d4",
+      "ours": "b3:389161b5b3437c0cec7cebe41ac8174249acbcfe3654fb2a1fba45c34c5a4ff3",
+      "theirs": "b3:189f0708c437177d1706d373f602c76ec7b49f45efd99e30fea11e3d378a5bf7",
+      "auto": [
+        {
+          "dimension": "extract.adapter",
+          "resolution": "same"
+        },
+        {
+          "dimension": "extract.model",
+          "resolution": "same"
+        },
+        {
+          "dimension": "extract.sampling",
+          "resolution": "same"
+        },
+        {
+          "dimension": "route",
+          "resolution": "same"
+        },
+        {
+          "dimension": "run.config",
+          "resolution": "same"
+        },
+        {
+          "dimension": "segment.tool",
+          "resolution": "same"
+        }
+      ],
+      "conflicts": [
+        {
+          "dimension": "extract.prompt",
+          "kind": "prompt",
+          "type": "modify/modify",
+          "base": {
+            "kind": "prompt",
+            "content": {
+              "template": "Find every {clause} clause.\nQuote it verbatim.",
+              "variables": [
+                "clause"
+              ]
+            },
+            "content_hash": "b3:9c31847d07b4688886a5b085d690998302b8d132755ee20a48e7961436644365"
+          },
+          "ours": {
+            "kind": "prompt",
+            "content": {
+              "template": "Find every {clause} clause.\nQuote it verbatim, including any cap amount.",
+              "variables": [
+                "clause"
+              ]
+            },
+            "content_hash": "b3:e87ce47de6a831016737b635e77b08024c5527d1391d7debfe45b4d10768f6e7"
+          },
+          "theirs": {
+            "kind": "prompt",
+            "content": {
+              "template": "Find every {clause} clause.\nQuote it verbatim and cite its section.",
+              "variables": [
+                "clause"
+              ]
+            },
+            "content_hash": "b3:badf3a9b6596497bb8423782c02f28b8effc91faf838921c5bca9115cce43b89"
+          },
+          "diff_ours": {
+            "dimension": "extract.prompt",
+            "kind": "prompt",
+            "op": "modified",
+            "details": {
+              "template": {
+                "lines_added": 1,
+                "lines_removed": 1
+              },
+              "variables_added": [],
+              "variables_removed": [],
+              "fields": []
+            }
+          },
+          "diff_theirs": {
+            "dimension": "extract.prompt",
+            "kind": "prompt",
+            "op": "modified",
+            "details": {
+              "template": {
+                "lines_added": 1,
+                "lines_removed": 1
+              },
+              "variables_added": [],
+              "variables_removed": [],
+              "fields": []
+            }
+          },
+          "evidence": {
+            "ours": [],
+            "theirs": []
+          }
+        }
+      ]
+    }
+  }
+}

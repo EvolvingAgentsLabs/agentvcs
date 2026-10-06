@@ -1,0 +1,21 @@
+{
+  "protocol": "agentvcs/0.1",
+  "type": "merge_resolution",
+  "merge_id": "b3:726058024857efaffa311cbd44eaa9861fe621711d7177c47fb199318c349620",
+  "resolutions": {
+    "extract.prompt": {
+      "kind": "prompt",
+      "content": {
+        "template": "Find every {clause} clause.\nQuote it verbatim, including any cap amount, and cite its section.",
+        "variables": [
+          "clause"
+        ]
+      }
+    }
+  },
+  "rationale": "both fixes are independent; combined them",
+  "author": {
+    "type": "agent",
+    "id": "claude-code"
+  }
+}

@@ -1,0 +1,104 @@
+{
+  "id": "merge-008-add-add",
+  "group": "merge",
+  "description": "both sides added the same name with different content",
+  "source": "generated",
+  "argv": [
+    "merge",
+    "prepare",
+    "--base",
+    "base.json",
+    "--ours",
+    "ours.json",
+    "--theirs",
+    "theirs.json"
+  ],
+  "expect": {
+    "exit": 0,
+    "json": {
+      "ok": true,
+      "merge_id": "b3:2572a0a0832cbf5faf29d42f223fd014b39652b37e2c776441c92a25176ea007",
+      "base": "b3:a0ddd7d70ce38a3e1751b29df11265770934a04ad434952bd4b640fb844e49d4",
+      "ours": "b3:10d2800e549ea5f20b1851d2e960b40bee97300c91ed07d3c6aa509fef8c3d21",
+      "theirs": "b3:8bad91bfde545b9bcc434659604d94a02063a7847e2104905115cc3ee7e6365b",
+      "auto": [
+        {
+          "dimension": "extract.adapter",
+          "resolution": "same"
+        },
+        {
+          "dimension": "extract.model",
+          "resolution": "same"
+        },
+        {
+          "dimension": "extract.prompt",
+          "resolution": "same"
+        },
+        {
+          "dimension": "extract.sampling",
+          "resolution": "same"
+        },
+        {
+          "dimension": "route",
+          "resolution": "same"
+        },
+        {
+          "dimension": "run.config",
+          "resolution": "same"
+        },
+        {
+          "dimension": "segment.tool",
+          "resolution": "same"
+        }
+      ],
+      "conflicts": [
+        {
+          "dimension": "verify.prompt",
+          "kind": "prompt",
+          "type": "add/add",
+          "base": null,
+          "ours": {
+            "kind": "prompt",
+            "content": {
+              "template": "Check {x}",
+              "variables": [
+                "x"
+              ]
+            },
+            "content_hash": "b3:010d0a721913c8e5cf01d0ea56ddbd8e9178f0d561b6ccb80c5923deecfe95ed"
+          },
+          "theirs": {
+            "kind": "prompt",
+            "content": {
+              "template": "Verify {x} twice",
+              "variables": [
+                "x"
+              ]
+            },
+            "content_hash": "b3:c002b4ab2b367dad221afbcf8e17f1b67ea28923b4f758866be6bc95a68c8f97"
+          },
+          "diff_ours": {
+            "dimension": "verify.prompt",
+            "kind": "prompt",
+            "op": "added",
+            "details": {
+              "content_hash": "b3:010d0a721913c8e5cf01d0ea56ddbd8e9178f0d561b6ccb80c5923deecfe95ed"
+            }
+          },
+          "diff_theirs": {
+            "dimension": "verify.prompt",
+            "kind": "prompt",
+            "op": "added",
+            "details": {
+              "content_hash": "b3:c002b4ab2b367dad221afbcf8e17f1b67ea28923b4f758866be6bc95a68c8f97"
+            }
+          },
+          "evidence": {
+            "ours": [],
+            "theirs": []
+          }
+        }
+      ]
+    }
+  }
+}

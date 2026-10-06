@@ -1,0 +1,27 @@
+{
+  "id": "merge-016-commit-stale",
+  "group": "merge",
+  "description": "resolution written for another merge",
+  "source": "generated",
+  "argv": [
+    "merge",
+    "commit",
+    "--base",
+    "base.json",
+    "--ours",
+    "ours.json",
+    "--theirs",
+    "theirs.json",
+    "--resolution",
+    "res.json"
+  ],
+  "expect": {
+    "exit": 3,
+    "json": {
+      "ok": false,
+      "error": {
+        "code": "E_MERGE_STALE"
+      }
+    }
+  }
+}

@@ -437,6 +437,116 @@ b = L().step(2, metric=0.5).end().bundle(); b["ledger"][1]["body"]["metrics"]["f
 blame_case("blame-008-invalid-ledger", "blame refuses a ledger that does not verify", b, exit_=3)
 
 
+# ======================================================================= merge (v0.2 draft)
+def mvar(edits):
+    return variant(FULL, edits)
+
+
+TPL = ("extract.prompt", "content", "template")
+P_OURS = "Find every {clause} clause.\nQuote it verbatim, including any cap amount."
+P_THEIRS = "Find every {clause} clause.\nQuote it verbatim and cite its section."
+
+
+def prep_case(cid, desc, base, ours, theirs, expect_auto, expect_conf, extra_files=None, extra_argv=(),
+              bundles=(None, None), metrics=()):
+    r = ref.merge_prepare(base, ours, theirs, *bundles, metrics=metrics)
+    auto = [(a["dimension"], a["resolution"]) for a in r["auto"]]
+    conf = [(c["dimension"], c["type"]) for c in r["conflicts"]]
+    assert auto == expect_auto, (cid, auto)
+    assert conf == expect_conf, (cid, conf)
+    files = {"base.json": jtext(base), "ours.json": jtext(ours), "theirs.json": jtext(theirs), **(extra_files or {})}
+    case(cid, "merge", desc, ["merge", "prepare", "--base", "base.json", "--ours", "ours.json",
+                              "--theirs", "theirs.json", *extra_argv], files, {"exit": 0, "json": r})
+
+
+ALL_SAME = [(d, "same") for d in sorted(FULL["dimensions"], key=ref.ckey)]
+
+
+def with_res(auto, **over):
+    return [(d, over.get(d, r)) for d, r in auto]
+
+
+prep_case("merge-001-nothing-changed", "no side changed anything", FULL, FULL, FULL, ALL_SAME, [])
+prep_case("merge-002-only-theirs", "only theirs changed sampling: taken mechanically", FULL, FULL,
+          mvar([(("extract.sampling", "content", "temperature"), 0.0)]),
+          with_res(ALL_SAME, **{"extract.sampling": "theirs"}), [])
+prep_case("merge-003-only-ours", "only ours changed the prompt: taken mechanically", FULL,
+          mvar([(TPL, P_OURS)]), FULL, with_res(ALL_SAME, **{"extract.prompt": "ours"}), [])
+prep_case("merge-004-same-change", "both sides made the same change", FULL, mvar([(TPL, P_OURS)]),
+          mvar([(TPL, P_OURS)]), ALL_SAME, [])
+prep_case("merge-005-modify-modify", "both sides rewrote the same prompt differently: conflict", FULL,
+          mvar([(TPL, P_OURS)]), mvar([(TPL, P_THEIRS)]),
+          [a for a in ALL_SAME if a[0] != "extract.prompt"], [("extract.prompt", "modify/modify")])
+prep_case("merge-006-modify-delete", "ours modified a dimension theirs deleted", FULL,
+          mvar([(("route", "content", "rules"), [])]), mvar([(("route",), DEL)]),
+          [a for a in ALL_SAME if a[0] != "route"], [("route", "modify/delete")])
+prep_case("merge-007-delete-modify", "ours deleted a dimension theirs modified", FULL,
+          mvar([(("route",), DEL)]), mvar([(("route", "content", "rules"), [])]),
+          [a for a in ALL_SAME if a[0] != "route"], [("route", "delete/modify")])
+prep_case("merge-008-add-add", "both sides added the same name with different content", FULL,
+          mvar([(("verify.prompt",), dim("prompt", {"template": "Check {x}", "variables": ["x"]}))]),
+          mvar([(("verify.prompt",), dim("prompt", {"template": "Verify {x} twice", "variables": ["x"]}))]),
+          ALL_SAME, [("verify.prompt", "add/add")])
+prep_case("merge-009-add-and-delete-mechanical", "theirs adds a dimension, ours deletes another: both mechanical",
+          FULL, mvar([(("route",), DEL)]),
+          mvar([(("verify.prompt",), dim("prompt", {"template": "Check {x}", "variables": ["x"]}))]),
+          sorted(with_res(ALL_SAME, route="ours") + [("verify.prompt", "theirs")], key=lambda a: ref.ckey(a[0])), [])
+prep_case("merge-010-kind-change-one-side", "one side changed a dimension's kind: mechanical", FULL,
+          FULL, mvar([(("route",), dim("config", {"rules": []}))]), with_res(ALL_SAME, route="theirs"), [])
+
+# evidence: ours is a run whose gated patch M0 -> M1 rewrote extract.prompt and raised f1
+l = L().step(4, metric=0.4); P_EV = l.patch(M1); l.step(4, metric=0.8).end()
+EV_BUNDLE = l.bundle()
+THEIRS_EV = variant(FULL, [(TPL, P_THEIRS)])
+prep_case("merge-011-evidence-from-run", "conflict evidence lists the run's patch that touched the dimension, its gate and blame delta",
+          M0, M1, THEIRS_EV, [a for a in ALL_SAME if a[0] != "extract.prompt"], [("extract.prompt", "modify/modify")],
+          extra_files={"ours-run.json": jtext(EV_BUNDLE)}, extra_argv=("--ours-run", "ours-run.json", "--metric", "f1"),
+          bundles=(EV_BUNDLE, None), metrics=("f1",))
+_ev = ref.merge_prepare(M0, M1, THEIRS_EV, EV_BUNDLE, None, metrics=("f1",))["conflicts"][0]["evidence"]["ours"]
+assert [e["patch_id"] for e in _ev] == [P_EV] and round(_ev[0]["blame"]["f1"], 9) == 0.4 and _ev[0]["gate"]["passed"]
+
+# commit
+B5, O5, T5 = FULL, mvar([(TPL, P_OURS)]), mvar([(TPL, P_THEIRS)])
+MID5 = ref.merge_prepare(B5, O5, T5)["merge_id"]
+
+
+def resolution(mid, res, rationale="kept ours: it is the one that was gated"):
+    return {"protocol": PROTOCOL, "type": "merge_resolution", "merge_id": mid, "resolutions": res,
+            "rationale": rationale, "author": {"type": "agent", "id": "claude-code"}}
+
+
+def commit_case(cid, desc, base, ours, theirs, res, code=None):
+    exit_, out = ref.merge_commit(base, ours, theirs, res)
+    got = out.get("error", {}).get("code")
+    assert got == code, (cid, got)
+    files = {"base.json": jtext(base), "ours.json": jtext(ours), "theirs.json": jtext(theirs), "res.json": jtext(res)}
+    case(cid, "merge", desc, ["merge", "commit", "--base", "base.json", "--ours", "ours.json", "--theirs",
+                              "theirs.json", "--resolution", "res.json"], files,
+         {"exit": exit_, "json": out if code is None else {"ok": False, "error": {"code": code}}})
+
+
+commit_case("merge-012-commit-take-ours", "resolve by taking ours; merged id and record are deterministic",
+            B5, O5, T5, resolution(MID5, {"extract.prompt": {"take": "ours"}}))
+commit_case("merge-013-commit-synthesis", "resolve with new content combining both sides",
+            B5, O5, T5, resolution(MID5, {"extract.prompt": {"kind": "prompt", "content": {
+                "template": "Find every {clause} clause.\nQuote it verbatim, including any cap amount, and cite its section.",
+                "variables": ["clause"]}}}, "both fixes are independent; combined them"))
+commit_case("merge-014-commit-unresolved", "a conflict left without a resolution", B5, O5, T5,
+            resolution(MID5, {}), "E_MERGE_UNRESOLVED")
+commit_case("merge-015-commit-extra", "a resolution for a dimension that did not conflict", B5, O5, T5,
+            resolution(MID5, {"extract.prompt": {"take": "ours"}, "extract.model": {"take": "theirs"}}), "E_MERGE_EXTRA")
+commit_case("merge-016-commit-stale", "resolution written for another merge", B5, O5, T5,
+            resolution(B3("other merge"), {"extract.prompt": {"take": "ours"}}), "E_MERGE_STALE")
+B6, O6, T6 = FULL, mvar([(("route",), DEL)]), mvar([(("route", "content", "rules"), [])])
+MID6 = ref.merge_prepare(B6, O6, T6)["merge_id"]
+commit_case("merge-017-commit-take-deleted-side", "take ours on a dimension ours deleted (use delete)",
+            B6, O6, T6, resolution(MID6, {"route": {"take": "ours"}}), "E_MERGE_TAKE")
+commit_case("merge-018-commit-delete", "resolve delete/modify by deleting", B6, O6, T6,
+            resolution(MID6, {"route": {"take": "delete"}}))
+commit_case("merge-019-commit-invalid-content", "synthesised content that is not a valid prompt", B5, O5, T5,
+            resolution(MID5, {"extract.prompt": {"kind": "prompt", "content": {"variables": []}}}), "E_SCHEMA")
+
+
 # ======================================================================= write
 def main():
     ids = [c["id"] for c in cases]

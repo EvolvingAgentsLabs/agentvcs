@@ -1,0 +1,57 @@
+{
+  "id": "merge-002-only-theirs",
+  "group": "merge",
+  "description": "only theirs changed sampling: taken mechanically",
+  "source": "generated",
+  "argv": [
+    "merge",
+    "prepare",
+    "--base",
+    "base.json",
+    "--ours",
+    "ours.json",
+    "--theirs",
+    "theirs.json"
+  ],
+  "expect": {
+    "exit": 0,
+    "json": {
+      "ok": true,
+      "merge_id": "b3:660b840bd30c8be5be1f2a026948ff8534c62bf2a186720983411bd532a99955",
+      "base": "b3:a0ddd7d70ce38a3e1751b29df11265770934a04ad434952bd4b640fb844e49d4",
+      "ours": "b3:a0ddd7d70ce38a3e1751b29df11265770934a04ad434952bd4b640fb844e49d4",
+      "theirs": "b3:50147b1a58514c2b0757f63f5c934d733523453cc248f66b2c7b56ca26d357a4",
+      "auto": [
+        {
+          "dimension": "extract.adapter",
+          "resolution": "same"
+        },
+        {
+          "dimension": "extract.model",
+          "resolution": "same"
+        },
+        {
+          "dimension": "extract.prompt",
+          "resolution": "same"
+        },
+        {
+          "dimension": "extract.sampling",
+          "resolution": "theirs"
+        },
+        {
+          "dimension": "route",
+          "resolution": "same"
+        },
+        {
+          "dimension": "run.config",
+          "resolution": "same"
+        },
+        {
+          "dimension": "segment.tool",
+          "resolution": "same"
+        }
+      ],
+      "conflicts": []
+    }
+  }
+}
