@@ -348,3 +348,120 @@ def blame(bundle: dict, metric: str) -> dict:
         attr.append({"patches": segs[i]["introduced_by"], "from_segment": i - 1, "to_segment": i,
                      "delta": None if a is None or c is None else c - a})
     return {"ok": True, "metric": metric, "segments": segs, "attributions": attr}
+
+
+# ---------------------------------------------------------------- merge (spec/MERGE.md, v0.2 draft)
+
+def merge_id(base_id: str, ours_id: str, theirs_id: str) -> str:
+    return h({"protocol": PROTOCOL, "base": base_id, "ours": ours_id, "theirs": theirs_id})
+
+
+def _side(m, d):
+    x = m["dimensions"].get(d)
+    return None if x is None else {"kind": x["kind"], "content": x["content"], "content_hash": x["content_hash"]}
+
+
+def _evidence(bundle, d, metrics):
+    if bundle is None:
+        return []
+    if not verify(bundle)["valid"]:
+        raise ValueError("E_INVALID_LEDGER")
+    bl = {m: blame(bundle, m) for m in metrics}
+    out = []
+    for e in bundle["ledger"]:
+        if e["kind"] != "patch":
+            continue
+        b = e["body"]
+        if not any(c["dimension"] == d for c in b["semantic_diff"]):
+            continue
+        g = b["gate_result"]
+        deltas = {}
+        for m, r in bl.items():
+            hit = [a for a in r.get("attributions", []) if b["patch_id"] in a["patches"]]
+            deltas[m] = hit[0]["delta"] if len(hit) == 1 and hit[0]["patches"] == [b["patch_id"]] else None
+        out.append({"patch_id": b["patch_id"], "applied_at_step": b["applied_at_step"],
+                    "rationale": b["rationale"], "author": b["author"],
+                    "gate": None if g is None else {"passed": g["passed"], "metrics": g["metrics"]},
+                    "blame": deltas})
+    return out
+
+
+def merge_prepare(base, ours, theirs, ours_bundle=None, theirs_bundle=None, metrics=()):
+    B, O, T = (normalize_manifest(x) for x in (base, ours, theirs))
+    auto, conflicts = [], []
+    dims = sorted(set(B["dimensions"]) | set(O["dimensions"]) | set(T["dimensions"]), key=ckey)
+    hb = lambda M, d: ((M["dimensions"][d]["kind"], M["dimensions"][d]["content_hash"])
+                       if d in M["dimensions"] else None)
+    for d in dims:
+        b, o, t = hb(B, d), hb(O, d), hb(T, d)
+        if o == t:
+            auto.append({"dimension": d, "resolution": "same"})
+        elif o == b:
+            auto.append({"dimension": d, "resolution": "theirs"})
+        elif t == b:
+            auto.append({"dimension": d, "resolution": "ours"})
+        else:
+            typ = ("add/add" if b is None else "modify/delete" if t is None
+                   else "delete/modify" if o is None else "modify/modify")
+            kind = (O["dimensions"].get(d) or T["dimensions"].get(d))["kind"]
+            dchange = lambda S: next((c for c in diff(B, S)["changes"] if c["dimension"] == d), None)
+            conflicts.append({"dimension": d, "kind": kind, "type": typ,
+                              "base": _side(B, d), "ours": _side(O, d), "theirs": _side(T, d),
+                              "diff_ours": dchange(O), "diff_theirs": dchange(T),
+                              "evidence": {"ours": _evidence(ours_bundle, d, metrics),
+                                           "theirs": _evidence(theirs_bundle, d, metrics)}})
+    return {"ok": True, "merge_id": merge_id(B["manifest_id"], O["manifest_id"], T["manifest_id"]),
+            "base": B["manifest_id"], "ours": O["manifest_id"], "theirs": T["manifest_id"],
+            "auto": auto, "conflicts": conflicts}
+
+
+def merge_commit(base, ours, theirs, resolution):
+    """Returns (exit_code, output). Mirrors spec/MERGE.md §4 without the gate."""
+    prep = merge_prepare(base, ours, theirs)
+    B, O, T = (normalize_manifest(x) for x in (base, ours, theirs))
+    err = lambda code: (3, {"ok": False, "error": {"code": code, "message": code}})
+    r = resolution
+    if not (isinstance(r, dict) and r.get("type") == "merge_resolution" and isinstance(r.get("resolutions"), dict)
+            and isinstance(r.get("rationale"), str) and isinstance(r.get("author"), dict)):
+        return err("E_SCHEMA")
+    if r.get("merge_id") != prep["merge_id"]:
+        return err("E_MERGE_STALE")
+    conflict = {c["dimension"]: c for c in prep["conflicts"]}
+    res = r["resolutions"]
+    if any(d not in res for d in conflict):
+        return err("E_MERGE_UNRESOLVED")
+    if any(d not in conflict for d in res):
+        return err("E_MERGE_EXTRA")
+    dims = {}
+    for a in prep["auto"]:
+        d = a["dimension"]
+        src = {"same": O, "ours": O, "theirs": T}[a["resolution"]]
+        if d in src["dimensions"]:
+            dims[d] = {"kind": src["dimensions"][d]["kind"], "content": src["dimensions"][d]["content"]}
+    for d, x in sorted(res.items(), key=lambda kv: ckey(kv[0])):
+        if "take" in x:
+            if x["take"] not in ("ours", "theirs", "base", "delete"):
+                return err("E_SCHEMA")
+            if x["take"] == "delete":
+                continue
+            src = {"ours": O, "theirs": T, "base": B}.get(x["take"])
+            if src is None or d not in src["dimensions"]:
+                return err("E_MERGE_TAKE")
+            dims[d] = {"kind": src["dimensions"][d]["kind"], "content": src["dimensions"][d]["content"]}
+        elif "content" in x and "kind" in x:
+            if x["kind"] not in KINDS:
+                return err("E_UNKNOWN_KIND")
+            need = {"prompt": ("template",), "model": ("provider", "id"),
+                    "tool": ("name", "signature", "code_hash"), "adapter": ("adapter_id", "weights_hash")}
+            if not isinstance(x["content"], dict) or any(k not in x["content"] for k in need.get(x["kind"], ())):
+                return err("E_SCHEMA")
+            dims[d] = {"kind": x["kind"], "content": x["content"]}
+        else:
+            return err("E_SCHEMA")
+    merged = normalize_manifest({"protocol": PROTOCOL, "type": "harness_manifest",
+                                 "parent_ids": [O["manifest_id"], T["manifest_id"]], "dimensions": dims})
+    record = {"protocol": PROTOCOL, "type": "merge_record", "merge_id": prep["merge_id"],
+              "base": B["manifest_id"], "ours": O["manifest_id"], "theirs": T["manifest_id"],
+              "merged": merged["manifest_id"], "auto": prep["auto"], "resolution": r, "gate": None}
+    return 0, {"ok": True, "merge_id": prep["merge_id"], "merged": merged["manifest_id"],
+               "record": h(record), "gate": None}

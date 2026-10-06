@@ -20,7 +20,9 @@ pub fn tool_of(c: &Cmd) -> Tool {
         required.push(prop(name));
     }
     for f in c.flags {
-        let schema = if f.value {
+        let schema = if f.multi {
+            json!({"type": ["string", "array"], "items": {"type": "string"}, "description": f.help})
+        } else if f.value {
             json!({"type": ["string", "number", "array"], "description": f.help})
         } else {
             json!({"type": "boolean", "description": f.help})
@@ -99,6 +101,12 @@ pub fn argv_of(c: &Cmd, args: &Value) -> Result<(Vec<String>, Option<String>), S
         match a.get(&prop(f.name)) {
             None | Some(Value::Null) => {}
             Some(Value::Bool(false)) if !f.value => {}
+            Some(Value::Array(vs)) if f.multi => {
+                for v in vs {
+                    argv.push(format!("--{}", f.name));
+                    argv.push(arg_text(v).ok_or_else(|| format!("bad value for {}", f.name))?);
+                }
+            }
             Some(v) => {
                 argv.push(format!("--{}", f.name));
                 if f.value {

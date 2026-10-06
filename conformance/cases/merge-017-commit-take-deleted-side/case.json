@@ -1,0 +1,27 @@
+{
+  "id": "merge-017-commit-take-deleted-side",
+  "group": "merge",
+  "description": "take ours on a dimension ours deleted (use delete)",
+  "source": "generated",
+  "argv": [
+    "merge",
+    "commit",
+    "--base",
+    "base.json",
+    "--ours",
+    "ours.json",
+    "--theirs",
+    "theirs.json",
+    "--resolution",
+    "res.json"
+  ],
+  "expect": {
+    "exit": 3,
+    "json": {
+      "ok": false,
+      "error": {
+        "code": "E_MERGE_TAKE"
+      }
+    }
+  }
+}

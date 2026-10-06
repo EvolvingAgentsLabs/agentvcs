@@ -1,0 +1,27 @@
+{
+  "id": "merge-014-commit-unresolved",
+  "group": "merge",
+  "description": "a conflict left without a resolution",
+  "source": "generated",
+  "argv": [
+    "merge",
+    "commit",
+    "--base",
+    "base.json",
+    "--ours",
+    "ours.json",
+    "--theirs",
+    "theirs.json",
+    "--resolution",
+    "res.json"
+  ],
+  "expect": {
+    "exit": 3,
+    "json": {
+      "ok": false,
+      "error": {
+        "code": "E_MERGE_UNRESOLVED"
+      }
+    }
+  }
+}

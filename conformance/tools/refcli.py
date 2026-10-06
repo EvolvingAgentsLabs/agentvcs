@@ -89,6 +89,18 @@ def main(argv):
         b, err = load(args[1])
         r = ref.blame(b, args[args.index("--metric") + 1])
         return out(r, 0 if r["ok"] else 3)
+    if cmd == "merge":
+        def opt(name):
+            return args[args.index(name) + 1] if name in args else None
+        base, ours, theirs = (load(opt(n))[0] for n in ("--base", "--ours", "--theirs"))
+        if args[1] == "prepare":
+            ob = load(opt("--ours-run"))[0] if opt("--ours-run") else None
+            tb = load(opt("--theirs-run"))[0] if opt("--theirs-run") else None
+            metrics = [args[i + 1] for i, a in enumerate(args) if a == "--metric"]
+            return out(ref.merge_prepare(base, ours, theirs, ob, tb, metrics=metrics), 0)
+        if args[1] == "commit":
+            code, o = ref.merge_commit(base, ours, theirs, load(opt("--resolution"))[0])
+            return out(o, code)
     return fail("E_USAGE", 2)
 
 

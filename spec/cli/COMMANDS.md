@@ -27,6 +27,8 @@ Commands marked **(conf)** have golden cases in `conformance/` for v0.1.
 | `freeze <manifest_id>` | `{"ok", "manifest_id", "frozen": true}` — requires a passed gate naming it |
 | `export audit <run> [-o file]` | writes an audit bundle (`PROTOCOL.md §4`) |
 | `verify <run\|bundle>` **(conf)** | `LEDGER.md` |
+| `merge prepare --base <m> --ours <m> --theirs <m> [--ours-run r] [--theirs-run r] [--metric m]...` **(conf, v0.2)** | `spec/MERGE.md §2` — mechanical results, conflicts with evidence |
+| `merge commit --base <m> --ours <m> --theirs <m> --resolution <file> [--suite s]` **(conf, v0.2)** | `spec/MERGE.md §4` — `{merge_id, merged, record, gate}` |
 | `mcp` | MCP server over stdio exposing the commands above with the same JSON |
 
 `hash` is not in the revival plan's command table. It is added because

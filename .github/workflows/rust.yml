@@ -33,7 +33,7 @@ jobs:
         run: cargo test --workspace
       - name: build release
         run: cargo build --release -p agentvcs-cli
-      - name: conformance (83 golden cases)
+      - name: conformance (103 golden cases)
         run: python conformance/run.py --cli "$PWD/target/release/agentvcs" --out conformance-${{ matrix.os }}.jsonl
       - uses: actions/upload-artifact@v4
         if: always()

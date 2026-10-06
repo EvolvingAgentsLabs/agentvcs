@@ -1,0 +1,15 @@
+{
+  "protocol": "agentvcs/0.1",
+  "type": "merge_resolution",
+  "merge_id": "b3:194fa3d9ad5a238e9913475516c559b1df8d396d501aee208494b438eb687eaf",
+  "resolutions": {
+    "route": {
+      "take": "ours"
+    }
+  },
+  "rationale": "kept ours: it is the one that was gated",
+  "author": {
+    "type": "agent",
+    "id": "claude-code"
+  }
+}

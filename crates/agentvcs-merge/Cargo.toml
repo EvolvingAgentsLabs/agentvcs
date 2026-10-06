@@ -1,0 +1,13 @@
+[package]
+name = "agentvcs-merge"
+description = "agentvcs three-way manifest merge (spec/MERGE.md, v0.2 draft)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+agentvcs-core.workspace = true
+agentvcs-diff.workspace = true
+agentvcs-query.workspace = true
+serde_json.workspace = true

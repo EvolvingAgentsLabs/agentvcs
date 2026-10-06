@@ -1,0 +1,61 @@
+{
+  "id": "merge-009-add-and-delete-mechanical",
+  "group": "merge",
+  "description": "theirs adds a dimension, ours deletes another: both mechanical",
+  "source": "generated",
+  "argv": [
+    "merge",
+    "prepare",
+    "--base",
+    "base.json",
+    "--ours",
+    "ours.json",
+    "--theirs",
+    "theirs.json"
+  ],
+  "expect": {
+    "exit": 0,
+    "json": {
+      "ok": true,
+      "merge_id": "b3:779f4507354c67820324d9dd45024f2ed4e4c962035465dfe33fee7e19a10578",
+      "base": "b3:a0ddd7d70ce38a3e1751b29df11265770934a04ad434952bd4b640fb844e49d4",
+      "ours": "b3:1d05276e792087c8498118921ecbde6bf042d649cb4c72ea29f7b33880b726e6",
+      "theirs": "b3:10d2800e549ea5f20b1851d2e960b40bee97300c91ed07d3c6aa509fef8c3d21",
+      "auto": [
+        {
+          "dimension": "extract.adapter",
+          "resolution": "same"
+        },
+        {
+          "dimension": "extract.model",
+          "resolution": "same"
+        },
+        {
+          "dimension": "extract.prompt",
+          "resolution": "same"
+        },
+        {
+          "dimension": "extract.sampling",
+          "resolution": "same"
+        },
+        {
+          "dimension": "route",
+          "resolution": "ours"
+        },
+        {
+          "dimension": "run.config",
+          "resolution": "same"
+        },
+        {
+          "dimension": "segment.tool",
+          "resolution": "same"
+        },
+        {
+          "dimension": "verify.prompt",
+          "resolution": "theirs"
+        }
+      ],
+      "conflicts": []
+    }
+  }
+}

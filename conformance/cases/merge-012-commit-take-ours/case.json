@@ -1,0 +1,28 @@
+{
+  "id": "merge-012-commit-take-ours",
+  "group": "merge",
+  "description": "resolve by taking ours; merged id and record are deterministic",
+  "source": "generated",
+  "argv": [
+    "merge",
+    "commit",
+    "--base",
+    "base.json",
+    "--ours",
+    "ours.json",
+    "--theirs",
+    "theirs.json",
+    "--resolution",
+    "res.json"
+  ],
+  "expect": {
+    "exit": 0,
+    "json": {
+      "ok": true,
+      "merge_id": "b3:726058024857efaffa311cbd44eaa9861fe621711d7177c47fb199318c349620",
+      "merged": "b3:389161b5b3437c0cec7cebe41ac8174249acbcfe3654fb2a1fba45c34c5a4ff3",
+      "record": "b3:7a77a27efd97dd34e81c68c4304c09559789d50f45b71016a55ab5dd79e2b616",
+      "gate": null
+    }
+  }
+}

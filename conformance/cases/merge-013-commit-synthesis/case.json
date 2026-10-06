@@ -1,0 +1,28 @@
+{
+  "id": "merge-013-commit-synthesis",
+  "group": "merge",
+  "description": "resolve with new content combining both sides",
+  "source": "generated",
+  "argv": [
+    "merge",
+    "commit",
+    "--base",
+    "base.json",
+    "--ours",
+    "ours.json",
+    "--theirs",
+    "theirs.json",
+    "--resolution",
+    "res.json"
+  ],
+  "expect": {
+    "exit": 0,
+    "json": {
+      "ok": true,
+      "merge_id": "b3:726058024857efaffa311cbd44eaa9861fe621711d7177c47fb199318c349620",
+      "merged": "b3:7b7a7258e52314b40e50bd3be57260a63422d812346a303a75934cfd3e1d9e28",
+      "record": "b3:0cf4e84fcccecfd04046cb3edeebcd2ebb7037069dad16130cbc9ead5e66273f",
+      "gate": null
+    }
+  }
+}

@@ -9,6 +9,7 @@ dependencies = [
  "agentvcs-core",
  "agentvcs-diff",
  "agentvcs-mcp",
+ "agentvcs-merge",
  "agentvcs-query",
  "serde_json",
  "serde_yaml",
@@ -39,6 +40,16 @@ dependencies = [
 name = "agentvcs-mcp"
 version = "0.1.0"
 dependencies = [
+ "serde_json",
+]
+
+[[package]]
+name = "agentvcs-merge"
+version = "0.1.0"
+dependencies = [
+ "agentvcs-core",
+ "agentvcs-diff",
+ "agentvcs-query",
  "serde_json",
 ]
 
