@@ -18,7 +18,7 @@
 
 ## Rust core (v0.1, in progress)
 
-The revival rebuilds agentvcs around a frozen protocol ([`spec/`](spec/PROTOCOL.md))
+The revival rebuilds agentvcs around a frozen protocol ([`spec/`](https://github.com/EvolvingAgentsLabs/agentvcs/blob/main/spec/PROTOCOL.md))
 as a Rust core, CLI and MCP server (ADR-0001). The Python implementation documented
 below stays the released one until the plan moves it to `legacy/`.
 
@@ -46,8 +46,8 @@ agentvcs mcp                                            # the same commands as M
 Crates: `agentvcs-core` (canonical JSON, BLAKE3, manifests, store, ledgers),
 `agentvcs-diff`, `agentvcs-query` (verify, blame, bisect), `agentvcs-cli`,
 `agentvcs-mcp`, `agentvcs-py` (PyO3 skeleton). Implementation decisions:
-[ADR-0006](docs/adr/0006-f1-implementation-notes.md). Numbers:
-[docs/BENCHMARKS.md](docs/BENCHMARKS.md).
+[ADR-0006](https://github.com/EvolvingAgentsLabs/agentvcs/blob/main/docs/adr/0006-f1-implementation-notes.md). Numbers:
+[docs/BENCHMARKS.md](https://github.com/EvolvingAgentsLabs/agentvcs/blob/main/docs/BENCHMARKS.md).
 
 ## The problem: your agent evolves, git never sees it
 
