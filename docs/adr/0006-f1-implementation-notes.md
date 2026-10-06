@@ -1,6 +1,6 @@
 # ADR-0006 — F1 implementation notes: ambiguities resolved and one spec bug
 
-- Status: proposed (2026-10-06) — needs Matias's review together with the spec
+- Status: accepted (2026-10-06) — §1 folded into spec/PROTOCOL.md §1 (2026-10-06) — needs Matias's review together with the spec
 - Context: Phase 1 (Rust core, CLI, MCP). The spec is normative; where it was
   silent the Rust implementation chose as below. No golden case was changed.
 

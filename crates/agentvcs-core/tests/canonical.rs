@@ -96,7 +96,9 @@ fn unsafe_integer_is_canonical_error() {
         parse(r#"{"seed": 9007199254740993}"#),
         Err(JsonError::Canonical)
     );
-    assert_eq!(parse("-9007199254740992"), Err(JsonError::Canonical));
+    // -2^53 is exactly a double and is its own canonical form: nothing is rounded
+    assert!(parse("-9007199254740992").is_ok());
+    assert_eq!(parse("-9007199254740993"), Err(JsonError::Canonical));
     // a float literal of the same magnitude is fine: it is a double by construction
     assert!(parse("9007199254740993.0").is_ok());
 }
@@ -139,18 +141,15 @@ fn integer_literals_stay_integers() {
     assert!(a[3].is_f64());
 }
 
-/// Spec bug recorded in ADR-0006 §1: the canonical form of 1e20 is an integer
-/// literal above 2^53 - 1, which the spec's own rule refuses on re-parse.
+/// ADR-0006 §1, now spec/PROTOCOL.md §1: the canonical form of 1e20 is an integer
+/// literal above 2^53 - 1, and it must read back. Only the pre-ADR strict mode refuses it.
 #[test]
-fn canonical_form_of_large_doubles_is_not_strictly_reparseable() {
+fn canonical_form_of_large_doubles_reparses() {
     let c = canon("[1e20, 2.9514790517935283e20]");
     assert_eq!(c, "[100000000000000000000,295147905179352830000]");
-    assert_eq!(parse(&c), Err(JsonError::Canonical));
-    let v = parse_with(&c, Mode::CanonicalForm).unwrap();
+    assert_eq!(parse_with(&c, Mode::Strict), Err(JsonError::Canonical));
+    let v = parse(&c).unwrap();
     assert_eq!(canonical(&v).unwrap(), c);
     // ...while a literal that would be silently rounded is still refused
-    assert_eq!(
-        parse_with("9007199254740993", Mode::CanonicalForm),
-        Err(JsonError::Canonical)
-    );
+    assert_eq!(parse("9007199254740993"), Err(JsonError::Canonical));
 }

@@ -30,8 +30,8 @@ class CanonicalError(ValueError):
 def _num(x) -> str:
     if isinstance(x, bool):
         raise TypeError
-    if isinstance(x, int) and abs(x) > 2**53 - 1:
-        raise CanonicalError("integer outside the IEEE-754 safe range")
+    if isinstance(x, int) and abs(x) > 2**53 - 1 and _num(float(x)) != str(x):
+        raise CanonicalError("integer outside the IEEE-754 safe range that is not a canonical double")
     f = float(x)
     if math.isnan(f) or math.isinf(f):
         raise CanonicalError("non-finite number")

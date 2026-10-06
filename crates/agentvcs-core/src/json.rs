@@ -42,7 +42,7 @@ impl std::error::Error for JsonError {}
 /// How integer literals beyond 2^53 − 1 are treated.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Mode {
-    /// `spec/PROTOCOL.md §1` as written: any such literal is `E_CANONICAL`.
+    /// The pre-ADR-0006 reading of §1: any such literal is `E_CANONICAL`.
     Strict,
     /// Also accept such a literal when it is exactly the JCS serialization of the
     /// double nearest to it (e.g. `100000000000000000000`, the canonical form of
@@ -51,9 +51,11 @@ pub enum Mode {
     CanonicalForm,
 }
 
-/// Parse one JSON document (surrounding whitespace allowed, nothing else), strictly.
+/// Parse one JSON document (surrounding whitespace allowed, nothing else) under
+/// `spec/PROTOCOL.md §1`, which since ADR-0006 §1 accepts a large integer literal
+/// only when it is the canonical form of its nearest double.
 pub fn parse(s: &str) -> Result<Value, JsonError> {
-    parse_with(s, Mode::Strict)
+    parse_with(s, Mode::CanonicalForm)
 }
 
 /// Parse one JSON document with the given integer policy.
@@ -73,9 +75,9 @@ pub fn parse_with(s: &str, mode: Mode) -> Result<Value, JsonError> {
     Ok(v)
 }
 
-/// Parse bytes that must be UTF-8 JSON, strictly.
+/// Parse bytes that must be UTF-8 JSON, under `spec/PROTOCOL.md §1` (see `parse`).
 pub fn parse_bytes(b: &[u8]) -> Result<Value, JsonError> {
-    parse_bytes_with(b, Mode::Strict)
+    parse_bytes_with(b, Mode::CanonicalForm)
 }
 
 /// Parse bytes that must be UTF-8 JSON.

@@ -30,7 +30,10 @@ contract in [`cli/COMMANDS.md`](cli/COMMANDS.md).
   lowercase hex), numbers serialized as ECMAScript `Number.prototype.toString`.
 - **Numbers are IEEE-754 doubles.** An integer literal with magnitude above
   2^53 − 1 is invalid (`E_CANONICAL`) rather than silently rounded — a rounded
-  `seed` inside a hash is a bug nobody would see. `NaN` and infinities are invalid
+  `seed` inside a hash is a bug nobody would see — **unless the literal is exactly
+  the canonical form of the double nearest to it** (e.g. `100000000000000000000`,
+  which is how `1e20` canonicalizes). Without that exception canonical bytes could
+  not be read back (ADR-0006 §1). `NaN` and infinities are invalid
   anywhere in the protocol.
   `1` and `1.0` are the same value and canonicalize to `1`.
 - **Strings** must be valid Unicode. Lone surrogates are invalid.
