@@ -3,6 +3,7 @@
 pub mod error;
 pub mod hash;
 pub mod json;
+pub mod ledger;
 pub mod manifest;
 pub mod schema;
 #[doc(hidden)]
