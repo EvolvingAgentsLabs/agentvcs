@@ -129,3 +129,20 @@ first run (0.44 s/doc) for ≈ 20 min: `--docs 2700 --patch-after 675`. One sess
 
 **Falsifiers (unchanged except the gate):** gate gain < 0.10 (nothing applied); blame names another
 patch or none; delta ≤ 0; `verify` fails.
+
+### Rerun result (2026-10-06, Colab T4; files in `runs/f2-rerun-2026-10-06/`) — **Gate F2 passed**
+
+2700 docs (8100 steps), ran to completion in 1845 s. Re-checked locally on the exported bundle
+(`agentvcs verify` / `blame` over `export.audit.json.gz`, uncompressed) [ran].
+
+- **Gate (paired, 12 held-out docs):** candidate 0.917, `from_manifest` 0.472, **gain +0.444 ≥ 0.10 → passed**.
+- **Applied at step 2051 = `harness.reloads[0].at_step`**, dimension `extract.prompt`; one rerun.
+- **Blame on `extract.recall`:** steps 0–2050 mean 0.431 (n = 684) → steps 2051–8099 mean 0.873
+  (n = 2016); one attribution naming exactly the supervisor's patch `b3:e4b07fbd…`, **delta +0.442**.
+- **`verify`:** valid, 8103 entries, no violations.
+- Falsifiers: none met.
+
+**Read with:** the gate was changed after the first run's result (logged above, owner sign-off). The
+gain clears the new threshold by 0.34, so the verdict does not hinge on that choice. The `--no-reload`
+control arm was not run on the real model; on the fake backend it shows delta 0 at the same boundary
+(CI). A new test shows the paired gate can fail (an unchanged candidate gains exactly 0).

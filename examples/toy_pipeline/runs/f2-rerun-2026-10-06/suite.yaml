@@ -1,0 +1,4 @@
+name: toy-holdout
+command: "/usr/bin/python3 /content/agentvcs/examples/toy_pipeline/gate_eval.py --backend openai --paired --base-url http://127.0.0.1:8081/v1"
+thresholds:
+  extract.recall.gain: {op: ">=", value: 0.1}
