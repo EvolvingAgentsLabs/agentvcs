@@ -13,3 +13,7 @@ Nothing here is implemented until it moves into the plan.
 - **Version skew 0.3.0 (pyproject) vs 0.4.0 (`__version__`)** — moot once Rust replaces the package; fix only if a Python release happens first.
 - **Manifest merge semantics** — v0.1 represents multiple parents but defines no merge.
 - **Bisect golden cases** — need the toy pipeline's hooks (Gate F2).
+- **Concurrent writers on one run** — v0.1 refuses a stale writer but takes no lock; add an advisory lock if two processes ever share a run.
+- **`blob put` command** — steps reference blobs by hash; the store has `put_blob` but no CLI verb yet (the SDK in Phase 2 needs it).
+- **Spec fix for large-double canonical form** — ADR-0006 §1; needs a spec revision and a golden case once accepted.
+- **Native arm64 Rust toolchain on the dev Mac** — the default rustup here is x86_64 under Rosetta; benchmarks used the aarch64 target.

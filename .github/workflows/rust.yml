@@ -1,0 +1,42 @@
+name: Rust
+
+on:
+  push:
+    branches: [main, "phase*/**"]
+  pull_request:
+
+jobs:
+  rust:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, ubuntu-latest]   # arm64, x86_64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Reference implementation deps (lifecycle test cross-checks ref.py)
+        run: pip install blake3
+      - name: fmt
+        run: cargo fmt --all --check
+      - name: clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: test
+        env:
+          AGENTVCS_REQUIRE_REFERENCE: "1"
+        run: cargo test --workspace
+      - name: build release
+        run: cargo build --release -p agentvcs-cli
+      - name: conformance (83 golden cases)
+        run: python conformance/run.py --cli "$PWD/target/release/agentvcs" --out conformance-${{ matrix.os }}.jsonl
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: conformance-${{ matrix.os }}
+          path: conformance-${{ matrix.os }}.jsonl

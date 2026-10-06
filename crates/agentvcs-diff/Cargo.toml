@@ -1,0 +1,11 @@
+[package]
+name = "agentvcs-diff"
+description = "agentvcs semantic diff of harness manifests (spec/SEMANTIC_DIFF.md)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+agentvcs-core.workspace = true
+serde_json.workspace = true

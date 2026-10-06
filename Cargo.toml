@@ -1,0 +1,34 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/agentvcs-core",
+    "crates/agentvcs-diff",
+    "crates/agentvcs-query",
+    "crates/agentvcs-cli",
+    "crates/agentvcs-mcp",
+    "crates/agentvcs-py",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/EvolvingAgentsLabs/agentvcs"
+rust-version = "1.80"
+
+[workspace.dependencies]
+agentvcs-core = { path = "crates/agentvcs-core" }
+agentvcs-diff = { path = "crates/agentvcs-diff" }
+agentvcs-query = { path = "crates/agentvcs-query" }
+agentvcs-mcp = { path = "crates/agentvcs-mcp" }
+agentvcs-cli = { path = "crates/agentvcs-cli" }
+serde_json = { version = "1", features = ["preserve_order"] }
+blake3 = "1"
+rusqlite = { version = "0.32", features = ["bundled"] }
+serde_yaml = "0.9"
+proptest = "1"
+tempfile = "3"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

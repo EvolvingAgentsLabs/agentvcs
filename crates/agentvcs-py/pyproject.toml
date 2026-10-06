@@ -1,0 +1,14 @@
+[build-system]
+requires = ["maturin>=1.7,<2"]
+build-backend = "maturin"
+
+[project]
+name = "agentvcs-py"
+version = "0.1.0"
+description = "agentvcs protocol v0.1 — thin Python binding over the Rust core (Phase 2 builds the SDK on it)"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+
+[tool.maturin]
+module-name = "agentvcs_py"
+features = ["extension-module"]

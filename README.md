@@ -16,6 +16,39 @@
 > traces & sub-agent swarm together** — and merge its **autonomous evolution back into
 > your releases, intelligently.**
 
+## Rust core (v0.1, in progress)
+
+The revival rebuilds agentvcs around a frozen protocol ([`spec/`](https://github.com/EvolvingAgentsLabs/agentvcs/blob/main/spec/PROTOCOL.md))
+as a Rust core, CLI and MCP server (ADR-0001). The Python implementation documented
+below stays the released one until the plan moves it to `legacy/`.
+
+```bash
+cargo build --release                       # target/release/agentvcs
+python3 conformance/run.py --cli "$PWD/target/release/agentvcs"   # 83/83
+cargo test --workspace
+```
+
+```bash
+agentvcs init --json
+agentvcs snapshot manifest.json --json                  # -> manifest_id
+agentvcs run start --manifest b3:… --run-id r1 --json
+echo '{"agent_id":"x","inputs":[],"outputs":[],"started_at":"…","ended_at":"…",
+       "tokens":{"in":1,"out":1},"latency_ms":3,"metrics":{"f1":0.4}}' \
+  | agentvcs step record r1 --json
+agentvcs patch propose r1 --from b3:… --to v2.json --rationale "…" --json
+agentvcs gate run b3:<patch> --suite suite.yaml --json  # suite: command + thresholds
+agentvcs patch apply b3:<patch> --json                  # refuses ungated patches (exit 5)
+agentvcs export audit r1 -o r1.audit.json --json
+agentvcs verify r1.audit.json --json && agentvcs blame r1.audit.json --metric f1 --json
+agentvcs mcp                                            # the same commands as MCP tools
+```
+
+Crates: `agentvcs-core` (canonical JSON, BLAKE3, manifests, store, ledgers),
+`agentvcs-diff`, `agentvcs-query` (verify, blame, bisect), `agentvcs-cli`,
+`agentvcs-mcp`, `agentvcs-py` (PyO3 skeleton). Implementation decisions:
+[ADR-0006](https://github.com/EvolvingAgentsLabs/agentvcs/blob/main/docs/adr/0006-f1-implementation-notes.md). Numbers:
+[docs/BENCHMARKS.md](https://github.com/EvolvingAgentsLabs/agentvcs/blob/main/docs/BENCHMARKS.md).
+
 ## The problem: your agent evolves, git never sees it
 
 An autonomous agent doesn't just *run* your system. In the field it **rewrites** it — a new
