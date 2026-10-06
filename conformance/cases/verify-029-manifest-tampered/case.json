@@ -1,0 +1,22 @@
+{
+  "id": "verify-029-manifest-tampered",
+  "group": "verify",
+  "description": "a manifest's content edited after hashing",
+  "source": "generated",
+  "argv": [
+    "verify",
+    "bundle.json"
+  ],
+  "expect": {
+    "exit": 1,
+    "json": {
+      "ok": true,
+      "valid": false,
+      "entries": 2
+    },
+    "first_violation": {
+      "code": "E_CONTENT_HASH",
+      "manifest_id": "b3:bc33efb1692a62158b07b76836741037d300fbb935531b692730fdcf1ee137f0"
+    }
+  }
+}

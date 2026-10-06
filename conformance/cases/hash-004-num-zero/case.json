@@ -1,0 +1,18 @@
+{
+  "id": "hash-004-num-zero",
+  "group": "hash",
+  "description": "ECMAScript Number serialization",
+  "source": "ECMA-262 Number::toString via RFC 8785 §3.2.2.3",
+  "argv": [
+    "hash",
+    "--canonical",
+    "in.json"
+  ],
+  "expect": {
+    "exit": 0,
+    "json": {
+      "ok": true,
+      "canonical": "[0,0,0,0]"
+    }
+  }
+}

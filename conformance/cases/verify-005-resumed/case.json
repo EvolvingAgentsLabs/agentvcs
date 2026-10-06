@@ -1,0 +1,18 @@
+{
+  "id": "verify-005-resumed",
+  "group": "verify",
+  "description": "child run resumed from step 5 starts at step_index 5",
+  "source": "generated",
+  "argv": [
+    "verify",
+    "bundle.json"
+  ],
+  "expect": {
+    "exit": 0,
+    "json": {
+      "ok": true,
+      "valid": true,
+      "entries": 5
+    }
+  }
+}

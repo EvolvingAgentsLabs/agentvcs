@@ -1,0 +1,18 @@
+{
+  "id": "verify-002-gated-patch",
+  "group": "verify",
+  "description": "a gated patch between steps",
+  "source": "generated",
+  "argv": [
+    "verify",
+    "bundle.json"
+  ],
+  "expect": {
+    "exit": 0,
+    "json": {
+      "ok": true,
+      "valid": true,
+      "entries": 9
+    }
+  }
+}

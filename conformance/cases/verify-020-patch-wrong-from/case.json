@@ -1,0 +1,22 @@
+{
+  "id": "verify-020-patch-wrong-from",
+  "group": "verify",
+  "description": "patch from a manifest that is not active",
+  "source": "generated",
+  "argv": [
+    "verify",
+    "bundle.json"
+  ],
+  "expect": {
+    "exit": 1,
+    "json": {
+      "ok": true,
+      "valid": false,
+      "entries": 3
+    },
+    "first_violation": {
+      "code": "E_PATCH_FROM",
+      "seq": 2
+    }
+  }
+}

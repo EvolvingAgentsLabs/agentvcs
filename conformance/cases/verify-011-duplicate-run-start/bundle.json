@@ -1,0 +1,314 @@
+{
+  "protocol": "agentvcs/0.1",
+  "type": "audit_bundle",
+  "run_id": "run-conformance",
+  "manifests": {
+    "b3:a0ddd7d70ce38a3e1751b29df11265770934a04ad434952bd4b640fb844e49d4": {
+      "protocol": "agentvcs/0.1",
+      "type": "harness_manifest",
+      "name": "due-diligence v1",
+      "dimensions": {
+        "extract.prompt": {
+          "kind": "prompt",
+          "content": {
+            "template": "Find every {clause} clause.\nQuote it verbatim.",
+            "variables": [
+              "clause"
+            ]
+          },
+          "content_hash": "b3:9c31847d07b4688886a5b085d690998302b8d132755ee20a48e7961436644365"
+        },
+        "extract.model": {
+          "kind": "model",
+          "content": {
+            "provider": "llama.cpp",
+            "id": "gemma-4-12b",
+            "quantization": "Q4_K_M"
+          },
+          "content_hash": "b3:4e3f5db53b60cbd488da4b9dcc2d7a9f2d4a618afbee2fcbe5165f489d422400"
+        },
+        "extract.sampling": {
+          "kind": "sampling",
+          "content": {
+            "temperature": 0.2,
+            "top_p": 0.95,
+            "max_tokens": 512,
+            "grammar": null
+          },
+          "content_hash": "b3:fd3a42302ea1a170fef940e9bf6545bd571fc62522c39d3f5c00b20b60816f13"
+        },
+        "segment.tool": {
+          "kind": "tool",
+          "content": {
+            "name": "split_sections",
+            "signature": {
+              "type": "object",
+              "properties": {
+                "doc": {
+                  "type": "string"
+                }
+              }
+            },
+            "code_hash": "b3:e219d02ced12f13e72d780956c683031087b621f7fd2c3fb41578c729927a4f3"
+          },
+          "content_hash": "b3:979d7f5dcfb3c925a240b96c11a7501f0232b93f2e6cfbede34028cb73649142"
+        },
+        "extract.adapter": {
+          "kind": "adapter",
+          "content": {
+            "adapter_id": "cuad-lora-r16",
+            "weights_hash": "b3:65e53dd3bb313166f1ba7836f51c548d695c6fcd47d69bf130cdd886e7070fe3"
+          },
+          "content_hash": "b3:0aa42750170b7a6bd0a439266e339d442fd4aec022c61803b52596cf9cd33438"
+        },
+        "route": {
+          "kind": "router",
+          "content": {
+            "rules": [
+              {
+                "if": "len(doc) > 40000",
+                "then": "extract.long"
+              }
+            ]
+          },
+          "content_hash": "b3:eb51fd2d6f1f20323a1f277605863a14d204068b6ace4102849e3d6888089c8d"
+        },
+        "run.config": {
+          "kind": "config",
+          "content": {
+            "value": {
+              "batch": 4,
+              "docs": 120
+            }
+          },
+          "content_hash": "b3:9fd3963c6347271b840f12b4a8ba1ed32eb156d7b5f052501fc8adccfacb1615"
+        }
+      },
+      "manifest_id": "b3:a0ddd7d70ce38a3e1751b29df11265770934a04ad434952bd4b640fb844e49d4"
+    },
+    "b3:389161b5b3437c0cec7cebe41ac8174249acbcfe3654fb2a1fba45c34c5a4ff3": {
+      "protocol": "agentvcs/0.1",
+      "type": "harness_manifest",
+      "name": "due-diligence v1",
+      "dimensions": {
+        "extract.prompt": {
+          "kind": "prompt",
+          "content": {
+            "template": "Find every {clause} clause.\nQuote it verbatim, including any cap amount.",
+            "variables": [
+              "clause"
+            ]
+          },
+          "content_hash": "b3:e87ce47de6a831016737b635e77b08024c5527d1391d7debfe45b4d10768f6e7"
+        },
+        "extract.model": {
+          "kind": "model",
+          "content": {
+            "provider": "llama.cpp",
+            "id": "gemma-4-12b",
+            "quantization": "Q4_K_M"
+          },
+          "content_hash": "b3:4e3f5db53b60cbd488da4b9dcc2d7a9f2d4a618afbee2fcbe5165f489d422400"
+        },
+        "extract.sampling": {
+          "kind": "sampling",
+          "content": {
+            "temperature": 0.2,
+            "top_p": 0.95,
+            "max_tokens": 512,
+            "grammar": null
+          },
+          "content_hash": "b3:fd3a42302ea1a170fef940e9bf6545bd571fc62522c39d3f5c00b20b60816f13"
+        },
+        "segment.tool": {
+          "kind": "tool",
+          "content": {
+            "name": "split_sections",
+            "signature": {
+              "type": "object",
+              "properties": {
+                "doc": {
+                  "type": "string"
+                }
+              }
+            },
+            "code_hash": "b3:e219d02ced12f13e72d780956c683031087b621f7fd2c3fb41578c729927a4f3"
+          },
+          "content_hash": "b3:979d7f5dcfb3c925a240b96c11a7501f0232b93f2e6cfbede34028cb73649142"
+        },
+        "extract.adapter": {
+          "kind": "adapter",
+          "content": {
+            "adapter_id": "cuad-lora-r16",
+            "weights_hash": "b3:65e53dd3bb313166f1ba7836f51c548d695c6fcd47d69bf130cdd886e7070fe3"
+          },
+          "content_hash": "b3:0aa42750170b7a6bd0a439266e339d442fd4aec022c61803b52596cf9cd33438"
+        },
+        "route": {
+          "kind": "router",
+          "content": {
+            "rules": [
+              {
+                "if": "len(doc) > 40000",
+                "then": "extract.long"
+              }
+            ]
+          },
+          "content_hash": "b3:eb51fd2d6f1f20323a1f277605863a14d204068b6ace4102849e3d6888089c8d"
+        },
+        "run.config": {
+          "kind": "config",
+          "content": {
+            "value": {
+              "batch": 4,
+              "docs": 120
+            }
+          },
+          "content_hash": "b3:9fd3963c6347271b840f12b4a8ba1ed32eb156d7b5f052501fc8adccfacb1615"
+        }
+      },
+      "manifest_id": "b3:389161b5b3437c0cec7cebe41ac8174249acbcfe3654fb2a1fba45c34c5a4ff3"
+    },
+    "b3:bc33efb1692a62158b07b76836741037d300fbb935531b692730fdcf1ee137f0": {
+      "protocol": "agentvcs/0.1",
+      "type": "harness_manifest",
+      "name": "due-diligence v1",
+      "dimensions": {
+        "extract.prompt": {
+          "kind": "prompt",
+          "content": {
+            "template": "Find every {clause} clause.\nQuote it verbatim.",
+            "variables": [
+              "clause"
+            ]
+          },
+          "content_hash": "b3:9c31847d07b4688886a5b085d690998302b8d132755ee20a48e7961436644365"
+        },
+        "extract.model": {
+          "kind": "model",
+          "content": {
+            "provider": "llama.cpp",
+            "id": "gemma-4-12b",
+            "quantization": "Q4_K_M"
+          },
+          "content_hash": "b3:4e3f5db53b60cbd488da4b9dcc2d7a9f2d4a618afbee2fcbe5165f489d422400"
+        },
+        "extract.sampling": {
+          "kind": "sampling",
+          "content": {
+            "temperature": 0.0,
+            "top_p": 0.95,
+            "max_tokens": 512,
+            "grammar": "root ::= clause+"
+          },
+          "content_hash": "b3:40cfc479a1e4c08fa80f425b0c90ca5e731dc001d3a5644d54fc73eca5dfc8d5"
+        },
+        "segment.tool": {
+          "kind": "tool",
+          "content": {
+            "name": "split_sections",
+            "signature": {
+              "type": "object",
+              "properties": {
+                "doc": {
+                  "type": "string"
+                }
+              }
+            },
+            "code_hash": "b3:e219d02ced12f13e72d780956c683031087b621f7fd2c3fb41578c729927a4f3"
+          },
+          "content_hash": "b3:979d7f5dcfb3c925a240b96c11a7501f0232b93f2e6cfbede34028cb73649142"
+        },
+        "extract.adapter": {
+          "kind": "adapter",
+          "content": {
+            "adapter_id": "cuad-lora-r16",
+            "weights_hash": "b3:65e53dd3bb313166f1ba7836f51c548d695c6fcd47d69bf130cdd886e7070fe3"
+          },
+          "content_hash": "b3:0aa42750170b7a6bd0a439266e339d442fd4aec022c61803b52596cf9cd33438"
+        },
+        "route": {
+          "kind": "router",
+          "content": {
+            "rules": [
+              {
+                "if": "len(doc) > 40000",
+                "then": "extract.long"
+              }
+            ]
+          },
+          "content_hash": "b3:eb51fd2d6f1f20323a1f277605863a14d204068b6ace4102849e3d6888089c8d"
+        },
+        "run.config": {
+          "kind": "config",
+          "content": {
+            "value": {
+              "batch": 4,
+              "docs": 120
+            }
+          },
+          "content_hash": "b3:9fd3963c6347271b840f12b4a8ba1ed32eb156d7b5f052501fc8adccfacb1615"
+        }
+      },
+      "manifest_id": "b3:bc33efb1692a62158b07b76836741037d300fbb935531b692730fdcf1ee137f0"
+    }
+  },
+  "ledger": [
+    {
+      "protocol": "agentvcs/0.1",
+      "type": "ledger_entry",
+      "run_id": "run-conformance",
+      "seq": 0,
+      "prev_hash": null,
+      "kind": "run_start",
+      "body": {
+        "manifest_id": "b3:a0ddd7d70ce38a3e1751b29df11265770934a04ad434952bd4b640fb844e49d4",
+        "started_at": "2026-10-06T12:00:00Z",
+        "parent": null
+      },
+      "entry_hash": "b3:e8ef25f1e4ba03fc678e12e9076a91428e787f78c8f5fc74e8dbdb93d73c6ce9"
+    },
+    {
+      "protocol": "agentvcs/0.1",
+      "type": "ledger_entry",
+      "run_id": "run-conformance",
+      "seq": 1,
+      "prev_hash": "b3:e8ef25f1e4ba03fc678e12e9076a91428e787f78c8f5fc74e8dbdb93d73c6ce9",
+      "kind": "step",
+      "body": {
+        "step_index": 0,
+        "manifest_id": "b3:a0ddd7d70ce38a3e1751b29df11265770934a04ad434952bd4b640fb844e49d4",
+        "agent_id": "extractor",
+        "inputs": [
+          "b3:507cc3517e53234f3b2cb83d79a706d4dbda498cff189b25047f0baf4fd93b7b"
+        ],
+        "outputs": [
+          "b3:a43557a85db1a7b21cb0a37422d9b0207a0f9d7aebe379cf97d76a99c0fce03f"
+        ],
+        "started_at": "2026-10-06T12:00:00Z",
+        "ended_at": "2026-10-06T12:00:01Z",
+        "tokens": {
+          "in": 800,
+          "out": 120
+        },
+        "latency_ms": 1000,
+        "checkpoint_ref": "ckpt/0"
+      },
+      "entry_hash": "b3:125e58270677969e2fc15486d491c887826699ccebc0a1c761668307da1f394d"
+    },
+    {
+      "protocol": "agentvcs/0.1",
+      "type": "ledger_entry",
+      "run_id": "run-conformance",
+      "seq": 2,
+      "prev_hash": "b3:125e58270677969e2fc15486d491c887826699ccebc0a1c761668307da1f394d",
+      "kind": "run_start",
+      "body": {
+        "manifest_id": "b3:a0ddd7d70ce38a3e1751b29df11265770934a04ad434952bd4b640fb844e49d4",
+        "started_at": "2026-10-06T12:00:00Z",
+        "parent": null
+      },
+      "entry_hash": "b3:e9111eb3fdf9a24f1c9e5585f86336afc6564483ada0a7e5c12b2237d0720577"
+    }
+  ]
+}

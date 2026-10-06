@@ -1,0 +1,22 @@
+{
+  "id": "verify-021-patch-wrong-step",
+  "group": "verify",
+  "description": "applied_at_step is not the next step",
+  "source": "generated",
+  "argv": [
+    "verify",
+    "bundle.json"
+  ],
+  "expect": {
+    "exit": 1,
+    "json": {
+      "ok": true,
+      "valid": false,
+      "entries": 4
+    },
+    "first_violation": {
+      "code": "E_PATCH_STEP",
+      "seq": 3
+    }
+  }
+}

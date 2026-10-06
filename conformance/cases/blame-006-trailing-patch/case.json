@@ -1,0 +1,49 @@
+{
+  "id": "blame-006-trailing-patch",
+  "group": "blame",
+  "description": "a patch after the last step introduces no segment",
+  "source": "generated",
+  "argv": [
+    "blame",
+    "bundle.json",
+    "--metric",
+    "f1"
+  ],
+  "expect": {
+    "exit": 0,
+    "json": {
+      "ok": true,
+      "metric": "f1",
+      "segments": [
+        {
+          "manifest_id": "b3:a0ddd7d70ce38a3e1751b29df11265770934a04ad434952bd4b640fb844e49d4",
+          "from_step": 0,
+          "to_step": 2,
+          "introduced_by": [],
+          "n": 3,
+          "mean": 0.3
+        },
+        {
+          "manifest_id": "b3:389161b5b3437c0cec7cebe41ac8174249acbcfe3654fb2a1fba45c34c5a4ff3",
+          "from_step": 3,
+          "to_step": 4,
+          "introduced_by": [
+            "b3:e36c14a745a1108af64814e399eae366eb9087af6ec8f427d552ee7c69392fec"
+          ],
+          "n": 2,
+          "mean": 0.4
+        }
+      ],
+      "attributions": [
+        {
+          "patches": [
+            "b3:e36c14a745a1108af64814e399eae366eb9087af6ec8f427d552ee7c69392fec"
+          ],
+          "from_segment": 0,
+          "to_segment": 1,
+          "delta": 0.10000000000000003
+        }
+      ]
+    }
+  }
+}

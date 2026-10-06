@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/EvolvingAgentsLabs/agentvcs/spec/schemas/audit_bundle.schema.json",
+  "title": "AuditBundle",
+  "type": "object",
+  "required": [
+    "protocol",
+    "type",
+    "run_id",
+    "manifests",
+    "ledger"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "protocol": {
+      "const": "agentvcs/0.1"
+    },
+    "type": {
+      "const": "audit_bundle"
+    },
+    "run_id": {
+      "type": "string"
+    },
+    "manifests": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "harness_manifest.schema.json"
+      }
+    },
+    "ledger": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    }
+  }
+}

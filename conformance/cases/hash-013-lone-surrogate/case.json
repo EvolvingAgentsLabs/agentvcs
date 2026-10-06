@@ -1,0 +1,17 @@
+{
+  "id": "hash-013-lone-surrogate",
+  "group": "hash",
+  "description": "a lone surrogate cannot be canonicalized",
+  "source": "generated",
+  "argv": [
+    "hash",
+    "--canonical",
+    "in.json"
+  ],
+  "expect": {
+    "exit": 3,
+    "json": {
+      "ok": false
+    }
+  }
+}

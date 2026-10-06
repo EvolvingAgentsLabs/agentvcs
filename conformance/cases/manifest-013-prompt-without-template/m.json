@@ -1,0 +1,12 @@
+{
+  "protocol": "agentvcs/0.1",
+  "type": "harness_manifest",
+  "dimensions": {
+    "p": {
+      "kind": "prompt",
+      "content": {
+        "variables": []
+      }
+    }
+  }
+}

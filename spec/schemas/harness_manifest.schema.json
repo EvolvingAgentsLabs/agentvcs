@@ -1,0 +1,298 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/EvolvingAgentsLabs/agentvcs/spec/schemas/harness_manifest.schema.json",
+  "title": "HarnessManifest",
+  "type": "object",
+  "required": [
+    "protocol",
+    "type",
+    "dimensions"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "protocol": {
+      "const": "agentvcs/0.1"
+    },
+    "type": {
+      "const": "harness_manifest"
+    },
+    "name": {
+      "type": "string"
+    },
+    "parent_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^b3:[0-9a-f]{64}$"
+      }
+    },
+    "manifest_id": {
+      "type": "string",
+      "pattern": "^b3:[0-9a-f]{64}$"
+    },
+    "dimensions": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z0-9][a-z0-9_.\\-/]*$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/dimension"
+      }
+    }
+  },
+  "$defs": {
+    "dimension": {
+      "type": "object",
+      "required": [
+        "kind",
+        "content"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "prompt",
+            "model",
+            "sampling",
+            "tool",
+            "adapter",
+            "router",
+            "config"
+          ]
+        },
+        "content": {},
+        "content_hash": {
+          "type": "string",
+          "pattern": "^b3:[0-9a-f]{64}$"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "prompt"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "content": {
+                "type": "object",
+                "properties": {
+                  "template": {
+                    "type": "string"
+                  },
+                  "variables": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "uniqueItems": true
+                  }
+                },
+                "required": [
+                  "template"
+                ],
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "model"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "content": {
+                "type": "object",
+                "properties": {
+                  "provider": {
+                    "type": "string"
+                  },
+                  "id": {
+                    "type": "string"
+                  },
+                  "quantization": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "revision": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "provider",
+                  "id"
+                ],
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "sampling"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "content": {
+                "type": "object",
+                "properties": {
+                  "temperature": {
+                    "type": "number"
+                  },
+                  "top_p": {
+                    "type": "number"
+                  },
+                  "top_k": {
+                    "type": "integer"
+                  },
+                  "min_p": {
+                    "type": "number"
+                  },
+                  "max_tokens": {
+                    "type": "integer"
+                  },
+                  "seed": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  },
+                  "stop": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "grammar": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [],
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "tool"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "content": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "signature": {
+                    "type": "object"
+                  },
+                  "code_hash": {
+                    "type": "string",
+                    "pattern": "^b3:[0-9a-f]{64}$"
+                  }
+                },
+                "required": [
+                  "name",
+                  "signature",
+                  "code_hash"
+                ],
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "adapter"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "content": {
+                "type": "object",
+                "properties": {
+                  "adapter_id": {
+                    "type": "string"
+                  },
+                  "weights_hash": {
+                    "type": "string",
+                    "pattern": "^b3:[0-9a-f]{64}$"
+                  },
+                  "base_model": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "adapter_id",
+                  "weights_hash"
+                ],
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "router"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "content": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "config"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "content": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

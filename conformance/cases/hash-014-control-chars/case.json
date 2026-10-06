@@ -1,0 +1,18 @@
+{
+  "id": "hash-014-control-chars",
+  "group": "hash",
+  "description": "control characters: named escapes and lowercase \\u00xx",
+  "source": "generated",
+  "argv": [
+    "hash",
+    "--canonical",
+    "in.json"
+  ],
+  "expect": {
+    "exit": 0,
+    "json": {
+      "ok": true,
+      "canonical": "[\"\\b\\t\\n\\f\\r\\u0001\\u001f/\"]"
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "id": "verify-022-patch-id-mismatch",
+  "group": "verify",
+  "description": "rationale edited after the patch id was computed",
+  "source": "generated",
+  "argv": [
+    "verify",
+    "bundle.json"
+  ],
+  "expect": {
+    "exit": 1,
+    "json": {
+      "ok": true,
+      "valid": false,
+      "entries": 3
+    },
+    "first_violation": {
+      "code": "E_PATCH_ID",
+      "seq": 2
+    }
+  }
+}

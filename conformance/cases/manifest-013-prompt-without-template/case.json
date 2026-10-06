@@ -1,0 +1,19 @@
+{
+  "id": "manifest-013-prompt-without-template",
+  "group": "manifest",
+  "description": "prompt content must carry template",
+  "source": "generated",
+  "argv": [
+    "snapshot",
+    "m.json"
+  ],
+  "expect": {
+    "exit": 3,
+    "json": {
+      "ok": false,
+      "error": {
+        "code": "E_SCHEMA"
+      }
+    }
+  }
+}

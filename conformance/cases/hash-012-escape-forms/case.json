@@ -1,0 +1,18 @@
+{
+  "id": "hash-012-escape-forms",
+  "group": "hash",
+  "description": "\\u00e9 escape and literal é hash the same (3/3)",
+  "source": "generated",
+  "argv": [
+    "hash",
+    "--canonical",
+    "in.json"
+  ],
+  "expect": {
+    "exit": 0,
+    "json": {
+      "ok": true,
+      "hash": "b3:af64c4be9611c15c3059db79ec8c703c3cd8e932136973c22f7a44b472364760"
+    }
+  }
+}

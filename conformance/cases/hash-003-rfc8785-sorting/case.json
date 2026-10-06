@@ -1,0 +1,18 @@
+{
+  "id": "hash-003-rfc8785-sorting",
+  "group": "hash",
+  "description": "keys sort by UTF-16 code units (emoji before U+FB33)",
+  "source": "RFC 8785 §3.2.3",
+  "argv": [
+    "hash",
+    "--canonical",
+    "in.json"
+  ],
+  "expect": {
+    "exit": 0,
+    "json": {
+      "ok": true,
+      "canonical": "{\"\\r\":\"Carriage Return\",\"1\":\"One\",\"\":\"Control\",\"ö\":\"Latin Small Letter O With Diaeresis\",\"€\":\"Euro Sign\",\"😀\":\"Emoji: Grinning Face\",\"דּ\":\"Hebrew Letter Dalet With Dagesh\"}"
+    }
+  }
+}

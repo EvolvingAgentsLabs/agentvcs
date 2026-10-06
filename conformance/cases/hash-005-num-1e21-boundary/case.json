@@ -1,0 +1,18 @@
+{
+  "id": "hash-005-num-1e21-boundary",
+  "group": "hash",
+  "description": "ECMAScript Number serialization",
+  "source": "ECMA-262 Number::toString via RFC 8785 §3.2.2.3",
+  "argv": [
+    "hash",
+    "--canonical",
+    "in.json"
+  ],
+  "expect": {
+    "exit": 0,
+    "json": {
+      "ok": true,
+      "canonical": "[100000000000000000000,1e+21,1e+23]"
+    }
+  }
+}

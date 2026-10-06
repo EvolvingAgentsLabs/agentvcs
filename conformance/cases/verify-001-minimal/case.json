@@ -1,0 +1,19 @@
+{
+  "id": "verify-001-minimal",
+  "group": "verify",
+  "description": "run_start, three steps, run_end",
+  "source": "generated",
+  "argv": [
+    "verify",
+    "bundle.json"
+  ],
+  "expect": {
+    "exit": 0,
+    "json": {
+      "ok": true,
+      "valid": true,
+      "entries": 5,
+      "open": false
+    }
+  }
+}

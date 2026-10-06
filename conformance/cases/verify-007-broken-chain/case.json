@@ -1,0 +1,22 @@
+{
+  "id": "verify-007-broken-chain",
+  "group": "verify",
+  "description": "prev_hash does not point at the previous entry",
+  "source": "generated",
+  "argv": [
+    "verify",
+    "bundle.json"
+  ],
+  "expect": {
+    "exit": 1,
+    "json": {
+      "ok": true,
+      "valid": false,
+      "entries": 6
+    },
+    "first_violation": {
+      "code": "E_PREV_HASH",
+      "seq": 2
+    }
+  }
+}

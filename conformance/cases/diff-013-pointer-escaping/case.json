@@ -1,0 +1,43 @@
+{
+  "id": "diff-013-pointer-escaping",
+  "group": "diff",
+  "description": "config keys with / and ~ are escaped in JSON Pointer",
+  "source": "generated",
+  "argv": [
+    "diff",
+    "a.json",
+    "b.json"
+  ],
+  "expect": {
+    "exit": 0,
+    "json": {
+      "ok": true,
+      "from": "b3:17450d086101173416321091d1eab07e77b1c7cae7d9590ed9cb4ea6544a520d",
+      "to": "b3:7ff612a36f3943a9c72a6419168b5ac6306d232d28a9b2a891243f0a48817ed4",
+      "identical": false,
+      "changes": [
+        {
+          "dimension": "run.config",
+          "kind": "config",
+          "op": "modified",
+          "details": {
+            "fields": [
+              {
+                "path": "/value/a~1b",
+                "op": "changed",
+                "from": 1,
+                "to": 2
+              },
+              {
+                "path": "/value/m~0n/k",
+                "op": "changed",
+                "from": 1,
+                "to": 2
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

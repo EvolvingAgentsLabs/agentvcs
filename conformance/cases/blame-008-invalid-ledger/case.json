@@ -1,0 +1,21 @@
+{
+  "id": "blame-008-invalid-ledger",
+  "group": "blame",
+  "description": "blame refuses a ledger that does not verify",
+  "source": "generated",
+  "argv": [
+    "blame",
+    "bundle.json",
+    "--metric",
+    "f1"
+  ],
+  "expect": {
+    "exit": 3,
+    "json": {
+      "ok": false,
+      "error": {
+        "code": "E_INVALID_LEDGER"
+      }
+    }
+  }
+}

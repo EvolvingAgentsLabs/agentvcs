@@ -1,0 +1,17 @@
+{
+  "id": "hash-015-int-beyond-safe-range",
+  "group": "hash",
+  "description": "an integer literal above 2^53-1 is refused, not rounded",
+  "source": "generated",
+  "argv": [
+    "hash",
+    "--canonical",
+    "in.json"
+  ],
+  "expect": {
+    "exit": 3,
+    "json": {
+      "ok": false
+    }
+  }
+}
