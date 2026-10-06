@@ -1,0 +1,84 @@
+{
+  "protocol": "agentvcs/0.1",
+  "type": "harness_manifest",
+  "name": "toy-pipeline v2",
+  "dimensions": {
+    "extract.prompt": {
+      "kind": "prompt",
+      "content": {
+        "system": "You extract fields from contracts.",
+        "template": "Fields: party, term, cap_amount\nFor each field, copy its value verbatim from the document. Reply with a single JSON object whose keys are exactly the field names above, and nothing else.\nDocument:\n{document}",
+        "variables": [
+          "document"
+        ]
+      }
+    },
+    "extract.model": {
+      "kind": "model",
+      "content": {
+        "provider": "openai-compat",
+        "id": "qwen2.5-1.5b-instruct-q4_k_m"
+      }
+    },
+    "extract.sampling": {
+      "kind": "sampling",
+      "content": {
+        "temperature": 0.0,
+        "seed": 7,
+        "max_tokens": 128
+      }
+    },
+    "check.prompt": {
+      "kind": "prompt",
+      "content": {
+        "system": "You audit contract extractions.",
+        "template": "Document:\n{document}\nExtraction:\n{extraction}\nWhich of these terms appear in the document but are missing from the extraction: party, term, cap_amount? Reply OK if none are missing, otherwise MISSING: followed by the comma-separated names.",
+        "variables": [
+          "document",
+          "extraction"
+        ]
+      }
+    },
+    "check.model": {
+      "kind": "model",
+      "content": {
+        "provider": "openai-compat",
+        "id": "qwen2.5-1.5b-instruct-q4_k_m"
+      }
+    },
+    "check.sampling": {
+      "kind": "sampling",
+      "content": {
+        "temperature": 0.0,
+        "seed": 7,
+        "max_tokens": 32
+      }
+    },
+    "summarize.prompt": {
+      "kind": "prompt",
+      "content": {
+        "system": "You write one-sentence contract summaries.",
+        "template": "Write one sentence summarizing this contract from the extracted terms, quoting every amount exactly:\n{extraction}",
+        "variables": [
+          "extraction"
+        ]
+      }
+    },
+    "summarize.model": {
+      "kind": "model",
+      "content": {
+        "provider": "openai-compat",
+        "id": "qwen2.5-1.5b-instruct-q4_k_m"
+      }
+    },
+    "summarize.sampling": {
+      "kind": "sampling",
+      "content": {
+        "temperature": 0.0,
+        "seed": 7,
+        "max_tokens": 96
+      }
+    }
+  },
+  "parent_ids": []
+}

@@ -87,3 +87,62 @@ generator, which limits that confound here. If the effect shows up, the
 attribution arm is the `--no-reload` control (same command plus `--no-reload`,
 another ~20 min; expected delta ≈ 0). Buy it only after the first run shows an
 effect.
+
+## Run on Colab (briefed 2026-10-06, before running; approved by the owner)
+
+Not on the Mac: on a Colab GPU VM, same model and server as above —
+Qwen2.5-1.5B-Instruct Q4_K_M via a prebuilt CUDA `llama-server` (b11443), `-c 4096 --parallel 1`.
+agentvcs is built from `main` on the VM (rustup ≥ 1.89, maturin wheel for Linux x86_64).
+Order: the 2-minute smoke first; if v1 recall is near 0 (unparseable JSON), stop and report.
+Then the Gate F2 run with `--docs` rescaled from the smoke's `harness.seconds` to ≈ 20 minutes,
+`--patch-after` at a quarter of the docs. One Colab session (≤ 60 min); falsifiers as above.
+
+## Result (2026-10-06, Colab T4; files in `runs/f2-real-2026-10-06/`)
+
+Qwen2.5-1.5B-Instruct Q4_K_M (SHA-256 `6a1a2eb6…407e`), llama.cpp b11443, temperature 0, seed 7.
+
+- **Smoke (60 docs):** gate 0.917 (n = 12) passed; patch applied at step 60 = `harness.reloads[0].at_step`;
+  blame on `extract.recall`: 0.417 → 0.825, one attribution naming exactly that patch, **delta +0.408**;
+  `verify` true.
+- **Gate F2 run (600 docs, 262 s — `--docs` was rescaled from the smoke's warm-up-inflated rate, so it
+  ran ~4.4 min instead of ~20):** the supervisor's gate scored **0.889 < 0.9** on the same 12 held-out
+  docs → not applied → one segment (mean 0.426), no attribution; `verify` true (1802 entries).
+- **Falsifier met: "the gate fails on held-out documents".** Gate F2 is **not passed**.
+
+**Why, read from the files.** The threshold is absolute (`extract.recall ≥ 0.9`) over 12 docs whose
+recall is in thirds, so the mean moves in steps of 1/36: 0.889 is one missed field below 0.917. And the
+same 12 docs gave 0.917 in the smoke and 0.889 here at temperature 0 — llama.cpp is not reproducible
+run to run, so the gate decided on one field's noise. Against v1's 0.40 the patch more than doubles
+recall either way. The check can fail while the capability works (CLAUDE.md); redefining it after this
+result is a change of instrument and needs the owner's sign-off before any rerun.
+
+## Rerun with a relative gate (briefed 2026-10-06, before running; signed off by the owner)
+
+**Change of instrument, made after the result above and logged as such.** The supervisor's gate now
+scores the candidate *and* the patch's `from_manifest` on the same 12 held-out documents
+(`gate_eval.py --paired`, base read from the store via `AGENTVCS_FROM_MANIFEST`) and requires
+`extract.recall.gain ≥ 0.10`. Paired on the same documents, run-to-run noise mostly cancels; the
+question becomes "does the patch help by at least 0.10", not "is the level above an arbitrary 0.9".
+
+**Run.** Same model, server and Colab T4 recipe; `--docs` sized from the *steady* rate measured in the
+first run (0.44 s/doc) for ≈ 20 min: `--docs 2700 --patch-after 675`. One session.
+
+**Falsifiers (unchanged except the gate):** gate gain < 0.10 (nothing applied); blame names another
+patch or none; delta ≤ 0; `verify` fails.
+
+### Rerun result (2026-10-06, Colab T4; files in `runs/f2-rerun-2026-10-06/`) — **Gate F2 passed**
+
+2700 docs (8100 steps), ran to completion in 1845 s. Re-checked locally on the exported bundle
+(`agentvcs verify` / `blame` over `export.audit.json.gz`, uncompressed) [ran].
+
+- **Gate (paired, 12 held-out docs):** candidate 0.917, `from_manifest` 0.472, **gain +0.444 ≥ 0.10 → passed**.
+- **Applied at step 2051 = `harness.reloads[0].at_step`**, dimension `extract.prompt`; one rerun.
+- **Blame on `extract.recall`:** steps 0–2050 mean 0.431 (n = 684) → steps 2051–8099 mean 0.873
+  (n = 2016); one attribution naming exactly the supervisor's patch `b3:e4b07fbd…`, **delta +0.442**.
+- **`verify`:** valid, 8103 entries, no violations.
+- Falsifiers: none met.
+
+**Read with:** the gate was changed after the first run's result (logged above, owner sign-off). The
+gain clears the new threshold by 0.34, so the verdict does not hinge on that choice. The `--no-reload`
+control arm was not run on the real model; on the fake backend it shows delta 0 at the same boundary
+(CI). A new test shows the paired gate can fail (an unchanged candidate gains exactly 0).

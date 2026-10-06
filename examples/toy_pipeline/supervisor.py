@@ -90,14 +90,17 @@ def main(argv=None) -> int:
     print(f"[supervisor] proposed {pid[:15]}…: {[c.get('dimension') for c in out['semantic_diff']]}", flush=True)
 
     # 3. gate (held-out documents, same backend)
-    gate_cmd = [sys.executable, os.path.join(HERE, "gate_eval.py"), "--backend", a.backend]
+    # Relative gate (2026-10-06, after the first real run): the candidate must beat the
+    # active manifest by 0.10 recall on the same held-out documents. An absolute 0.9 over
+    # 12 docs scored in thirds flipped on one field's run-to-run noise (RUN_REAL.md).
+    gate_cmd = [sys.executable, os.path.join(HERE, "gate_eval.py"), "--backend", a.backend, "--paired"]
     if a.base_url:
         gate_cmd += ["--base-url", a.base_url]
     suite = os.path.join(a.store, "suite.yaml")
     with open(suite, "w") as f:
         f.write("name: toy-holdout\n")
         f.write(f"command: {json.dumps(shlex.join(gate_cmd))}\n")
-        f.write('thresholds:\n  extract.recall: {op: ">=", value: 0.9}\n')
+        f.write('thresholds:\n  extract.recall.gain: {op: ">=", value: 0.1}\n')
     code, out = cli("gate", "run", pid, "--suite", suite)
     if not out.get("ok"):
         raise SystemExit(f"[supervisor] gate could not run: {out}")

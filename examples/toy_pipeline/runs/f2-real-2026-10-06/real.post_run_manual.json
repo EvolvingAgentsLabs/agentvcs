@@ -1,0 +1,68 @@
+{
+  "note": "run_pipeline.py exited before writing result.json (supervisor exit 1: gate failed, nothing applied). These values were produced afterwards by running the same CLI calls by hand on the workdir: export audit, verify, blame.",
+  "verify": {
+    "valid": true,
+    "entries": 1802,
+    "open": false,
+    "violations": []
+  },
+  "blame": {
+    "extract.recall": {
+      "segments": [
+        {
+          "manifest_id": "b3:ed5369c677e6292f655a704a106b472e3b19d7b2464c2de5a57ed1e819524401",
+          "from_step": 0,
+          "to_step": 1799,
+          "n": 600,
+          "mean": 0.4261111111111117
+        }
+      ],
+      "attributions": []
+    },
+    "check.ok": {
+      "segments": [
+        {
+          "from_step": 0,
+          "to_step": 1799,
+          "n": 600,
+          "mean": 1.0
+        }
+      ],
+      "attributions": []
+    },
+    "summary.mentions_cap": {
+      "segments": [
+        {
+          "from_step": 0,
+          "to_step": 1799,
+          "n": 600,
+          "mean": 0.0
+        }
+      ],
+      "attributions": []
+    }
+  },
+  "supervisor": {
+    "extractions_seen": 150,
+    "mean_recall": 0.402,
+    "checker_flagged_steps": [],
+    "gate": {
+      "suite": "toy-holdout",
+      "extract.recall": 0.8888888888888888,
+      "n": 12,
+      "threshold": ">=0.9",
+      "passed": false
+    },
+    "patch_id": "b3:e4b07fbd634f1e3a1500b5144dabe84c0cd3b49aa4edc1c973d828e6c509bb60",
+    "applied": false
+  },
+  "harness": {
+    "reloads": [],
+    "stats": {
+      "steps": 1800,
+      "reruns": 0,
+      "stale_retries": 0
+    },
+    "seconds": 262.04
+  }
+}

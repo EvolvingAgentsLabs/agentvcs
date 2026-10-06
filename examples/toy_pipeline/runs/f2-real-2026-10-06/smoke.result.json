@@ -1,0 +1,112 @@
+{
+  "ok": true,
+  "backend": "openai",
+  "no_reload": false,
+  "patch_id": "b3:e4b07fbd634f1e3a1500b5144dabe84c0cd3b49aa4edc1c973d828e6c509bb60",
+  "gate": {
+    "extract.recall": 0.9166666666666666,
+    "n": 12
+  },
+  "verify": true,
+  "entries": 183,
+  "harness": {
+    "run_id": "toy",
+    "reloads": [
+      {
+        "patch_id": "b3:e4b07fbd634f1e3a1500b5144dabe84c0cd3b49aa4edc1c973d828e6c509bb60",
+        "at_step": 60,
+        "dimensions": [
+          "extract.prompt"
+        ]
+      }
+    ],
+    "stats": {
+      "steps": 180,
+      "reruns": 1,
+      "stale_retries": 0
+    },
+    "seconds": 119.89,
+    "no_reload": false
+  },
+  "blame": {
+    "extract.recall": {
+      "segments": [
+        {
+          "from_step": 0,
+          "to_step": 59,
+          "n": 20,
+          "mean": 0.41666666666666663
+        },
+        {
+          "from_step": 60,
+          "to_step": 179,
+          "n": 40,
+          "mean": 0.825
+        }
+      ],
+      "attributions": [
+        {
+          "patches": [
+            "b3:e4b07fbd634f1e3a1500b5144dabe84c0cd3b49aa4edc1c973d828e6c509bb60"
+          ],
+          "from_segment": 0,
+          "to_segment": 1,
+          "delta": 0.4083333333333333
+        }
+      ]
+    },
+    "check.ok": {
+      "segments": [
+        {
+          "from_step": 0,
+          "to_step": 59,
+          "n": 20,
+          "mean": 1.0
+        },
+        {
+          "from_step": 60,
+          "to_step": 179,
+          "n": 40,
+          "mean": 1.0
+        }
+      ],
+      "attributions": [
+        {
+          "patches": [
+            "b3:e4b07fbd634f1e3a1500b5144dabe84c0cd3b49aa4edc1c973d828e6c509bb60"
+          ],
+          "from_segment": 0,
+          "to_segment": 1,
+          "delta": 0.0
+        }
+      ]
+    },
+    "summary.mentions_cap": {
+      "segments": [
+        {
+          "from_step": 0,
+          "to_step": 59,
+          "n": 20,
+          "mean": 0.0
+        },
+        {
+          "from_step": 60,
+          "to_step": 179,
+          "n": 40,
+          "mean": 1.0
+        }
+      ],
+      "attributions": [
+        {
+          "patches": [
+            "b3:e4b07fbd634f1e3a1500b5144dabe84c0cd3b49aa4edc1c973d828e6c509bb60"
+          ],
+          "from_segment": 0,
+          "to_segment": 1,
+          "delta": 1.0
+        }
+      ]
+    }
+  },
+  "applied_at_step": 60
+}

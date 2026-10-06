@@ -1,0 +1,22 @@
+{
+  "date": "2026-10-06",
+  "colab_session": "f2-rerun",
+  "gpu": "Tesla T4, 15360 MiB (1235-1243 MiB used with llama-server resident, nvidia-smi)",
+  "gguf": "qwen2.5-1.5b-instruct-q4_k_m.gguf (Qwen/Qwen2.5-1.5B-Instruct-GGUF:Q4_K_M, 1117320736 bytes)",
+  "gguf_sha256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e (sha256sum on the VM, matches)",
+  "llama_cpp": "b11443 (commit f0c41e016) ubuntu-cuda-12.8-x64 prebuilt + cudart tarball; LD_LIBRARY_PATH=cudart dir:llama dir:/usr/lib64-nvidia",
+  "server_args": "llama-server -hf Qwen/Qwen2.5-1.5B-Instruct-GGUF:Q4_K_M --port 8081 -c 4096 --parallel 1",
+  "rustc": "1.99.0 (b940084d7 2026-09-28)",
+  "maturin": "1.15.0",
+  "python": "3.13.15",
+  "agentvcs": "branch runs/f2-real @ 368f803; wheel via maturin build --release in crates/agentvcs-py; also cargo build --release -p agentvcs-cli",
+  "toy_tests": "pytest examples/toy_pipeline/tests: 2 passed (6.08 s)",
+  "command": "python examples/toy_pipeline/run_pipeline.py --backend openai --base-url http://127.0.0.1:8081/v1 --model qwen2.5-1.5b-instruct-q4_k_m --docs 2700 --patch-after 675 --workdir examples/toy_pipeline/workdir-rerun",
+  "docs": 2700,
+  "patch_after": 675,
+  "wall_seconds": 1845.0,
+  "harness_seconds": 1842.81,
+  "finished": true,
+  "stopped_early": false,
+  "note": "Ran to completion (session minute ~36); no SIGINT. Smoke skipped by instruction. export.audit.json produced with `agentvcs export audit toy`; toy.audit.json written by the pipeline is byte-size identical."
+}
