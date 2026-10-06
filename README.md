@@ -18,7 +18,7 @@
 
 ## Rust core (v0.1, in progress)
 
-The revival rebuilds agentvcs around a frozen protocol ([`spec/`](spec/PROTOCOL.md))
+The revival rebuilds agentvcs around a frozen protocol ([`spec/`](https://github.com/EvolvingAgentsLabs/agentvcs/blob/main/spec/PROTOCOL.md))
 as a Rust core, CLI and MCP server (ADR-0001). The Python implementation documented
 below stays the released one until the plan moves it to `legacy/`.
 
@@ -45,9 +45,54 @@ agentvcs mcp                                            # the same commands as M
 
 Crates: `agentvcs-core` (canonical JSON, BLAKE3, manifests, store, ledgers),
 `agentvcs-diff`, `agentvcs-query` (verify, blame, bisect), `agentvcs-cli`,
-`agentvcs-mcp`, `agentvcs-py` (PyO3 skeleton). Implementation decisions:
-[ADR-0006](docs/adr/0006-f1-implementation-notes.md). Numbers:
-[docs/BENCHMARKS.md](docs/BENCHMARKS.md).
+`agentvcs-mcp`, `agentvcs-py` (the Python SDK, below). Implementation decisions:
+[ADR-0006](https://github.com/EvolvingAgentsLabs/agentvcs/blob/main/docs/adr/0006-f1-implementation-notes.md). Numbers:
+[docs/BENCHMARKS.md](https://github.com/EvolvingAgentsLabs/agentvcs/blob/main/docs/BENCHMARKS.md).
+
+### Python SDK (v0.1, Phase 2)
+
+`crates/agentvcs-py` is the Python package `agentvcs` — a thin PyO3 binding over
+the Rust core plus harness ergonomics ([ADR-0007](https://github.com/EvolvingAgentsLabs/agentvcs/blob/main/docs/adr/0007-python-sdk-layout.md)).
+Not on PyPI yet; build it locally:
+
+```bash
+crates/agentvcs-py/dev.sh test        # venv + maturin develop --release + pytest
+```
+
+```python
+import agentvcs as avcs
+
+with avcs.run("manifest.json", store=".") as run:          # run_start ... run_end(status)
+    run.on_patch(lambda ev: print("reload", ev.changed_dimensions))
+    run.checkpoint(lambda step: save_kv_state(step.step_index))   # -> checkpoint_ref
+
+    @avcs.step(agent_id="extractor")                     # one StepRecord per call
+    def extract(doc):
+        prompt = run.manifest["extract.prompt"]["template"]   # always the active manifest
+        avcs.current_step().metric("f1", score(...))
+        ...
+```
+
+`python -m agentvcs` (and the `agentvcs` console script of the wheel) is the Rust
+CLI in-process; it passes the same 83/83 conformance cases. Model wrappers for
+OpenAI-compatible servers (llama.cpp, vLLM, Ollama) and Claude live in
+`agentvcs.integrations`; the end-to-end example is
+[`examples/toy_pipeline`](https://github.com/EvolvingAgentsLabs/agentvcs/blob/main/examples/toy_pipeline/README.md).
+
+**Name clash.** The legacy pure-Python package documented below also imports as
+`agentvcs`. Use one per virtualenv: the root `pyproject.toml` is the legacy one,
+`crates/agentvcs-py/pyproject.toml` the SDK.
+
+**Apple Silicon with an x86_64 rustup (Rosetta).** If `rustc -vV` says
+`host: x86_64-apple-darwin` but your Python is arm64, a plain build links the
+extension for the wrong architecture (`symbol(s) not found for architecture
+x86_64`). `dev.sh` detects this and builds with `--target aarch64-apple-darwin`
+(`rustup target add aarch64-apple-darwin`). The permanent fix is a native
+toolchain: reinstall rustup from an arm64 shell, or
+`rustup toolchain install stable-aarch64-apple-darwin && rustup default
+stable-aarch64-apple-darwin`. `cargo build` at the root skips the binding
+(it is not a default workspace member); `cargo clippy/test --workspace` still
+cover it.
 
 ## The problem: your agent evolves, git never sees it
 
