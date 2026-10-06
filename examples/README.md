@@ -18,6 +18,12 @@ this" to "version a real agent in your stack".
 | [`business-cases/`](business-cases/) | **The same power, in plain English** — five everyday situations (a bot that quietly gets worse, a fork nobody merged, wasted context, a poisoned shared memory) that each end in a one-line recommendation, with no math on screen. Start here for the "why". | `bash run.sh` |
 | [`evolution-diagnostics/`](evolution-diagnostics/) | **Is the self-modification actually working?** The technical companion to `business-cases/`: five self-asserting acts over real evals — `price` catches an error catastrophe git can't see, branch-and-select cures it, `branch` flags Muller's ratchet, `infobits` bounds the value of context, `contain` sizes a poisoned-memory's verification rate. | `bash run.sh` |
 
+## Protocol v0.1 (Rust core + Python SDK)
+
+| Example | What it shows | Run |
+| --- | --- | --- |
+| [`toy_pipeline/`](toy_pipeline/) | Three agents driven by a manifest; a supervisor **process** patches the extraction prompt mid-run through the CLI, the harness hot-reloads via `on_patch`, and `agentvcs blame` attributes the recall gain to that patch. A `--no-reload` control gets zero credit. | `python run_pipeline.py --backend fake` |
+
 ## Zero-friction trace capture (passive providers)
 
 The agent just works; `commit` vacuums its native session log. One module per
