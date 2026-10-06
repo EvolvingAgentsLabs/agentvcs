@@ -1,0 +1,25 @@
+[package]
+name = "agentvcs-py"
+description = "Python binding (PyO3) for the agentvcs core — skeleton for Phase 2"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[lib]
+name = "agentvcs_py"
+crate-type = ["cdylib"]
+# no Rust unit tests here: the binding is exercised from Python (`maturin develop`)
+test = false
+doctest = false
+
+[dependencies]
+agentvcs-core.workspace = true
+agentvcs-cli.workspace = true
+serde_json.workspace = true
+pyo3 = "0.29"
+
+[features]
+# maturin turns this on (pyproject.toml); plain `cargo build` links libpython
+extension-module = ["pyo3/extension-module"]
