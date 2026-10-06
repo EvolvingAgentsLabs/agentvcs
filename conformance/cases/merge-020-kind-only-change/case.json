@@ -1,0 +1,57 @@
+{
+  "id": "merge-020-kind-only-change",
+  "group": "merge",
+  "description": "a kind change with identical content is a change (identity is kind + hash)",
+  "source": "generated",
+  "argv": [
+    "merge",
+    "prepare",
+    "--base",
+    "base.json",
+    "--ours",
+    "ours.json",
+    "--theirs",
+    "theirs.json"
+  ],
+  "expect": {
+    "exit": 0,
+    "json": {
+      "ok": true,
+      "merge_id": "b3:0836089f467b65d3afdad2d1c2c19907272a346fa90d9d0d0645c02250ae6552",
+      "base": "b3:05fbd580c8d8aa6f006e88fd7ae812d01dc88b6cb0df17e6cb4c6d75e9cec8ea",
+      "ours": "b3:05fbd580c8d8aa6f006e88fd7ae812d01dc88b6cb0df17e6cb4c6d75e9cec8ea",
+      "theirs": "b3:5f7685d27dd6e55dad78742cf98c48d008a02884c4a93b463cf94b5c8fd58780",
+      "auto": [
+        {
+          "dimension": "extract.adapter",
+          "resolution": "same"
+        },
+        {
+          "dimension": "extract.model",
+          "resolution": "same"
+        },
+        {
+          "dimension": "extract.prompt",
+          "resolution": "same"
+        },
+        {
+          "dimension": "extract.sampling",
+          "resolution": "same"
+        },
+        {
+          "dimension": "route",
+          "resolution": "same"
+        },
+        {
+          "dimension": "run.config",
+          "resolution": "theirs"
+        },
+        {
+          "dimension": "segment.tool",
+          "resolution": "same"
+        }
+      ],
+      "conflicts": []
+    }
+  }
+}

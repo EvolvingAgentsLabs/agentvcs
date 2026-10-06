@@ -8,6 +8,8 @@ pub struct Flag {
     /// Takes a value (`--name v` / `--name=v`); otherwise boolean.
     pub value: bool,
     pub required: bool,
+    /// May be given more than once (`--metric a --metric b`; an array over MCP).
+    pub multi: bool,
     pub help: &'static str,
 }
 
@@ -30,6 +32,18 @@ const fn f(name: &'static str, value: bool, required: bool, help: &'static str) 
         name,
         value,
         required,
+        multi: false,
+        help,
+    }
+}
+
+/// A repeatable flag that takes a value.
+const fn many(name: &'static str, help: &'static str) -> Flag {
+    Flag {
+        name,
+        value: true,
+        required: false,
+        multi: true,
         help,
     }
 }
@@ -221,6 +235,35 @@ pub const COMMANDS: &[Cmd] = &[
         positionals: &[("target", "run id or audit bundle file")],
         flags: &[],
         help: "Verify a ledger (spec/LEDGER.md); exit 1 when it has violations.",
+        stdin: false,
+    },
+    Cmd {
+        words: &["merge", "prepare"],
+        tool: "merge_prepare",
+        positionals: &[],
+        flags: &[
+            f("base", true, true, "common ancestor: manifest id in the store, or a manifest file"),
+            f("ours", true, true, "our side: manifest id or file"),
+            f("theirs", true, true, "their side: manifest id or file"),
+            f("ours-run", true, false, "run id or audit bundle file whose patches are our evidence"),
+            f("theirs-run", true, false, "run id or audit bundle file whose patches are their evidence"),
+            many("metric", "metric whose blame delta each evidence patch carries (repeatable)"),
+        ],
+        help: "Three-way merge, mechanical part: auto results and every conflict with both sides, diffs and run evidence (spec/MERGE.md §2, v0.2 draft).",
+        stdin: false,
+    },
+    Cmd {
+        words: &["merge", "commit"],
+        tool: "merge_commit",
+        positionals: &[],
+        flags: &[
+            f("base", true, true, "common ancestor: manifest id in the store, or a manifest file"),
+            f("ours", true, true, "our side: manifest id or file"),
+            f("theirs", true, true, "their side: manifest id or file"),
+            f("resolution", true, true, "merge_resolution file (spec/MERGE.md §3)"),
+            f("suite", true, false, "gate the merged manifest with this suite, as `gate run` does (exit 1 when it does not pass)"),
+        ],
+        help: "Check a merge resolution, store the merged manifest (parent_ids [ours, theirs]) and the merge record, optionally gate it (spec/MERGE.md §4, v0.2 draft).",
         stdin: false,
     },
 ];

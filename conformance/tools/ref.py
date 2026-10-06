@@ -364,6 +364,8 @@ def _side(m, d):
 def _evidence(bundle, d, metrics):
     if bundle is None:
         return []
+    if not verify(bundle)["valid"]:
+        raise ValueError("E_INVALID_LEDGER")
     bl = {m: blame(bundle, m) for m in metrics}
     out = []
     for e in bundle["ledger"]:
@@ -388,7 +390,8 @@ def merge_prepare(base, ours, theirs, ours_bundle=None, theirs_bundle=None, metr
     B, O, T = (normalize_manifest(x) for x in (base, ours, theirs))
     auto, conflicts = [], []
     dims = sorted(set(B["dimensions"]) | set(O["dimensions"]) | set(T["dimensions"]), key=ckey)
-    hb = lambda M, d: M["dimensions"][d]["content_hash"] if d in M["dimensions"] else None
+    hb = lambda M, d: ((M["dimensions"][d]["kind"], M["dimensions"][d]["content_hash"])
+                       if d in M["dimensions"] else None)
     for d in dims:
         b, o, t = hb(B, d), hb(O, d), hb(T, d)
         if o == t:
@@ -437,6 +440,8 @@ def merge_commit(base, ours, theirs, resolution):
             dims[d] = {"kind": src["dimensions"][d]["kind"], "content": src["dimensions"][d]["content"]}
     for d, x in sorted(res.items(), key=lambda kv: ckey(kv[0])):
         if "take" in x:
+            if x["take"] not in ("ours", "theirs", "base", "delete"):
+                return err("E_SCHEMA")
             if x["take"] == "delete":
                 continue
             src = {"ours": O, "theirs": T, "base": B}.get(x["take"])

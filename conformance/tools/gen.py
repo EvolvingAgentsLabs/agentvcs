@@ -494,6 +494,12 @@ prep_case("merge-009-add-and-delete-mechanical", "theirs adds a dimension, ours 
 prep_case("merge-010-kind-change-one-side", "one side changed a dimension's kind: mechanical", FULL,
           FULL, mvar([(("route",), dim("config", {"rules": []}))]), with_res(ALL_SAME, route="theirs"), [])
 
+prep_case("merge-020-kind-only-change", "a kind change with identical content is a change (identity is kind + hash)",
+          variant(FULL, [(("run.config",), dim("config", {"rules": []}))]),
+          variant(FULL, [(("run.config",), dim("config", {"rules": []}))]),
+          variant(FULL, [(("run.config",), dim("router", {"rules": []}))]),
+          with_res(ALL_SAME, **{"run.config": "theirs"}), [])
+
 # evidence: ours is a run whose gated patch M0 -> M1 rewrote extract.prompt and raised f1
 l = L().step(4, metric=0.4); P_EV = l.patch(M1); l.step(4, metric=0.8).end()
 EV_BUNDLE = l.bundle()

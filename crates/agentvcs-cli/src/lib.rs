@@ -25,6 +25,8 @@ pub struct Invocation {
     pub cmd: &'static spec::Cmd,
     pub pos: Vec<String>,
     pub flags: HashMap<&'static str, String>,
+    /// Values of repeatable flags, in command-line order.
+    pub lists: HashMap<&'static str, Vec<String>>,
     pub yes: bool,
 }
 
@@ -35,6 +37,11 @@ impl Invocation {
 
     pub fn has(&self, name: &str) -> bool {
         self.flags.contains_key(name)
+    }
+
+    /// Every value of a repeatable flag (empty when not given).
+    pub fn values(&self, name: &str) -> &[String] {
+        self.lists.get(name).map_or(&[], Vec::as_slice)
     }
 }
 
@@ -72,6 +79,7 @@ pub fn parse(args: &[String], yes: bool) -> Result<Invocation, Error> {
     })?;
     let mut pos = Vec::new();
     let mut flags = HashMap::new();
+    let mut lists: HashMap<&'static str, Vec<String>> = HashMap::new();
     let mut it = args[cmd.words.len()..].iter();
     while let Some(a) = it.next() {
         let name_val: Option<(&str, Option<&str>)> = if a == "-o" {
@@ -104,7 +112,9 @@ pub fn parse(args: &[String], yes: bool) -> Result<Invocation, Error> {
                     }
                     String::new()
                 };
-                if flags.insert(fl.name, v).is_some() {
+                if fl.multi {
+                    lists.entry(fl.name).or_default().push(v);
+                } else if flags.insert(fl.name, v).is_some() {
                     return Err(usage(format!("--{name} given twice")));
                 }
             }
@@ -120,7 +130,7 @@ pub fn parse(args: &[String], yes: bool) -> Result<Invocation, Error> {
         )));
     }
     for fl in cmd.flags {
-        if fl.required && !flags.contains_key(fl.name) {
+        if fl.required && !flags.contains_key(fl.name) && !lists.contains_key(fl.name) {
             return Err(usage(format!(
                 "{} needs --{}",
                 cmd.words.join(" "),
@@ -132,6 +142,7 @@ pub fn parse(args: &[String], yes: bool) -> Result<Invocation, Error> {
         cmd,
         pos,
         flags,
+        lists,
         yes,
     })
 }
@@ -158,6 +169,9 @@ pub fn help_json() -> Value {
                 };
                 syn.push(' ');
                 syn.push_str(&if f.required { s } else { format!("[{s}]") });
+                if f.multi {
+                    syn.push_str("...");
+                }
             }
             json!({"usage": syn, "help": c.help})
         })

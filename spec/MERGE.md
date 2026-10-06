@@ -23,8 +23,10 @@ merge prepare  →  agent resolves conflicts (its own intelligence + the evidenc
 
 ## 1. Mechanical rules
 
-For each dimension name `d` in `base ∪ ours ∪ theirs`, with `b`, `o`, `t` its `content_hash` on each
-side (or *absent*); a kind change counts as a content change (it changes the hash):
+For each dimension name `d` in `base ∪ ours ∪ theirs`, with `b`, `o`, `t` its identity
+`(kind, content_hash)` on each side (or *absent*). The kind is part of the identity: a change of kind
+with identical content (`config {"x":1}` → `router {"x":1}`) is a change, although the hash is equal
+(ADR-0008 §2):
 
 | case | result | `resolution` |
 |---|---|---|
@@ -83,7 +85,7 @@ that run's ledger whose `semantic_diff` touches `d`**, in ledger order:
 patch (`null` if the metric is absent or the patch is attributed jointly with others — the evidence
 says so rather than splitting it). Evidence is what the runtime *observed*; it is not a verdict, and
 spec/BLAME.md's caveat applies (a segment boundary is not causation). Without a run, `evidence.<side>`
-is `[]`.
+is `[]`. A run whose ledger does not `verify` is refused (`E_INVALID_LEDGER`), as `blame` refuses it.
 
 ## 3. The resolution an agent writes
 
@@ -118,6 +120,7 @@ Checks, in order (exit 3 unless noted):
 | `merge_id` equals the prepared one | `E_MERGE_STALE` |
 | every conflict has exactly one resolution | `E_MERGE_UNRESOLVED` |
 | no resolution for a dimension that is not a conflict | `E_MERGE_EXTRA` |
+| `take` is one of `ours`, `theirs`, `base`, `delete` | `E_SCHEMA` |
 | `take` names a side that exists for that dimension (`take: ours` on a dimension ours deleted is an error; use `delete`) | `E_MERGE_TAKE` |
 | `content` resolutions validate as their kind (spec/PROTOCOL.md §2.1) | `E_SCHEMA` / `E_UNKNOWN_KIND` |
 
