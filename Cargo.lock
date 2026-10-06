@@ -3,6 +3,19 @@
 version = 4
 
 [[package]]
+name = "agentvcs-cli"
+version = "0.1.0"
+dependencies = [
+ "agentvcs-core",
+ "agentvcs-diff",
+ "agentvcs-mcp",
+ "agentvcs-query",
+ "serde_json",
+ "serde_yaml",
+ "tempfile",
+]
+
+[[package]]
 name = "agentvcs-core"
 version = "0.1.0"
 dependencies = [
@@ -19,6 +32,13 @@ name = "agentvcs-diff"
 version = "0.1.0"
 dependencies = [
  "agentvcs-core",
+ "serde_json",
+]
+
+[[package]]
+name = "agentvcs-mcp"
+version = "0.1.0"
+dependencies = [
  "serde_json",
 ]
 

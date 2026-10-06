@@ -1,0 +1,193 @@
+//! The agentvcs CLI as a library: argv in, `(exit code, one JSON object)` out.
+//! The binary, the MCP server and the Python binding all go through [`run`].
+
+pub mod commands;
+pub mod mcp;
+pub mod spec;
+
+use agentvcs_core::Error;
+use serde_json::{json, Value};
+use std::collections::HashMap;
+use std::path::PathBuf;
+
+/// Global options, accepted anywhere on the command line.
+#[derive(Debug, Clone, Default)]
+pub struct Globals {
+    pub dir: Option<PathBuf>,
+    pub json: bool,
+    pub yes: bool,
+    pub help: bool,
+}
+
+/// A parsed command line.
+#[derive(Debug, Clone)]
+pub struct Invocation {
+    pub cmd: &'static spec::Cmd,
+    pub pos: Vec<String>,
+    pub flags: HashMap<&'static str, String>,
+    pub yes: bool,
+}
+
+impl Invocation {
+    pub fn flag(&self, name: &str) -> Option<&str> {
+        self.flags.get(name).map(String::as_str)
+    }
+
+    pub fn has(&self, name: &str) -> bool {
+        self.flags.contains_key(name)
+    }
+}
+
+fn usage(msg: impl Into<String>) -> Error {
+    Error::new("E_USAGE", msg)
+}
+
+/// Strip the global options out of `args`.
+pub fn split_globals(args: &[String]) -> Result<(Globals, Vec<String>), Error> {
+    let mut g = Globals::default();
+    let mut rest = Vec::new();
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "-C" => {
+                let d = it.next().ok_or_else(|| usage("-C needs a directory"))?;
+                g.dir = Some(PathBuf::from(d));
+            }
+            "--json" => g.json = true,
+            "--yes" | "-y" => g.yes = true,
+            "--help" | "-h" => g.help = true,
+            _ => rest.push(a.clone()),
+        }
+    }
+    Ok((g, rest))
+}
+
+/// Parse the command words, positionals and flags of a command line.
+pub fn parse(args: &[String], yes: bool) -> Result<Invocation, Error> {
+    let cmd = spec::lookup(args).ok_or_else(|| {
+        usage(match args.first() {
+            None => "no command given".to_string(),
+            Some(_) => format!("unknown command: {}", args.join(" ")),
+        })
+    })?;
+    let mut pos = Vec::new();
+    let mut flags = HashMap::new();
+    let mut it = args[cmd.words.len()..].iter();
+    while let Some(a) = it.next() {
+        let name_val: Option<(&str, Option<&str>)> = if a == "-o" {
+            Some(("output", None))
+        } else if let Some(s) = a.strip_prefix("--") {
+            Some(match s.split_once('=') {
+                Some((n, v)) => (n, Some(v)),
+                None => (s, None),
+            })
+        } else {
+            None
+        };
+        match name_val {
+            None => pos.push(a.clone()),
+            Some((name, inline)) => {
+                let fl = cmd.flags.iter().find(|f| f.name == name).ok_or_else(|| {
+                    usage(format!("{}: unknown flag --{name}", cmd.words.join(" ")))
+                })?;
+                let v = if fl.value {
+                    match inline {
+                        Some(v) => v.to_owned(),
+                        None => it
+                            .next()
+                            .ok_or_else(|| usage(format!("--{name} needs a value")))?
+                            .clone(),
+                    }
+                } else {
+                    if inline.is_some() {
+                        return Err(usage(format!("--{name} takes no value")));
+                    }
+                    String::new()
+                };
+                if flags.insert(fl.name, v).is_some() {
+                    return Err(usage(format!("--{name} given twice")));
+                }
+            }
+        }
+    }
+    if pos.len() != cmd.positionals.len() {
+        let names: Vec<&str> = cmd.positionals.iter().map(|p| p.0).collect();
+        return Err(usage(format!(
+            "{} takes {} positional argument(s): {}",
+            cmd.words.join(" "),
+            names.len(),
+            names.join(" ")
+        )));
+    }
+    for fl in cmd.flags {
+        if fl.required && !flags.contains_key(fl.name) {
+            return Err(usage(format!(
+                "{} needs --{}",
+                cmd.words.join(" "),
+                fl.name
+            )));
+        }
+    }
+    Ok(Invocation {
+        cmd,
+        pos,
+        flags,
+        yes,
+    })
+}
+
+/// `{"ok": false, "error": {...}}`.
+pub fn error_json(e: &Error) -> Value {
+    json!({"ok": false, "error": {"code": e.code, "message": e.message}})
+}
+
+/// The help text as JSON.
+pub fn help_json() -> Value {
+    let cmds: Vec<Value> = spec::COMMANDS
+        .iter()
+        .map(|c| {
+            let mut syn = c.words.join(" ");
+            for p in c.positionals {
+                syn.push_str(&format!(" <{}>", p.0));
+            }
+            for f in c.flags {
+                let s = if f.value {
+                    format!("--{} <v>", f.name)
+                } else {
+                    format!("--{}", f.name)
+                };
+                syn.push(' ');
+                syn.push_str(&if f.required { s } else { format!("[{s}]") });
+            }
+            json!({"usage": syn, "help": c.help})
+        })
+        .collect();
+    json!({"ok": true, "version": env!("CARGO_PKG_VERSION"), "protocol": agentvcs_core::PROTOCOL,
+           "global": "-C <dir>, --json, --yes", "commands": cmds})
+}
+
+/// Run one command line (global options included) with `stdin` as the body of
+/// commands that read one. Returns the exit code and the JSON output.
+pub fn run(args: &[String], stdin: Option<String>, cwd: PathBuf) -> (i32, Value) {
+    let (g, rest) = match split_globals(args) {
+        Ok(x) => x,
+        Err(e) => return (e.exit_code(), error_json(&e)),
+    };
+    if g.help || rest.is_empty() || rest[0] == "help" {
+        return (0, help_json());
+    }
+    let cwd = match &g.dir {
+        Some(d) if d.is_absolute() => d.clone(),
+        Some(d) => cwd.join(d),
+        None => cwd,
+    };
+    let inv = match parse(&rest, g.yes) {
+        Ok(i) => i,
+        Err(e) => return (e.exit_code(), error_json(&e)),
+    };
+    let ctx = commands::Ctx { cwd, stdin };
+    match commands::dispatch(&inv, &ctx) {
+        Ok((code, v)) => (code, v),
+        Err(e) => (e.exit_code(), error_json(&e)),
+    }
+}

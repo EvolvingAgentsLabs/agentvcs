@@ -4,6 +4,8 @@ members = [
     "crates/agentvcs-core",
     "crates/agentvcs-diff",
     "crates/agentvcs-query",
+    "crates/agentvcs-cli",
+    "crates/agentvcs-mcp",
 ]
 
 [workspace.package]
@@ -18,6 +20,7 @@ agentvcs-core = { path = "crates/agentvcs-core" }
 agentvcs-diff = { path = "crates/agentvcs-diff" }
 agentvcs-query = { path = "crates/agentvcs-query" }
 agentvcs-mcp = { path = "crates/agentvcs-mcp" }
+agentvcs-cli = { path = "crates/agentvcs-cli" }
 serde_json = { version = "1", features = ["preserve_order"] }
 blake3 = "1"
 rusqlite = { version = "0.32", features = ["bundled"] }

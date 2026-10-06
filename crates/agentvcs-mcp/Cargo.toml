@@ -1,0 +1,10 @@
+[package]
+name = "agentvcs-mcp"
+description = "MCP (JSON-RPC 2.0 over stdio) server exposing agentvcs commands as tools"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+serde_json.workspace = true
