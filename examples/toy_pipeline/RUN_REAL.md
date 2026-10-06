@@ -115,3 +115,17 @@ same 12 docs gave 0.917 in the smoke and 0.889 here at temperature 0 — llama.c
 run to run, so the gate decided on one field's noise. Against v1's 0.40 the patch more than doubles
 recall either way. The check can fail while the capability works (CLAUDE.md); redefining it after this
 result is a change of instrument and needs the owner's sign-off before any rerun.
+
+## Rerun with a relative gate (briefed 2026-10-06, before running; signed off by the owner)
+
+**Change of instrument, made after the result above and logged as such.** The supervisor's gate now
+scores the candidate *and* the patch's `from_manifest` on the same 12 held-out documents
+(`gate_eval.py --paired`, base read from the store via `AGENTVCS_FROM_MANIFEST`) and requires
+`extract.recall.gain ≥ 0.10`. Paired on the same documents, run-to-run noise mostly cancels; the
+question becomes "does the patch help by at least 0.10", not "is the level above an arbitrary 0.9".
+
+**Run.** Same model, server and Colab T4 recipe; `--docs` sized from the *steady* rate measured in the
+first run (0.44 s/doc) for ≈ 20 min: `--docs 2700 --patch-after 675`. One session.
+
+**Falsifiers (unchanged except the gate):** gate gain < 0.10 (nothing applied); blame names another
+patch or none; delta ≤ 0; `verify` fails.
