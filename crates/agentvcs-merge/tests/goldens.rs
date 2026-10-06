@@ -22,7 +22,7 @@ fn flag<'a>(argv: &'a [Value], name: &str) -> Vec<&'a str> {
 #[test]
 fn merge_goldens() {
     let cs = cases("merge");
-    assert_eq!(cs.len(), 19);
+    assert_eq!(cs.len(), 20);
     for (dir, case) in cs {
         let argv = case["argv"].as_array().unwrap();
         let m = |f: &str| normalize(&load(&dir, flag(argv, f)[0])).unwrap();
