@@ -87,3 +87,12 @@ generator, which limits that confound here. If the effect shows up, the
 attribution arm is the `--no-reload` control (same command plus `--no-reload`,
 another ~20 min; expected delta ≈ 0). Buy it only after the first run shows an
 effect.
+
+## Run on Colab (briefed 2026-10-06, before running; approved by the owner)
+
+Not on the Mac: on a Colab GPU VM, same model and server as above —
+Qwen2.5-1.5B-Instruct Q4_K_M via a prebuilt CUDA `llama-server` (b11443), `-c 4096 --parallel 1`.
+agentvcs is built from `main` on the VM (rustup ≥ 1.89, maturin wheel for Linux x86_64).
+Order: the 2-minute smoke first; if v1 recall is near 0 (unparseable JSON), stop and report.
+Then the Gate F2 run with `--docs` rescaled from the smoke's `harness.seconds` to ≈ 20 minutes,
+`--patch-after` at a quarter of the docs. One Colab session (≤ 60 min); falsifiers as above.
