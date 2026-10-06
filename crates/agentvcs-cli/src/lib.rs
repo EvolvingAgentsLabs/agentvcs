@@ -191,3 +191,47 @@ pub fn run(args: &[String], stdin: Option<String>, cwd: PathBuf) -> (i32, Value)
         Err(e) => (e.exit_code(), error_json(&e)),
     }
 }
+
+/// The whole `agentvcs` executable as a function: reads stdin for the commands
+/// that take a body, serves MCP for `mcp`, prints one JSON object on stdout and
+/// returns the exit code. The binary and the Python SDK's `python -m agentvcs`
+/// both call this, so they cannot drift apart.
+pub fn main_with(args: &[String], cwd: PathBuf) -> i32 {
+    use std::io::Read;
+    let (globals, rest) = match split_globals(args) {
+        Ok(x) => x,
+        Err(e) => return print_out(e.exit_code(), &error_json(&e), true),
+    };
+    if rest.first().map(String::as_str) == Some("mcp") {
+        let base = match &globals.dir {
+            Some(d) if d.is_absolute() => d.clone(),
+            Some(d) => cwd.join(d),
+            None => cwd,
+        };
+        return mcp::serve_stdio(base);
+    }
+    let stdin = match spec::lookup(&rest) {
+        Some(c) if c.stdin => {
+            let mut s = String::new();
+            let _ = std::io::stdin().read_to_string(&mut s);
+            Some(s)
+        }
+        _ => None,
+    };
+    let (code, out) = run(args, stdin, cwd);
+    print_out(code, &out, globals.json)
+}
+
+fn print_out(code: i32, out: &Value, compact: bool) -> i32 {
+    use std::io::Write;
+    let text = if compact {
+        serde_json::to_string(out)
+    } else {
+        serde_json::to_string_pretty(out)
+    }
+    .unwrap_or_else(|_| "{\"ok\":false}".into());
+    let mut so = std::io::stdout().lock();
+    let _ = writeln!(so, "{text}");
+    let _ = so.flush();
+    code
+}

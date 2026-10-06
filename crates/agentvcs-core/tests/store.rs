@@ -119,3 +119,65 @@ fn index_is_rebuildable() {
     s.rebuild_index().unwrap();
     assert_eq!(s.index_snapshot().unwrap(), before);
 }
+
+/// Two writers on one run (a harness and a supervisor, ADR-0007 §4): with the
+/// advisory lock, losers get `E_STALE_STATE` and retry; the chain never forks.
+#[test]
+fn concurrent_writers_never_fork_the_chain() {
+    let d = tempfile::tempdir().unwrap();
+    let s = Store::init(d.path()).unwrap();
+    let m = normalize(&manifest("x", "m")).unwrap();
+    s.put_manifest(&m).unwrap();
+    let mut st = RunState::new("c");
+    s.append(
+        &mut st,
+        "run_start",
+        run_start_body(&m.manifest_id, "t", None),
+    )
+    .unwrap();
+    let writers: Vec<_> = (0..4)
+        .map(|_| {
+            let dir = d.path().to_path_buf();
+            std::thread::spawn(move || {
+                let s = Store::open(&dir).unwrap();
+                let mut stale = 0;
+                let mut done = 0;
+                while done < 50 {
+                    let mut st = s.run_state("c").unwrap();
+                    let Value::Object(mut b) = step() else {
+                        unreachable!()
+                    };
+                    st.fill_step(&mut b).unwrap();
+                    match s.append(&mut st, "step", Value::Object(b)) {
+                        Ok(_) => done += 1,
+                        Err(e) if e.code == "E_STALE_STATE" => stale += 1,
+                        Err(e) => panic!("{e:?}"),
+                    }
+                }
+                stale
+            })
+        })
+        .collect();
+    for w in writers {
+        w.join().unwrap();
+    }
+    let ledger = s.read_ledger("c").unwrap();
+    assert_eq!(ledger.len(), 1 + 4 * 50);
+    for (i, e) in ledger.iter().enumerate() {
+        assert_eq!(e["seq"], json!(i));
+        if i > 0 {
+            assert_eq!(e["prev_hash"], ledger[i - 1]["entry_hash"]);
+            assert_eq!(e["body"]["step_index"], json!(i - 1));
+        }
+    }
+}
+
+#[test]
+fn a_refused_entry_leaves_no_ledger_file() {
+    let d = tempfile::tempdir().unwrap();
+    let s = Store::init(d.path()).unwrap();
+    let mut st = RunState::new("r");
+    let err = s.append(&mut st, "step", step()).unwrap_err();
+    assert_eq!(err.code, "E_FIRST_NOT_RUN_START");
+    assert!(!s.run_exists("r").unwrap());
+}
