@@ -1,0 +1,19 @@
+{
+  "id": "manifest-012-tool-without-code-hash",
+  "group": "manifest",
+  "description": "tool content must carry code_hash",
+  "source": "generated",
+  "argv": [
+    "snapshot",
+    "m.json"
+  ],
+  "expect": {
+    "exit": 3,
+    "json": {
+      "ok": false,
+      "error": {
+        "code": "E_SCHEMA"
+      }
+    }
+  }
+}

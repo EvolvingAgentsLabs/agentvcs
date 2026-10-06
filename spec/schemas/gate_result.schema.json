@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/EvolvingAgentsLabs/agentvcs/spec/schemas/gate_result.schema.json",
+  "title": "GateResult",
+  "type": "object",
+  "required": [
+    "suite",
+    "suite_hash",
+    "metrics",
+    "thresholds",
+    "passed",
+    "evidence"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "suite": {
+      "type": "string"
+    },
+    "suite_hash": {
+      "type": "string",
+      "pattern": "^b3:[0-9a-f]{64}$"
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "number"
+      }
+    },
+    "thresholds": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "enum": [
+              ">=",
+              ">",
+              "<=",
+              "<",
+              "=="
+            ]
+          },
+          "value": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "op",
+          "value"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "passed": {
+      "type": "boolean"
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

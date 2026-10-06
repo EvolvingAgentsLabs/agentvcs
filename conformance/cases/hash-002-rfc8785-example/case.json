@@ -1,0 +1,19 @@
+{
+  "id": "hash-002-rfc8785-example",
+  "group": "hash",
+  "description": "RFC 8785 §3.2.2 canonicalization example",
+  "source": "RFC 8785 §3.2.2",
+  "argv": [
+    "hash",
+    "--canonical",
+    "in.json"
+  ],
+  "expect": {
+    "exit": 0,
+    "json": {
+      "ok": true,
+      "canonical": "{\"literals\":[null,true,false],\"numbers\":[333333333.3333333,1e+30,4.5,0.002,1e-27],\"string\":\"€$\\u000f\\nA'B\\\"\\\\\\\\\\\"/\"}",
+      "hash": "b3:5b3b80c51be7d32b5df2e507fa592a888faf3a4c98b39ef647fadffcd4ce73bd"
+    }
+  }
+}

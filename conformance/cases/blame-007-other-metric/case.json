@@ -1,0 +1,30 @@
+{
+  "id": "blame-007-other-metric",
+  "group": "blame",
+  "description": "asking for a metric no step carries",
+  "source": "generated",
+  "argv": [
+    "blame",
+    "bundle.json",
+    "--metric",
+    "latency"
+  ],
+  "expect": {
+    "exit": 0,
+    "json": {
+      "ok": true,
+      "metric": "latency",
+      "segments": [
+        {
+          "manifest_id": "b3:a0ddd7d70ce38a3e1751b29df11265770934a04ad434952bd4b640fb844e49d4",
+          "from_step": 0,
+          "to_step": 1,
+          "introduced_by": [],
+          "n": 0,
+          "mean": null
+        }
+      ],
+      "attributions": []
+    }
+  }
+}

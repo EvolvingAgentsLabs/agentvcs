@@ -1,0 +1,39 @@
+{
+  "id": "diff-008-tool-code-only",
+  "group": "diff",
+  "description": "tool: code changed, signature unchanged",
+  "source": "generated",
+  "argv": [
+    "diff",
+    "a.json",
+    "b.json"
+  ],
+  "expect": {
+    "exit": 0,
+    "json": {
+      "ok": true,
+      "from": "b3:a0ddd7d70ce38a3e1751b29df11265770934a04ad434952bd4b640fb844e49d4",
+      "to": "b3:5cdab296eaae87a80b5fc94632ff8b9c75e77796e1510a5d75af3f292f0594cf",
+      "identical": false,
+      "changes": [
+        {
+          "dimension": "segment.tool",
+          "kind": "tool",
+          "op": "modified",
+          "details": {
+            "fields": [
+              {
+                "path": "/code_hash",
+                "op": "changed",
+                "from": "b3:e219d02ced12f13e72d780956c683031087b621f7fd2c3fb41578c729927a4f3",
+                "to": "b3:8be1d2af52bf824a12f856e279adebdd4cc99d8705fcbc99647befa00f1b9cc8"
+              }
+            ],
+            "code_changed": true,
+            "signature_changed": false
+          }
+        }
+      ]
+    }
+  }
+}

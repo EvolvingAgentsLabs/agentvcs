@@ -1,0 +1,40 @@
+{
+  "id": "diff-009-tool-signature",
+  "group": "diff",
+  "description": "tool: signature gained a parameter",
+  "source": "generated",
+  "argv": [
+    "diff",
+    "a.json",
+    "b.json"
+  ],
+  "expect": {
+    "exit": 0,
+    "json": {
+      "ok": true,
+      "from": "b3:a0ddd7d70ce38a3e1751b29df11265770934a04ad434952bd4b640fb844e49d4",
+      "to": "b3:90c29b5486ee4f714ecf2dc7ebbfcc769ebfba0b465b96957cb19fa3f9386aa8",
+      "identical": false,
+      "changes": [
+        {
+          "dimension": "segment.tool",
+          "kind": "tool",
+          "op": "modified",
+          "details": {
+            "fields": [
+              {
+                "path": "/signature/properties/max_len",
+                "op": "added",
+                "to": {
+                  "type": "integer"
+                }
+              }
+            ],
+            "code_changed": false,
+            "signature_changed": true
+          }
+        }
+      ]
+    }
+  }
+}

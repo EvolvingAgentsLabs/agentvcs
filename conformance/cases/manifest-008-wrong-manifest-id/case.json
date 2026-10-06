@@ -1,0 +1,19 @@
+{
+  "id": "manifest-008-wrong-manifest-id",
+  "group": "manifest",
+  "description": "stated manifest_id does not match",
+  "source": "generated",
+  "argv": [
+    "snapshot",
+    "m.json"
+  ],
+  "expect": {
+    "exit": 3,
+    "json": {
+      "ok": false,
+      "error": {
+        "code": "E_MANIFEST_ID"
+      }
+    }
+  }
+}

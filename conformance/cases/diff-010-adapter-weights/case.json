@@ -1,0 +1,38 @@
+{
+  "id": "diff-010-adapter-weights",
+  "group": "diff",
+  "description": "adapter: new weights, same id",
+  "source": "generated",
+  "argv": [
+    "diff",
+    "a.json",
+    "b.json"
+  ],
+  "expect": {
+    "exit": 0,
+    "json": {
+      "ok": true,
+      "from": "b3:a0ddd7d70ce38a3e1751b29df11265770934a04ad434952bd4b640fb844e49d4",
+      "to": "b3:cd2e6976a5ff6241a771bd5f337944d501cd7cd300f4c9867437d2ef99211070",
+      "identical": false,
+      "changes": [
+        {
+          "dimension": "extract.adapter",
+          "kind": "adapter",
+          "op": "modified",
+          "details": {
+            "fields": [
+              {
+                "path": "/weights_hash",
+                "op": "changed",
+                "from": "b3:65e53dd3bb313166f1ba7836f51c548d695c6fcd47d69bf130cdd886e7070fe3",
+                "to": "b3:2f9f50732f7e10c3f2ea667174b43d2f91c0b93e2ed5b36e8c4245d5944d539e"
+              }
+            ],
+            "weights_changed": true
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "id": "verify-018-gate-inconsistent",
+  "group": "verify",
+  "description": "gate says passed but its metric is under threshold",
+  "source": "generated",
+  "argv": [
+    "verify",
+    "bundle.json"
+  ],
+  "expect": {
+    "exit": 1,
+    "json": {
+      "ok": true,
+      "valid": false,
+      "entries": 3
+    },
+    "first_violation": {
+      "code": "E_GATE_INCONSISTENT",
+      "seq": 2
+    }
+  }
+}

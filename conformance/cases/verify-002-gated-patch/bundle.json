@@ -1,0 +1,508 @@
+{
+  "protocol": "agentvcs/0.1",
+  "type": "audit_bundle",
+  "run_id": "run-conformance",
+  "manifests": {
+    "b3:a0ddd7d70ce38a3e1751b29df11265770934a04ad434952bd4b640fb844e49d4": {
+      "protocol": "agentvcs/0.1",
+      "type": "harness_manifest",
+      "name": "due-diligence v1",
+      "dimensions": {
+        "extract.prompt": {
+          "kind": "prompt",
+          "content": {
+            "template": "Find every {clause} clause.\nQuote it verbatim.",
+            "variables": [
+              "clause"
+            ]
+          },
+          "content_hash": "b3:9c31847d07b4688886a5b085d690998302b8d132755ee20a48e7961436644365"
+        },
+        "extract.model": {
+          "kind": "model",
+          "content": {
+            "provider": "llama.cpp",
+            "id": "gemma-4-12b",
+            "quantization": "Q4_K_M"
+          },
+          "content_hash": "b3:4e3f5db53b60cbd488da4b9dcc2d7a9f2d4a618afbee2fcbe5165f489d422400"
+        },
+        "extract.sampling": {
+          "kind": "sampling",
+          "content": {
+            "temperature": 0.2,
+            "top_p": 0.95,
+            "max_tokens": 512,
+            "grammar": null
+          },
+          "content_hash": "b3:fd3a42302ea1a170fef940e9bf6545bd571fc62522c39d3f5c00b20b60816f13"
+        },
+        "segment.tool": {
+          "kind": "tool",
+          "content": {
+            "name": "split_sections",
+            "signature": {
+              "type": "object",
+              "properties": {
+                "doc": {
+                  "type": "string"
+                }
+              }
+            },
+            "code_hash": "b3:e219d02ced12f13e72d780956c683031087b621f7fd2c3fb41578c729927a4f3"
+          },
+          "content_hash": "b3:979d7f5dcfb3c925a240b96c11a7501f0232b93f2e6cfbede34028cb73649142"
+        },
+        "extract.adapter": {
+          "kind": "adapter",
+          "content": {
+            "adapter_id": "cuad-lora-r16",
+            "weights_hash": "b3:65e53dd3bb313166f1ba7836f51c548d695c6fcd47d69bf130cdd886e7070fe3"
+          },
+          "content_hash": "b3:0aa42750170b7a6bd0a439266e339d442fd4aec022c61803b52596cf9cd33438"
+        },
+        "route": {
+          "kind": "router",
+          "content": {
+            "rules": [
+              {
+                "if": "len(doc) > 40000",
+                "then": "extract.long"
+              }
+            ]
+          },
+          "content_hash": "b3:eb51fd2d6f1f20323a1f277605863a14d204068b6ace4102849e3d6888089c8d"
+        },
+        "run.config": {
+          "kind": "config",
+          "content": {
+            "value": {
+              "batch": 4,
+              "docs": 120
+            }
+          },
+          "content_hash": "b3:9fd3963c6347271b840f12b4a8ba1ed32eb156d7b5f052501fc8adccfacb1615"
+        }
+      },
+      "manifest_id": "b3:a0ddd7d70ce38a3e1751b29df11265770934a04ad434952bd4b640fb844e49d4"
+    },
+    "b3:389161b5b3437c0cec7cebe41ac8174249acbcfe3654fb2a1fba45c34c5a4ff3": {
+      "protocol": "agentvcs/0.1",
+      "type": "harness_manifest",
+      "name": "due-diligence v1",
+      "dimensions": {
+        "extract.prompt": {
+          "kind": "prompt",
+          "content": {
+            "template": "Find every {clause} clause.\nQuote it verbatim, including any cap amount.",
+            "variables": [
+              "clause"
+            ]
+          },
+          "content_hash": "b3:e87ce47de6a831016737b635e77b08024c5527d1391d7debfe45b4d10768f6e7"
+        },
+        "extract.model": {
+          "kind": "model",
+          "content": {
+            "provider": "llama.cpp",
+            "id": "gemma-4-12b",
+            "quantization": "Q4_K_M"
+          },
+          "content_hash": "b3:4e3f5db53b60cbd488da4b9dcc2d7a9f2d4a618afbee2fcbe5165f489d422400"
+        },
+        "extract.sampling": {
+          "kind": "sampling",
+          "content": {
+            "temperature": 0.2,
+            "top_p": 0.95,
+            "max_tokens": 512,
+            "grammar": null
+          },
+          "content_hash": "b3:fd3a42302ea1a170fef940e9bf6545bd571fc62522c39d3f5c00b20b60816f13"
+        },
+        "segment.tool": {
+          "kind": "tool",
+          "content": {
+            "name": "split_sections",
+            "signature": {
+              "type": "object",
+              "properties": {
+                "doc": {
+                  "type": "string"
+                }
+              }
+            },
+            "code_hash": "b3:e219d02ced12f13e72d780956c683031087b621f7fd2c3fb41578c729927a4f3"
+          },
+          "content_hash": "b3:979d7f5dcfb3c925a240b96c11a7501f0232b93f2e6cfbede34028cb73649142"
+        },
+        "extract.adapter": {
+          "kind": "adapter",
+          "content": {
+            "adapter_id": "cuad-lora-r16",
+            "weights_hash": "b3:65e53dd3bb313166f1ba7836f51c548d695c6fcd47d69bf130cdd886e7070fe3"
+          },
+          "content_hash": "b3:0aa42750170b7a6bd0a439266e339d442fd4aec022c61803b52596cf9cd33438"
+        },
+        "route": {
+          "kind": "router",
+          "content": {
+            "rules": [
+              {
+                "if": "len(doc) > 40000",
+                "then": "extract.long"
+              }
+            ]
+          },
+          "content_hash": "b3:eb51fd2d6f1f20323a1f277605863a14d204068b6ace4102849e3d6888089c8d"
+        },
+        "run.config": {
+          "kind": "config",
+          "content": {
+            "value": {
+              "batch": 4,
+              "docs": 120
+            }
+          },
+          "content_hash": "b3:9fd3963c6347271b840f12b4a8ba1ed32eb156d7b5f052501fc8adccfacb1615"
+        }
+      },
+      "manifest_id": "b3:389161b5b3437c0cec7cebe41ac8174249acbcfe3654fb2a1fba45c34c5a4ff3"
+    },
+    "b3:bc33efb1692a62158b07b76836741037d300fbb935531b692730fdcf1ee137f0": {
+      "protocol": "agentvcs/0.1",
+      "type": "harness_manifest",
+      "name": "due-diligence v1",
+      "dimensions": {
+        "extract.prompt": {
+          "kind": "prompt",
+          "content": {
+            "template": "Find every {clause} clause.\nQuote it verbatim.",
+            "variables": [
+              "clause"
+            ]
+          },
+          "content_hash": "b3:9c31847d07b4688886a5b085d690998302b8d132755ee20a48e7961436644365"
+        },
+        "extract.model": {
+          "kind": "model",
+          "content": {
+            "provider": "llama.cpp",
+            "id": "gemma-4-12b",
+            "quantization": "Q4_K_M"
+          },
+          "content_hash": "b3:4e3f5db53b60cbd488da4b9dcc2d7a9f2d4a618afbee2fcbe5165f489d422400"
+        },
+        "extract.sampling": {
+          "kind": "sampling",
+          "content": {
+            "temperature": 0.0,
+            "top_p": 0.95,
+            "max_tokens": 512,
+            "grammar": "root ::= clause+"
+          },
+          "content_hash": "b3:40cfc479a1e4c08fa80f425b0c90ca5e731dc001d3a5644d54fc73eca5dfc8d5"
+        },
+        "segment.tool": {
+          "kind": "tool",
+          "content": {
+            "name": "split_sections",
+            "signature": {
+              "type": "object",
+              "properties": {
+                "doc": {
+                  "type": "string"
+                }
+              }
+            },
+            "code_hash": "b3:e219d02ced12f13e72d780956c683031087b621f7fd2c3fb41578c729927a4f3"
+          },
+          "content_hash": "b3:979d7f5dcfb3c925a240b96c11a7501f0232b93f2e6cfbede34028cb73649142"
+        },
+        "extract.adapter": {
+          "kind": "adapter",
+          "content": {
+            "adapter_id": "cuad-lora-r16",
+            "weights_hash": "b3:65e53dd3bb313166f1ba7836f51c548d695c6fcd47d69bf130cdd886e7070fe3"
+          },
+          "content_hash": "b3:0aa42750170b7a6bd0a439266e339d442fd4aec022c61803b52596cf9cd33438"
+        },
+        "route": {
+          "kind": "router",
+          "content": {
+            "rules": [
+              {
+                "if": "len(doc) > 40000",
+                "then": "extract.long"
+              }
+            ]
+          },
+          "content_hash": "b3:eb51fd2d6f1f20323a1f277605863a14d204068b6ace4102849e3d6888089c8d"
+        },
+        "run.config": {
+          "kind": "config",
+          "content": {
+            "value": {
+              "batch": 4,
+              "docs": 120
+            }
+          },
+          "content_hash": "b3:9fd3963c6347271b840f12b4a8ba1ed32eb156d7b5f052501fc8adccfacb1615"
+        }
+      },
+      "manifest_id": "b3:bc33efb1692a62158b07b76836741037d300fbb935531b692730fdcf1ee137f0"
+    }
+  },
+  "ledger": [
+    {
+      "protocol": "agentvcs/0.1",
+      "type": "ledger_entry",
+      "run_id": "run-conformance",
+      "seq": 0,
+      "prev_hash": null,
+      "kind": "run_start",
+      "body": {
+        "manifest_id": "b3:a0ddd7d70ce38a3e1751b29df11265770934a04ad434952bd4b640fb844e49d4",
+        "started_at": "2026-10-06T12:00:00Z",
+        "parent": null
+      },
+      "entry_hash": "b3:e8ef25f1e4ba03fc678e12e9076a91428e787f78c8f5fc74e8dbdb93d73c6ce9"
+    },
+    {
+      "protocol": "agentvcs/0.1",
+      "type": "ledger_entry",
+      "run_id": "run-conformance",
+      "seq": 1,
+      "prev_hash": "b3:e8ef25f1e4ba03fc678e12e9076a91428e787f78c8f5fc74e8dbdb93d73c6ce9",
+      "kind": "step",
+      "body": {
+        "step_index": 0,
+        "manifest_id": "b3:a0ddd7d70ce38a3e1751b29df11265770934a04ad434952bd4b640fb844e49d4",
+        "agent_id": "extractor",
+        "inputs": [
+          "b3:507cc3517e53234f3b2cb83d79a706d4dbda498cff189b25047f0baf4fd93b7b"
+        ],
+        "outputs": [
+          "b3:a43557a85db1a7b21cb0a37422d9b0207a0f9d7aebe379cf97d76a99c0fce03f"
+        ],
+        "started_at": "2026-10-06T12:00:00Z",
+        "ended_at": "2026-10-06T12:00:01Z",
+        "tokens": {
+          "in": 800,
+          "out": 120
+        },
+        "latency_ms": 1000,
+        "checkpoint_ref": "ckpt/0"
+      },
+      "entry_hash": "b3:125e58270677969e2fc15486d491c887826699ccebc0a1c761668307da1f394d"
+    },
+    {
+      "protocol": "agentvcs/0.1",
+      "type": "ledger_entry",
+      "run_id": "run-conformance",
+      "seq": 2,
+      "prev_hash": "b3:125e58270677969e2fc15486d491c887826699ccebc0a1c761668307da1f394d",
+      "kind": "step",
+      "body": {
+        "step_index": 1,
+        "manifest_id": "b3:a0ddd7d70ce38a3e1751b29df11265770934a04ad434952bd4b640fb844e49d4",
+        "agent_id": "extractor",
+        "inputs": [
+          "b3:aeeed3448b55bf05bd9301472b449f6da0de17fd9bec1aa36078d64355e7d4a8"
+        ],
+        "outputs": [
+          "b3:413346333dd7f82a2635648cfea020f7c23cdfd8b39eceafffad19865bf770ab"
+        ],
+        "started_at": "2026-10-06T12:00:00Z",
+        "ended_at": "2026-10-06T12:00:01Z",
+        "tokens": {
+          "in": 800,
+          "out": 120
+        },
+        "latency_ms": 1000,
+        "checkpoint_ref": "ckpt/1"
+      },
+      "entry_hash": "b3:110bd56383cea1c84942e53b0306ce0b1111c62ef39337a46d48989c55163208"
+    },
+    {
+      "protocol": "agentvcs/0.1",
+      "type": "ledger_entry",
+      "run_id": "run-conformance",
+      "seq": 3,
+      "prev_hash": "b3:110bd56383cea1c84942e53b0306ce0b1111c62ef39337a46d48989c55163208",
+      "kind": "step",
+      "body": {
+        "step_index": 2,
+        "manifest_id": "b3:a0ddd7d70ce38a3e1751b29df11265770934a04ad434952bd4b640fb844e49d4",
+        "agent_id": "extractor",
+        "inputs": [
+          "b3:6793704f5c3672e87a0fec61180f7ff6bbb73e8f1ba29a6abf75765b8f848960"
+        ],
+        "outputs": [
+          "b3:416f6862a4ca10d6925ae93befa2f80f1a9648517e1f03da14a247f0f8ff20ec"
+        ],
+        "started_at": "2026-10-06T12:00:00Z",
+        "ended_at": "2026-10-06T12:00:01Z",
+        "tokens": {
+          "in": 800,
+          "out": 120
+        },
+        "latency_ms": 1000,
+        "checkpoint_ref": "ckpt/2"
+      },
+      "entry_hash": "b3:0b2e2d3d64b9508689daf2622cb0fa4e7cd4a983c47dd31d1eb87f6d61193bb9"
+    },
+    {
+      "protocol": "agentvcs/0.1",
+      "type": "ledger_entry",
+      "run_id": "run-conformance",
+      "seq": 4,
+      "prev_hash": "b3:0b2e2d3d64b9508689daf2622cb0fa4e7cd4a983c47dd31d1eb87f6d61193bb9",
+      "kind": "patch",
+      "body": {
+        "from_manifest": "b3:a0ddd7d70ce38a3e1751b29df11265770934a04ad434952bd4b640fb844e49d4",
+        "to_manifest": "b3:389161b5b3437c0cec7cebe41ac8174249acbcfe3654fb2a1fba45c34c5a4ff3",
+        "semantic_diff": [
+          {
+            "dimension": "extract.prompt",
+            "kind": "prompt",
+            "op": "modified",
+            "details": {
+              "template": {
+                "lines_added": 1,
+                "lines_removed": 1
+              },
+              "variables_added": [],
+              "variables_removed": [],
+              "fields": []
+            }
+          }
+        ],
+        "rationale": "fix extraction",
+        "evidence": [
+          2
+        ],
+        "author": {
+          "type": "agent",
+          "id": "supervisor-v0"
+        },
+        "applied_at_step": 3,
+        "rollback_of": null,
+        "gate_result": {
+          "suite": "cuad-smoke",
+          "suite_hash": "b3:64e79984be4a563f808ba8953623a9eae04dd4654c617514bd481dd689363baf",
+          "metrics": {
+            "f1.macro": 0.71
+          },
+          "thresholds": {
+            "f1.macro": {
+              "op": ">=",
+              "value": 0.65
+            }
+          },
+          "passed": true,
+          "evidence": []
+        },
+        "patch_id": "b3:e36c14a745a1108af64814e399eae366eb9087af6ec8f427d552ee7c69392fec"
+      },
+      "entry_hash": "b3:a3e5f74f7582af9ccfc325e84edede19d7b6a5297dca8b9e82d8c137c5e9270c"
+    },
+    {
+      "protocol": "agentvcs/0.1",
+      "type": "ledger_entry",
+      "run_id": "run-conformance",
+      "seq": 5,
+      "prev_hash": "b3:a3e5f74f7582af9ccfc325e84edede19d7b6a5297dca8b9e82d8c137c5e9270c",
+      "kind": "step",
+      "body": {
+        "step_index": 3,
+        "manifest_id": "b3:389161b5b3437c0cec7cebe41ac8174249acbcfe3654fb2a1fba45c34c5a4ff3",
+        "agent_id": "extractor",
+        "inputs": [
+          "b3:e05368b6f2759fd41beba46fc749fa2b7acda1a1b3633f136dac46fcd64c2619"
+        ],
+        "outputs": [
+          "b3:27d5571044f919f3036b5e55ea365324df96b76df21d9fa3f963d9a3d5a6aca7"
+        ],
+        "started_at": "2026-10-06T12:00:00Z",
+        "ended_at": "2026-10-06T12:00:01Z",
+        "tokens": {
+          "in": 800,
+          "out": 120
+        },
+        "latency_ms": 1000,
+        "checkpoint_ref": "ckpt/3"
+      },
+      "entry_hash": "b3:cf5434ee8785713608b4072e50cb238ba1c28fa60d4beb5b009f6de8029b0db9"
+    },
+    {
+      "protocol": "agentvcs/0.1",
+      "type": "ledger_entry",
+      "run_id": "run-conformance",
+      "seq": 6,
+      "prev_hash": "b3:cf5434ee8785713608b4072e50cb238ba1c28fa60d4beb5b009f6de8029b0db9",
+      "kind": "step",
+      "body": {
+        "step_index": 4,
+        "manifest_id": "b3:389161b5b3437c0cec7cebe41ac8174249acbcfe3654fb2a1fba45c34c5a4ff3",
+        "agent_id": "extractor",
+        "inputs": [
+          "b3:9fa797e1c013c27b54358b4509e07256d943fd71b07f0dc5e8d7c6fd076f3ebe"
+        ],
+        "outputs": [
+          "b3:a8df8b11e976cc271e523c449d8ff600ab0374252a0e25c91765028fc81b716d"
+        ],
+        "started_at": "2026-10-06T12:00:00Z",
+        "ended_at": "2026-10-06T12:00:01Z",
+        "tokens": {
+          "in": 800,
+          "out": 120
+        },
+        "latency_ms": 1000,
+        "checkpoint_ref": "ckpt/4"
+      },
+      "entry_hash": "b3:16cc0bfbb20da1f2b80f3dc6ce026211239e28a64ff98a958fc5a3a66ece34e4"
+    },
+    {
+      "protocol": "agentvcs/0.1",
+      "type": "ledger_entry",
+      "run_id": "run-conformance",
+      "seq": 7,
+      "prev_hash": "b3:16cc0bfbb20da1f2b80f3dc6ce026211239e28a64ff98a958fc5a3a66ece34e4",
+      "kind": "step",
+      "body": {
+        "step_index": 5,
+        "manifest_id": "b3:389161b5b3437c0cec7cebe41ac8174249acbcfe3654fb2a1fba45c34c5a4ff3",
+        "agent_id": "extractor",
+        "inputs": [
+          "b3:1ba71d2b373686b61e8421d201763b077e8d0a86edc23a83a25e5d10893dbd6f"
+        ],
+        "outputs": [
+          "b3:cfee788195047b80f64328e93d74ff2563ac1f926b9229b70b5e2ec3151d04b6"
+        ],
+        "started_at": "2026-10-06T12:00:00Z",
+        "ended_at": "2026-10-06T12:00:01Z",
+        "tokens": {
+          "in": 800,
+          "out": 120
+        },
+        "latency_ms": 1000,
+        "checkpoint_ref": "ckpt/5"
+      },
+      "entry_hash": "b3:373d65798f9bb0a19819a0a0b4eeda871cbd9c21eaaa127a5883247c0e6132fa"
+    },
+    {
+      "protocol": "agentvcs/0.1",
+      "type": "ledger_entry",
+      "run_id": "run-conformance",
+      "seq": 8,
+      "prev_hash": "b3:373d65798f9bb0a19819a0a0b4eeda871cbd9c21eaaa127a5883247c0e6132fa",
+      "kind": "run_end",
+      "body": {
+        "ended_at": "2026-10-06T13:00:00Z",
+        "status": "completed"
+      },
+      "entry_hash": "b3:47c8c842124ebec6e598c65df9d452f7bd2732ccfe01de301b56ed6b48f29bd6"
+    }
+  ]
+}

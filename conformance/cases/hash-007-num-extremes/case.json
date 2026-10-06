@@ -1,0 +1,18 @@
+{
+  "id": "hash-007-num-extremes",
+  "group": "hash",
+  "description": "ECMAScript Number serialization",
+  "source": "ECMA-262 Number::toString via RFC 8785 §3.2.2.3",
+  "argv": [
+    "hash",
+    "--canonical",
+    "in.json"
+  ],
+  "expect": {
+    "exit": 0,
+    "json": {
+      "ok": true,
+      "canonical": "[1.7976931348623157e+308,9007199254740991,-9007199254740991,-1.5]"
+    }
+  }
+}

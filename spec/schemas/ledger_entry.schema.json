@@ -1,0 +1,355 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/EvolvingAgentsLabs/agentvcs/spec/schemas/ledger_entry.schema.json",
+  "title": "LedgerEntry",
+  "type": "object",
+  "required": [
+    "protocol",
+    "type",
+    "run_id",
+    "seq",
+    "prev_hash",
+    "kind",
+    "body",
+    "entry_hash"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "protocol": {
+      "const": "agentvcs/0.1"
+    },
+    "type": {
+      "const": "ledger_entry"
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "seq": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "prev_hash": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string",
+          "pattern": "^b3:[0-9a-f]{64}$"
+        }
+      ]
+    },
+    "kind": {
+      "enum": [
+        "run_start",
+        "step",
+        "patch",
+        "run_end"
+      ]
+    },
+    "body": {
+      "type": "object"
+    },
+    "entry_hash": {
+      "type": "string",
+      "pattern": "^b3:[0-9a-f]{64}$"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "run_start"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "type": "object",
+            "properties": {
+              "manifest_id": {
+                "type": "string",
+                "pattern": "^b3:[0-9a-f]{64}$"
+              },
+              "started_at": {
+                "type": "string"
+              },
+              "parent": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "run_id": {
+                        "type": "string"
+                      },
+                      "from_step": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "checkpoint_ref": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "run_id",
+                      "from_step",
+                      "checkpoint_ref"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            },
+            "required": [
+              "manifest_id",
+              "started_at",
+              "parent"
+            ],
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "step"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "type": "object",
+            "properties": {
+              "step_index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "manifest_id": {
+                "type": "string",
+                "pattern": "^b3:[0-9a-f]{64}$"
+              },
+              "agent_id": {
+                "type": "string"
+              },
+              "inputs": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^b3:[0-9a-f]{64}$"
+                }
+              },
+              "outputs": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^b3:[0-9a-f]{64}$"
+                }
+              },
+              "started_at": {
+                "type": "string"
+              },
+              "ended_at": {
+                "type": "string"
+              },
+              "tokens": {
+                "type": "object",
+                "properties": {
+                  "in": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "out": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "in",
+                  "out"
+                ],
+                "additionalProperties": false
+              },
+              "latency_ms": {
+                "type": "number",
+                "minimum": 0
+              },
+              "metrics": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "number"
+                }
+              },
+              "checkpoint_ref": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "step_index",
+              "manifest_id",
+              "agent_id",
+              "inputs",
+              "outputs",
+              "started_at",
+              "ended_at",
+              "tokens",
+              "latency_ms",
+              "checkpoint_ref"
+            ],
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "patch"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "type": "object",
+            "properties": {
+              "patch_id": {
+                "type": "string",
+                "pattern": "^b3:[0-9a-f]{64}$"
+              },
+              "from_manifest": {
+                "type": "string",
+                "pattern": "^b3:[0-9a-f]{64}$"
+              },
+              "to_manifest": {
+                "type": "string",
+                "pattern": "^b3:[0-9a-f]{64}$"
+              },
+              "semantic_diff": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "rationale": {
+                "type": "string"
+              },
+              "evidence": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "author": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "enum": [
+                      "human",
+                      "agent"
+                    ]
+                  },
+                  "id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "type",
+                  "id"
+                ],
+                "additionalProperties": false
+              },
+              "applied_at_step": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "rollback_of": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "^b3:[0-9a-f]{64}$"
+                  }
+                ]
+              },
+              "gate_result": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "gate_result.schema.json"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "patch_id",
+              "from_manifest",
+              "to_manifest",
+              "semantic_diff",
+              "rationale",
+              "evidence",
+              "author",
+              "applied_at_step",
+              "rollback_of",
+              "gate_result"
+            ],
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "run_end"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "type": "object",
+            "properties": {
+              "ended_at": {
+                "type": "string"
+              },
+              "status": {
+                "enum": [
+                  "completed",
+                  "aborted",
+                  "failed"
+                ]
+              }
+            },
+            "required": [
+              "ended_at",
+              "status"
+            ],
+            "additionalProperties": false
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "id": "manifest-009-unknown-kind",
+  "group": "manifest",
+  "description": "kind outside the v0.1 set",
+  "source": "generated",
+  "argv": [
+    "snapshot",
+    "m.json"
+  ],
+  "expect": {
+    "exit": 3,
+    "json": {
+      "ok": false,
+      "error": {
+        "code": "E_UNKNOWN_KIND"
+      }
+    }
+  }
+}

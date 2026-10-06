@@ -1,0 +1,37 @@
+{
+  "id": "diff-007-model-quantization",
+  "group": "diff",
+  "description": "model: quantization changed",
+  "source": "generated",
+  "argv": [
+    "diff",
+    "a.json",
+    "b.json"
+  ],
+  "expect": {
+    "exit": 0,
+    "json": {
+      "ok": true,
+      "from": "b3:a0ddd7d70ce38a3e1751b29df11265770934a04ad434952bd4b640fb844e49d4",
+      "to": "b3:8cb9d65eb1b10eae008ebda16914929fb26442107b66884845f182a6c5fdc70a",
+      "identical": false,
+      "changes": [
+        {
+          "dimension": "extract.model",
+          "kind": "model",
+          "op": "modified",
+          "details": {
+            "fields": [
+              {
+                "path": "/quantization",
+                "op": "changed",
+                "from": "Q4_K_M",
+                "to": "Q8_0"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "id": "verify-027-run-id-mismatch",
+  "group": "verify",
+  "description": "an entry from another run",
+  "source": "generated",
+  "argv": [
+    "verify",
+    "bundle.json"
+  ],
+  "expect": {
+    "exit": 1,
+    "json": {
+      "ok": true,
+      "valid": false,
+      "entries": 3
+    },
+    "first_violation": {
+      "code": "E_RUN_ID",
+      "seq": 1
+    }
+  }
+}

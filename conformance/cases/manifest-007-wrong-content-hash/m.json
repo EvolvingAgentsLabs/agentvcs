@@ -1,0 +1,83 @@
+{
+  "protocol": "agentvcs/0.1",
+  "type": "harness_manifest",
+  "name": "due-diligence v1",
+  "dimensions": {
+    "extract.prompt": {
+      "kind": "prompt",
+      "content": {
+        "template": "Find every {clause} clause.\nQuote it verbatim.",
+        "variables": [
+          "clause"
+        ]
+      },
+      "content_hash": "b3:9c31847d07b4688886a5b085d690998302b8d132755ee20a48e7961436644365"
+    },
+    "extract.model": {
+      "kind": "model",
+      "content": {
+        "provider": "llama.cpp",
+        "id": "gemma-4-12b",
+        "quantization": "Q4_K_M"
+      },
+      "content_hash": "b3:3d94e5e3ead3ffa574f6165f6f4389bea23f67d53175a856d438eec6d7e5499b"
+    },
+    "extract.sampling": {
+      "kind": "sampling",
+      "content": {
+        "temperature": 0.2,
+        "top_p": 0.95,
+        "max_tokens": 512,
+        "grammar": null
+      },
+      "content_hash": "b3:fd3a42302ea1a170fef940e9bf6545bd571fc62522c39d3f5c00b20b60816f13"
+    },
+    "segment.tool": {
+      "kind": "tool",
+      "content": {
+        "name": "split_sections",
+        "signature": {
+          "type": "object",
+          "properties": {
+            "doc": {
+              "type": "string"
+            }
+          }
+        },
+        "code_hash": "b3:e219d02ced12f13e72d780956c683031087b621f7fd2c3fb41578c729927a4f3"
+      },
+      "content_hash": "b3:979d7f5dcfb3c925a240b96c11a7501f0232b93f2e6cfbede34028cb73649142"
+    },
+    "extract.adapter": {
+      "kind": "adapter",
+      "content": {
+        "adapter_id": "cuad-lora-r16",
+        "weights_hash": "b3:65e53dd3bb313166f1ba7836f51c548d695c6fcd47d69bf130cdd886e7070fe3"
+      },
+      "content_hash": "b3:0aa42750170b7a6bd0a439266e339d442fd4aec022c61803b52596cf9cd33438"
+    },
+    "route": {
+      "kind": "router",
+      "content": {
+        "rules": [
+          {
+            "if": "len(doc) > 40000",
+            "then": "extract.long"
+          }
+        ]
+      },
+      "content_hash": "b3:eb51fd2d6f1f20323a1f277605863a14d204068b6ace4102849e3d6888089c8d"
+    },
+    "run.config": {
+      "kind": "config",
+      "content": {
+        "value": {
+          "batch": 4,
+          "docs": 120
+        }
+      },
+      "content_hash": "b3:9fd3963c6347271b840f12b4a8ba1ed32eb156d7b5f052501fc8adccfacb1615"
+    }
+  },
+  "manifest_id": "b3:a0ddd7d70ce38a3e1751b29df11265770934a04ad434952bd4b640fb844e49d4"
+}

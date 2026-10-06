@@ -1,0 +1,17 @@
+{
+  "id": "hash-001-blake3-empty",
+  "group": "hash",
+  "description": "BLAKE3 of empty input, published vector",
+  "source": "BLAKE3 spec test vector (input length 0)",
+  "argv": [
+    "hash",
+    "empty.bin"
+  ],
+  "expect": {
+    "exit": 0,
+    "json": {
+      "ok": true,
+      "hash": "b3:af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262"
+    }
+  }
+}

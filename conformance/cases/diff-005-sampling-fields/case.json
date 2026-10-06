@@ -1,0 +1,48 @@
+{
+  "id": "diff-005-sampling-fields",
+  "group": "diff",
+  "description": "sampling: temperature changed, grammar set, top_p removed",
+  "source": "generated",
+  "argv": [
+    "diff",
+    "a.json",
+    "b.json"
+  ],
+  "expect": {
+    "exit": 0,
+    "json": {
+      "ok": true,
+      "from": "b3:a0ddd7d70ce38a3e1751b29df11265770934a04ad434952bd4b640fb844e49d4",
+      "to": "b3:d47bdad62d36ef0b729c3f2059ebdb0f937b56e8d87721314ff2ea2c8f52df8a",
+      "identical": false,
+      "changes": [
+        {
+          "dimension": "extract.sampling",
+          "kind": "sampling",
+          "op": "modified",
+          "details": {
+            "fields": [
+              {
+                "path": "/grammar",
+                "op": "changed",
+                "from": null,
+                "to": "root ::= \"yes\" | \"no\""
+              },
+              {
+                "path": "/temperature",
+                "op": "changed",
+                "from": 0.2,
+                "to": 0.0
+              },
+              {
+                "path": "/top_p",
+                "op": "removed",
+                "from": 0.95
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

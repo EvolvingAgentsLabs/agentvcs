@@ -1,0 +1,38 @@
+{
+  "id": "diff-011-added-removed",
+  "group": "diff",
+  "description": "a dimension added and another removed",
+  "source": "generated",
+  "argv": [
+    "diff",
+    "a.json",
+    "b.json"
+  ],
+  "expect": {
+    "exit": 0,
+    "json": {
+      "ok": true,
+      "from": "b3:a0ddd7d70ce38a3e1751b29df11265770934a04ad434952bd4b640fb844e49d4",
+      "to": "b3:02a6069f8d024868ad249f80a8269f73734bcd733e434cad5df7b11c4f3fa059",
+      "identical": false,
+      "changes": [
+        {
+          "dimension": "route",
+          "kind": "router",
+          "op": "removed",
+          "details": {
+            "content_hash": "b3:eb51fd2d6f1f20323a1f277605863a14d204068b6ace4102849e3d6888089c8d"
+          }
+        },
+        {
+          "dimension": "verify.prompt",
+          "kind": "prompt",
+          "op": "added",
+          "details": {
+            "content_hash": "b3:08d725a1905ce5b8f07ce67ed555a4fd0777557f551469ea154983ed7b4ed5a3"
+          }
+        }
+      ]
+    }
+  }
+}

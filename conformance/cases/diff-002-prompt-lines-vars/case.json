@@ -1,0 +1,38 @@
+{
+  "id": "diff-002-prompt-lines-vars",
+  "group": "diff",
+  "description": "prompt: one line rewritten, one appended, variable added",
+  "source": "generated",
+  "argv": [
+    "diff",
+    "a.json",
+    "b.json"
+  ],
+  "expect": {
+    "exit": 0,
+    "json": {
+      "ok": true,
+      "from": "b3:a0ddd7d70ce38a3e1751b29df11265770934a04ad434952bd4b640fb844e49d4",
+      "to": "b3:15cdc16d58f002844337f5b46c941a3dd8c999d488f6a69c5c5037ca173738e0",
+      "identical": false,
+      "changes": [
+        {
+          "dimension": "extract.prompt",
+          "kind": "prompt",
+          "op": "modified",
+          "details": {
+            "template": {
+              "lines_added": 2,
+              "lines_removed": 1
+            },
+            "variables_added": [
+              "cap_amount"
+            ],
+            "variables_removed": [],
+            "fields": []
+          }
+        }
+      ]
+    }
+  }
+}

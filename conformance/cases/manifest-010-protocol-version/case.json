@@ -1,0 +1,19 @@
+{
+  "id": "manifest-010-protocol-version",
+  "group": "manifest",
+  "description": "unknown protocol version",
+  "source": "generated",
+  "argv": [
+    "snapshot",
+    "m.json"
+  ],
+  "expect": {
+    "exit": 3,
+    "json": {
+      "ok": false,
+      "error": {
+        "code": "E_PROTOCOL_VERSION"
+      }
+    }
+  }
+}

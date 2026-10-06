@@ -1,0 +1,19 @@
+{
+  "id": "manifest-011-bad-dimension-name",
+  "group": "manifest",
+  "description": "dimension names are lowercase slugs",
+  "source": "generated",
+  "argv": [
+    "snapshot",
+    "m.json"
+  ],
+  "expect": {
+    "exit": 3,
+    "json": {
+      "ok": false,
+      "error": {
+        "code": "E_SCHEMA"
+      }
+    }
+  }
+}

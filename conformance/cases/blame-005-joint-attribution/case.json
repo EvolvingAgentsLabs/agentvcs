@@ -1,0 +1,51 @@
+{
+  "id": "blame-005-joint-attribution",
+  "group": "blame",
+  "description": "two patches with no step between are attributed jointly",
+  "source": "generated",
+  "argv": [
+    "blame",
+    "bundle.json",
+    "--metric",
+    "f1"
+  ],
+  "expect": {
+    "exit": 0,
+    "json": {
+      "ok": true,
+      "metric": "f1",
+      "segments": [
+        {
+          "manifest_id": "b3:a0ddd7d70ce38a3e1751b29df11265770934a04ad434952bd4b640fb844e49d4",
+          "from_step": 0,
+          "to_step": 1,
+          "introduced_by": [],
+          "n": 2,
+          "mean": 0.5
+        },
+        {
+          "manifest_id": "b3:bc33efb1692a62158b07b76836741037d300fbb935531b692730fdcf1ee137f0",
+          "from_step": 2,
+          "to_step": 3,
+          "introduced_by": [
+            "b3:82e34a6ae3d65501b0adb01084f8867cfd051989800f9f7d7a19efc84ce32935",
+            "b3:3fe2d2711010ef6e821d94bbd636ccaaeab8a5b155b34d0670fc4bb7edb9115c"
+          ],
+          "n": 2,
+          "mean": 0.9
+        }
+      ],
+      "attributions": [
+        {
+          "patches": [
+            "b3:82e34a6ae3d65501b0adb01084f8867cfd051989800f9f7d7a19efc84ce32935",
+            "b3:3fe2d2711010ef6e821d94bbd636ccaaeab8a5b155b34d0670fc4bb7edb9115c"
+          ],
+          "from_segment": 0,
+          "to_segment": 1,
+          "delta": 0.4
+        }
+      ]
+    }
+  }
+}

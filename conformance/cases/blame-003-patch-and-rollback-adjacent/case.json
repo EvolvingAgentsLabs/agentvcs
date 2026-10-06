@@ -1,0 +1,51 @@
+{
+  "id": "blame-003-patch-and-rollback-adjacent",
+  "group": "blame",
+  "description": "patch then rollback with no step between: two segments on one manifest",
+  "source": "generated",
+  "argv": [
+    "blame",
+    "bundle.json",
+    "--metric",
+    "f1"
+  ],
+  "expect": {
+    "exit": 0,
+    "json": {
+      "ok": true,
+      "metric": "f1",
+      "segments": [
+        {
+          "manifest_id": "b3:a0ddd7d70ce38a3e1751b29df11265770934a04ad434952bd4b640fb844e49d4",
+          "from_step": 0,
+          "to_step": 1,
+          "introduced_by": [],
+          "n": 2,
+          "mean": 0.5
+        },
+        {
+          "manifest_id": "b3:a0ddd7d70ce38a3e1751b29df11265770934a04ad434952bd4b640fb844e49d4",
+          "from_step": 2,
+          "to_step": 3,
+          "introduced_by": [
+            "b3:82e34a6ae3d65501b0adb01084f8867cfd051989800f9f7d7a19efc84ce32935",
+            "b3:f0abae91ab1298d4dcdea72df104f8e0883dce2be41f518016e6b453d1d6b083"
+          ],
+          "n": 2,
+          "mean": 0.5
+        }
+      ],
+      "attributions": [
+        {
+          "patches": [
+            "b3:82e34a6ae3d65501b0adb01084f8867cfd051989800f9f7d7a19efc84ce32935",
+            "b3:f0abae91ab1298d4dcdea72df104f8e0883dce2be41f518016e6b453d1d6b083"
+          ],
+          "from_segment": 0,
+          "to_segment": 1,
+          "delta": 0.0
+        }
+      ]
+    }
+  }
+}

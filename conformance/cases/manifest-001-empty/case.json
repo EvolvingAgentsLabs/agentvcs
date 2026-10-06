@@ -1,0 +1,18 @@
+{
+  "id": "manifest-001-empty",
+  "group": "manifest",
+  "description": "zero dimensions is a valid manifest",
+  "source": "generated",
+  "argv": [
+    "snapshot",
+    "m.json"
+  ],
+  "expect": {
+    "exit": 0,
+    "json": {
+      "ok": true,
+      "manifest_id": "b3:d16c08db075a56fdab36c30890155896d908ad0dbbe244ab319c26bd179c5c0d",
+      "dimensions": {}
+    }
+  }
+}

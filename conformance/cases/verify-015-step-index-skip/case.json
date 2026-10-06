@@ -1,0 +1,22 @@
+{
+  "id": "verify-015-step-index-skip",
+  "group": "verify",
+  "description": "step_index skips one",
+  "source": "generated",
+  "argv": [
+    "verify",
+    "bundle.json"
+  ],
+  "expect": {
+    "exit": 1,
+    "json": {
+      "ok": true,
+      "valid": false,
+      "entries": 3
+    },
+    "first_violation": {
+      "code": "E_STEP_INDEX",
+      "seq": 2
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "id": "diff-003-prompt-trailing-newline",
+  "group": "diff",
+  "description": "a trailing newline is one added (empty) line",
+  "source": "generated",
+  "argv": [
+    "diff",
+    "a.json",
+    "b.json"
+  ],
+  "expect": {
+    "exit": 0,
+    "json": {
+      "ok": true,
+      "from": "b3:a0ddd7d70ce38a3e1751b29df11265770934a04ad434952bd4b640fb844e49d4",
+      "to": "b3:306142efdffb9360c4a1d0946d95c9e51870ac5204766d49b6b4a875ff3ec445",
+      "identical": false,
+      "changes": [
+        {
+          "dimension": "extract.prompt",
+          "kind": "prompt",
+          "op": "modified",
+          "details": {
+            "template": {
+              "lines_added": 1,
+              "lines_removed": 0
+            },
+            "variables_added": [],
+            "variables_removed": [],
+            "fields": []
+          }
+        }
+      ]
+    }
+  }
+}

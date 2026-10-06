@@ -27,3 +27,19 @@ jobs:
           bash examples/agent-loop-demo/run.sh
           # the simulated agent drives the full loop, so the scorecard must be >=5/6
           python3 examples/claude-code-task/score.py examples/agent-loop-demo/workdir
+
+  conformance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install blake3
+      - name: Goldens regenerate byte-identically
+        run: |
+          python conformance/tools/gen.py
+          git diff --exit-code -- conformance/cases
+          test -z "$(git status --porcelain -- conformance/cases)"
+      - name: Runner positive control
+        run: python conformance/run.py --cli "python $PWD/conformance/tools/refcli.py"

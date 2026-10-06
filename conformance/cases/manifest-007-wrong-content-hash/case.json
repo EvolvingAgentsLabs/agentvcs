@@ -1,0 +1,19 @@
+{
+  "id": "manifest-007-wrong-content-hash",
+  "group": "manifest",
+  "description": "stated content_hash does not match content",
+  "source": "generated",
+  "argv": [
+    "snapshot",
+    "m.json"
+  ],
+  "expect": {
+    "exit": 3,
+    "json": {
+      "ok": false,
+      "error": {
+        "code": "E_CONTENT_HASH"
+      }
+    }
+  }
+}

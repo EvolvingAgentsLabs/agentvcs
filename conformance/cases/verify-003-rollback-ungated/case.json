@@ -1,0 +1,18 @@
+{
+  "id": "verify-003-rollback-ungated",
+  "group": "verify",
+  "description": "a rollback needs no gate",
+  "source": "generated",
+  "argv": [
+    "verify",
+    "bundle.json"
+  ],
+  "expect": {
+    "exit": 0,
+    "json": {
+      "ok": true,
+      "valid": true,
+      "entries": 10
+    }
+  }
+}

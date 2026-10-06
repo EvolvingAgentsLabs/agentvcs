@@ -1,0 +1,69 @@
+{
+  "id": "diff-015-many-sorted",
+  "group": "diff",
+  "description": "several dimensions change; output sorted by name",
+  "source": "generated",
+  "argv": [
+    "diff",
+    "a.json",
+    "b.json"
+  ],
+  "expect": {
+    "exit": 0,
+    "json": {
+      "ok": true,
+      "from": "b3:a0ddd7d70ce38a3e1751b29df11265770934a04ad434952bd4b640fb844e49d4",
+      "to": "b3:0597d4035338649e82edf3d483e04ffdc913584132c4d55b110581070a283d09",
+      "identical": false,
+      "changes": [
+        {
+          "dimension": "extract.model",
+          "kind": "model",
+          "op": "modified",
+          "details": {
+            "fields": [
+              {
+                "path": "/id",
+                "op": "changed",
+                "from": "gemma-4-12b",
+                "to": "gemma-4-26b"
+              }
+            ]
+          }
+        },
+        {
+          "dimension": "run.config",
+          "kind": "config",
+          "op": "modified",
+          "details": {
+            "fields": [
+              {
+                "path": "/value/batch",
+                "op": "changed",
+                "from": 4,
+                "to": 8
+              }
+            ]
+          }
+        },
+        {
+          "dimension": "segment.tool",
+          "kind": "tool",
+          "op": "modified",
+          "details": {
+            "fields": [
+              {
+                "path": "/name",
+                "op": "changed",
+                "from": "split_sections",
+                "to": "split"
+              }
+            ],
+            "code_changed": false,
+            "signature_changed": false
+          }
+        }
+      ]
+    }
+  }
+}

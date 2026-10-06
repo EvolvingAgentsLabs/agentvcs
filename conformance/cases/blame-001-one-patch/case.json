@@ -1,0 +1,49 @@
+{
+  "id": "blame-001-one-patch",
+  "group": "blame",
+  "description": "one patch, metric rises 0.3",
+  "source": "generated",
+  "argv": [
+    "blame",
+    "bundle.json",
+    "--metric",
+    "f1"
+  ],
+  "expect": {
+    "exit": 0,
+    "json": {
+      "ok": true,
+      "metric": "f1",
+      "segments": [
+        {
+          "manifest_id": "b3:a0ddd7d70ce38a3e1751b29df11265770934a04ad434952bd4b640fb844e49d4",
+          "from_step": 0,
+          "to_step": 3,
+          "introduced_by": [],
+          "n": 4,
+          "mean": 0.4
+        },
+        {
+          "manifest_id": "b3:389161b5b3437c0cec7cebe41ac8174249acbcfe3654fb2a1fba45c34c5a4ff3",
+          "from_step": 4,
+          "to_step": 7,
+          "introduced_by": [
+            "b3:1687a7abb22f2083e294728287d446fac5fe37fde6e682e001522520d9c48a40"
+          ],
+          "n": 4,
+          "mean": 0.7
+        }
+      ],
+      "attributions": [
+        {
+          "patches": [
+            "b3:1687a7abb22f2083e294728287d446fac5fe37fde6e682e001522520d9c48a40"
+          ],
+          "from_segment": 0,
+          "to_segment": 1,
+          "delta": 0.29999999999999993
+        }
+      ]
+    }
+  }
+}

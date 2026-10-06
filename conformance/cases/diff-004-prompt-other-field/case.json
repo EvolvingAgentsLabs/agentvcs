@@ -1,0 +1,39 @@
+{
+  "id": "diff-004-prompt-other-field",
+  "group": "diff",
+  "description": "prompt: template equal, extra field changed → template null",
+  "source": "generated",
+  "argv": [
+    "diff",
+    "a.json",
+    "b.json"
+  ],
+  "expect": {
+    "exit": 0,
+    "json": {
+      "ok": true,
+      "from": "b3:a0ddd7d70ce38a3e1751b29df11265770934a04ad434952bd4b640fb844e49d4",
+      "to": "b3:b33972e6bbf35776bfcff402f705060abd06ac7adf22a384ebc8d0319ae51f9c",
+      "identical": false,
+      "changes": [
+        {
+          "dimension": "extract.prompt",
+          "kind": "prompt",
+          "op": "modified",
+          "details": {
+            "template": null,
+            "variables_added": [],
+            "variables_removed": [],
+            "fields": [
+              {
+                "path": "/system",
+                "op": "added",
+                "to": "You are a paralegal."
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "id": "diff-006-sampling-int-float",
+  "group": "diff",
+  "description": "temperature 1 vs 1.0 is no change",
+  "source": "generated",
+  "argv": [
+    "diff",
+    "a.json",
+    "b.json"
+  ],
+  "expect": {
+    "exit": 0,
+    "json": {
+      "ok": true,
+      "from": "b3:4e2967e812739cfce4151825bc9566ecd91fb848533fa4e43fb1cc7d65cf4307",
+      "to": "b3:4e2967e812739cfce4151825bc9566ecd91fb848533fa4e43fb1cc7d65cf4307",
+      "identical": true,
+      "changes": []
+    }
+  }
+}

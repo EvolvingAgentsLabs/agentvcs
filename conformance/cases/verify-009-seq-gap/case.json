@@ -1,0 +1,22 @@
+{
+  "id": "verify-009-seq-gap",
+  "group": "verify",
+  "description": "seq does not match position",
+  "source": "generated",
+  "argv": [
+    "verify",
+    "bundle.json"
+  ],
+  "expect": {
+    "exit": 1,
+    "json": {
+      "ok": true,
+      "valid": false,
+      "entries": 4
+    },
+    "first_violation": {
+      "code": "E_SEQ",
+      "seq": 2
+    }
+  }
+}
