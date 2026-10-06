@@ -3,12 +3,27 @@ requires = ["maturin>=1.7,<2"]
 build-backend = "maturin"
 
 [project]
-name = "agentvcs-py"
-version = "0.1.0"
-description = "agentvcs protocol v0.1 — thin Python binding over the Rust core (Phase 2 builds the SDK on it)"
+# The new SDK takes the `agentvcs` name (ADR-0007 §2). The legacy pure-Python
+# package in the repository root also declares `agentvcs`; never install both
+# into one environment.
+name = "agentvcs"
+version = "0.5.0.dev0"
+description = "agentvcs protocol v0.1 — Python SDK over the Rust core: run/step recording, live patches, checkpoints"
+readme = "README.md"
 requires-python = ">=3.10"
 license = "Apache-2.0"
+dependencies = []  # stdlib only; the protocol lives in the native module
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[project.scripts]
+agentvcs = "agentvcs.__main__:main"
 
 [tool.maturin]
-module-name = "agentvcs_py"
+python-source = "python"
+module-name = "agentvcs._native"
 features = ["extension-module"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
