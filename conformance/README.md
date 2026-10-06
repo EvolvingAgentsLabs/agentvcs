@@ -34,3 +34,4 @@ that regeneration is byte-identical to what is committed.
 
 - [`results/legacy-python-0.4.0.md`](results/legacy-python-0.4.0.md) — 0/83, as predicted.
 - [`results/rust-0.1.0.md`](results/rust-0.1.0.md) — 83/83.
+- [`results/rust-merge-v0.2.md`](results/rust-merge-v0.2.md) — 102/102 (with merge, v0.2 draft).

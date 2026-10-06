@@ -35,7 +35,7 @@ jobs:
       - name: SDK tests + toy pipeline (fake backend, both arms)
         working-directory: crates/agentvcs-py
         run: python -m pytest -q tests ../../examples/toy_pipeline/tests
-      - name: Conformance through `python -m agentvcs` (83 golden cases)
+      - name: Conformance through `python -m agentvcs` (102 golden cases)
         run: python conformance/run.py --cli "python -m agentvcs"
       - name: Toy pipeline with the release binary as the supervisor's CLI
         run: |

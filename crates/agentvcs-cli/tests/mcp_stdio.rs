@@ -48,7 +48,7 @@ fn scripted_stdio_session() {
         .iter()
         .map(|t| t["name"].as_str().unwrap())
         .collect();
-    assert_eq!(names.len(), 18, "{names:?}");
+    assert_eq!(names.len(), 20, "{names:?}");
     for n in [
         "init",
         "snapshot",
@@ -58,6 +58,8 @@ fn scripted_stdio_session() {
         "verify",
         "blame",
         "export_audit",
+        "merge_prepare",
+        "merge_commit",
     ] {
         assert!(names.contains(&n), "{n}");
     }
@@ -103,6 +105,79 @@ fn scripted_stdio_session() {
         tool("blame", json!({"target": "m1", "metric": "f1"})),
     );
     assert_eq!(r["result"]["structuredContent"]["segments"][0]["mean"], 0.5);
+    // merge: the same JSON as the CLI, a repeatable flag as an array
+    let mf = |t: &str| {
+        format!(
+            r#"{{"protocol":"agentvcs/0.1","type":"harness_manifest","dimensions":{{"p":{{"kind":"prompt","content":{{"template":"{t}"}}}}}}}}"#
+        )
+    };
+    std::fs::write(dir.join("o.json"), mf("o")).unwrap();
+    std::fs::write(dir.join("t.json"), mf("t")).unwrap();
+    let cli_json = |args: &[&str]| -> String {
+        let o = Command::new(BIN)
+            .args(["-C", dir.to_str().unwrap()])
+            .args(args)
+            .arg("--json")
+            .output()
+            .unwrap();
+        String::from_utf8(o.stdout).unwrap().trim().to_owned()
+    };
+    let r = call(
+        "tools/call",
+        tool(
+            "merge_prepare",
+            json!({"base": mid, "ours": "o.json", "theirs": "t.json", "ours_run": "m1",
+                   "metric": ["f1", "loss"]}),
+        ),
+    );
+    let prep = &r["result"]["structuredContent"];
+    assert_eq!(prep["conflicts"][0]["type"], "modify/modify");
+    assert_eq!(
+        r["result"]["content"][0]["text"].as_str().unwrap(),
+        cli_json(&[
+            "merge",
+            "prepare",
+            "--base",
+            &mid,
+            "--ours",
+            "o.json",
+            "--theirs",
+            "t.json",
+            "--ours-run",
+            "m1",
+            "--metric",
+            "f1",
+            "--metric",
+            "loss",
+        ])
+    );
+    let res = json!({"protocol": "agentvcs/0.1", "type": "merge_resolution",
+        "merge_id": prep["merge_id"], "resolutions": {"p": {"take": "theirs"}},
+        "rationale": "r", "author": {"type": "agent", "id": "t"}});
+    std::fs::write(dir.join("res.json"), res.to_string()).unwrap();
+    let r = call(
+        "tools/call",
+        tool(
+            "merge_commit",
+            json!({"base": mid, "ours": "o.json", "theirs": "t.json", "resolution": "res.json"}),
+        ),
+    );
+    assert_eq!(r["result"]["structuredContent"]["gate"], Value::Null);
+    assert_eq!(
+        r["result"]["content"][0]["text"].as_str().unwrap(),
+        cli_json(&[
+            "merge",
+            "commit",
+            "--base",
+            &mid,
+            "--ours",
+            "o.json",
+            "--theirs",
+            "t.json",
+            "--resolution",
+            "res.json",
+        ])
+    );
     // policy refusal surfaces as a tool error with the CLI's code
     let r = call("tools/call", tool("freeze", json!({"manifest_id": mid})));
     assert_eq!(r["result"]["isError"], true);

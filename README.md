@@ -24,7 +24,7 @@ below stays the released one until the plan moves it to `legacy/`.
 
 ```bash
 cargo build --release                       # target/release/agentvcs
-python3 conformance/run.py --cli "$PWD/target/release/agentvcs"   # 83/83
+python3 conformance/run.py --cli "$PWD/target/release/agentvcs"   # 102/102
 cargo test --workspace
 ```
 
@@ -44,10 +44,35 @@ agentvcs mcp                                            # the same commands as M
 ```
 
 Crates: `agentvcs-core` (canonical JSON, BLAKE3, manifests, store, ledgers),
-`agentvcs-diff`, `agentvcs-query` (verify, blame, bisect), `agentvcs-cli`,
+`agentvcs-diff`, `agentvcs-query` (verify, blame, bisect), `agentvcs-merge`, `agentvcs-cli`,
 `agentvcs-mcp`, `agentvcs-py` (the Python SDK, below). Implementation decisions:
 [ADR-0006](https://github.com/EvolvingAgentsLabs/agentvcs/blob/main/docs/adr/0006-f1-implementation-notes.md). Numbers:
 [docs/BENCHMARKS.md](https://github.com/EvolvingAgentsLabs/agentvcs/blob/main/docs/BENCHMARKS.md).
+
+### Merge (v0.2 draft)
+
+Two lines of a harness that diverged from a common manifest merge three-way,
+dimension by dimension ([spec/MERGE.md](https://github.com/EvolvingAgentsLabs/agentvcs/blob/main/spec/MERGE.md)).
+agentvcs merges what is mechanical and hands each real conflict to an agent with
+the evidence a run observed — the patches that touched that dimension, their
+gates and their blame deltas. The agent writes a resolution; agentvcs checks it,
+stores the merged manifest (`parent_ids: [ours, theirs]`) and a merge record,
+and gates it. It never decides a conflict by itself.
+
+```bash
+agentvcs merge prepare --base b3:… --ours b3:… --theirs theirs.json \
+    --ours-run r1 --metric f1 --json            # auto results + conflicts with evidence
+# the agent writes resolution.json: per conflict {"take": "ours"|"theirs"|"base"|"delete"}
+# or {"kind", "content"}, plus a rationale (spec/MERGE.md §3)
+agentvcs merge commit --base b3:… --ours b3:… --theirs theirs.json \
+    --resolution resolution.json --suite suite.yaml --json   # exit 1 if the gate fails
+agentvcs patch propose r1 --from b3:<ours> --to b3:<merged> --rationale "merge:b3:<record>" --json
+```
+
+Applying a merge to a running system is an ordinary gated patch, so `blame`
+attributes what the merge changed. Same commands over MCP (`merge_prepare`,
+`merge_commit`) and in the SDK (`avcs.merge_prepare`, `avcs.merge_commit`).
+Decisions: [ADR-0008](https://github.com/EvolvingAgentsLabs/agentvcs/blob/main/docs/adr/0008-merge.md).
 
 ### Python SDK (v0.1, Phase 2)
 
@@ -74,7 +99,7 @@ with avcs.run("manifest.json", store=".") as run:          # run_start ... run_e
 ```
 
 `python -m agentvcs` (and the `agentvcs` console script of the wheel) is the Rust
-CLI in-process; it passes the same 83/83 conformance cases. Model wrappers for
+CLI in-process; it passes the same 102/102 conformance cases. Model wrappers for
 OpenAI-compatible servers (llama.cpp, vLLM, Ollama) and Claude live in
 `agentvcs.integrations`; the end-to-end example is
 [`examples/toy_pipeline`](https://github.com/EvolvingAgentsLabs/agentvcs/blob/main/examples/toy_pipeline/README.md).

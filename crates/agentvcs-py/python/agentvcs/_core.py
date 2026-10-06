@@ -556,6 +556,60 @@ def cli(*args: str, stdin: Optional[str] = None, store: Union[str, os.PathLike] 
     return out
 
 
+PathOrId = Union[str, "os.PathLike[str]"]
+
+
+def _manifest_arg(ref: PathOrId) -> str:
+    """A manifest id passes through; a path is made absolute (the CLI resolves
+    relative paths against the store directory, not the caller's cwd)."""
+    s = os.fspath(ref)
+    return s if s.startswith("b3:") and not os.path.exists(s) else os.path.abspath(s)
+
+
+def merge_prepare(
+    base: PathOrId,
+    ours: PathOrId,
+    theirs: PathOrId,
+    *,
+    ours_run: Optional[PathOrId] = None,
+    theirs_run: Optional[PathOrId] = None,
+    metrics: Sequence[str] = (),
+    store: Union[str, os.PathLike] = ".",
+) -> dict:
+    """``agentvcs merge prepare`` (spec/MERGE.md §2, v0.2 draft): mechanical
+    results and every conflict with both sides, diffs and run evidence. Manifests
+    and runs are ids in the store or files (audit bundles for runs)."""
+    args = ["merge", "prepare", "--base", _manifest_arg(base), "--ours", _manifest_arg(ours),
+            "--theirs", _manifest_arg(theirs)]
+    for flag, r in (("--ours-run", ours_run), ("--theirs-run", theirs_run)):
+        if r is not None:
+            s = os.fspath(r)
+            args += [flag, os.path.abspath(s) if os.path.exists(s) else s]
+    for m in metrics:
+        args += ["--metric", m]
+    return _cli_ok(args, os.fspath(store))
+
+
+def merge_commit(
+    base: PathOrId,
+    ours: PathOrId,
+    theirs: PathOrId,
+    resolution: Union[str, "os.PathLike[str]"],
+    *,
+    suite: Optional[Union[str, "os.PathLike[str]"]] = None,
+    store: Union[str, os.PathLike] = ".",
+) -> dict:
+    """``agentvcs merge commit`` (spec/MERGE.md §4, v0.2 draft): checks the
+    resolution file, stores the merged manifest and the merge record, and gates it
+    with ``suite`` when given. A failed gate is not an exception: the record is
+    stored and ``out["gate"]["passed"]`` is ``False`` (CLI exit 1)."""
+    args = ["merge", "commit", "--base", _manifest_arg(base), "--ours", _manifest_arg(ours),
+            "--theirs", _manifest_arg(theirs), "--resolution", os.path.abspath(os.fspath(resolution))]
+    if suite is not None:
+        args += ["--suite", os.path.abspath(os.fspath(suite))]
+    return _cli_ok(args, os.fspath(store))
+
+
 def open_store(store: Union[str, os.PathLike, "_native.NativeStore"] = ".", init: bool = True):
     if isinstance(store, _native.NativeStore):
         return store

@@ -61,6 +61,8 @@ pub fn dispatch(inv: &Invocation, ctx: &Ctx) -> Out {
         "freeze" => freeze(inv, ctx),
         "export_audit" => export_audit(inv, ctx),
         "verify" => verify(inv, ctx),
+        "merge_prepare" => merge_prepare(inv, ctx),
+        "merge_commit" => merge_commit(inv, ctx),
         other => Err(Error::new("E_USAGE", format!("unknown command {other}"))),
     }
 }
@@ -390,11 +392,19 @@ fn shell(cmd: &str, cwd: &Path, env: &[(&str, String)]) -> Result<Vec<u8>> {
     Ok(o.stdout)
 }
 
-fn gate_run(inv: &Invocation, ctx: &Ctx) -> Out {
-    let store = ctx.store()?;
-    let pid = &inv.pos[0];
-    let mut rec = store.get_patch(pid)?;
-    let suite_path = inv.flag("suite").unwrap_or_default();
+/// The file a stored manifest lives in (what a suite command reads).
+fn manifest_file(store: &Store, id: &str) -> String {
+    store
+        .root()
+        .join("manifests")
+        .join(format!("{}.json", agentvcs_core::hash::hex_of(id)))
+        .to_string_lossy()
+        .into_owned()
+}
+
+/// Run a suite's command with `env` and turn its stdout into a gate result
+/// (`gate_result.schema.json`). Shared by `gate run` and `merge commit --suite`.
+fn run_suite(ctx: &Ctx, store: &Store, suite_path: &str, env: &[(&str, String)]) -> Result<Value> {
     let suite = load_doc(ctx, suite_path)?;
     let command = suite["command"]
         .as_str()
@@ -412,33 +422,7 @@ fn gate_run(inv: &Invocation, ctx: &Ctx) -> Out {
                 .map(|s| s.to_string_lossy().into_owned())
                 .unwrap_or_default()
         });
-    let to = rec["to_manifest"].as_str().unwrap_or_default().to_owned();
-    let manifest_file = store
-        .root()
-        .join("manifests")
-        .join(format!("{}.json", agentvcs_core::hash::hex_of(&to)));
-    let env = [
-        ("AGENTVCS_PATCH", pid.clone()),
-        (
-            "AGENTVCS_RUN",
-            rec["run_id"].as_str().unwrap_or_default().to_owned(),
-        ),
-        (
-            "AGENTVCS_FROM_MANIFEST",
-            rec["from_manifest"].as_str().unwrap_or_default().to_owned(),
-        ),
-        ("AGENTVCS_TO_MANIFEST", to.clone()),
-        ("AGENTVCS_MANIFEST", to.clone()),
-        (
-            "AGENTVCS_MANIFEST_FILE",
-            manifest_file.to_string_lossy().into_owned(),
-        ),
-        (
-            "AGENTVCS_STORE",
-            store.root().to_string_lossy().into_owned(),
-        ),
-    ];
-    let stdout = shell(command, &ctx.cwd, &env)?;
+    let stdout = shell(command, &ctx.cwd, env)?;
     let out = parse_bytes(&stdout).map_err(|e| {
         Error::new(
             "E_GATE_COMMAND",
@@ -467,6 +451,33 @@ fn gate_run(inv: &Invocation, ctx: &Ctx) -> Out {
             "suite thresholds must be {metric: {op, value}}",
         ));
     }
+    Ok(g)
+}
+
+fn gate_run(inv: &Invocation, ctx: &Ctx) -> Out {
+    let store = ctx.store()?;
+    let pid = &inv.pos[0];
+    let mut rec = store.get_patch(pid)?;
+    let to = rec["to_manifest"].as_str().unwrap_or_default().to_owned();
+    let env = [
+        ("AGENTVCS_PATCH", pid.clone()),
+        (
+            "AGENTVCS_RUN",
+            rec["run_id"].as_str().unwrap_or_default().to_owned(),
+        ),
+        (
+            "AGENTVCS_FROM_MANIFEST",
+            rec["from_manifest"].as_str().unwrap_or_default().to_owned(),
+        ),
+        ("AGENTVCS_TO_MANIFEST", to.clone()),
+        ("AGENTVCS_MANIFEST", to.clone()),
+        ("AGENTVCS_MANIFEST_FILE", manifest_file(&store, &to)),
+        (
+            "AGENTVCS_STORE",
+            store.root().to_string_lossy().into_owned(),
+        ),
+    ];
+    let g = run_suite(ctx, &store, inv.flag("suite").unwrap_or_default(), &env)?;
     rec["gate_result"] = g.clone();
     store.put_patch(&rec)?;
     let code = if g["passed"] == true { 0 } else { 1 };
@@ -758,4 +769,68 @@ fn export_audit(inv: &Invocation, ctx: &Ctx) -> Out {
             okv(json!({"ok": true, "run_id": run, "entries": entries, "path": p}))
         }
     }
+}
+
+// ---------------------------------------------------------------- merge (v0.2 draft)
+
+fn merge_sides(inv: &Invocation, ctx: &Ctx, store: Option<&Store>) -> Result<[Manifest; 3]> {
+    let get = |f: &str| load_manifest(ctx, store, inv.flag(f).unwrap_or_default());
+    Ok([get("base")?, get("ours")?, get("theirs")?])
+}
+
+fn merge_prepare(inv: &Invocation, ctx: &Ctx) -> Out {
+    let [b, o, t] = merge_sides(inv, ctx, None)?;
+    let run = |f: &str| inv.flag(f).map(|r| load_bundle(ctx, r)).transpose();
+    let (ours_run, theirs_run) = (run("ours-run")?, run("theirs-run")?);
+    let p = agentvcs_merge::prepare(
+        &b,
+        &o,
+        &t,
+        ours_run.as_ref(),
+        theirs_run.as_ref(),
+        inv.values("metric"),
+    )?;
+    okv(p.to_value())
+}
+
+fn merge_commit(inv: &Invocation, ctx: &Ctx) -> Out {
+    let store = ctx.store()?;
+    let [b, o, t] = merge_sides(inv, ctx, Some(&store))?;
+    let resolution = load_doc(ctx, inv.flag("resolution").unwrap_or_default())?;
+    let mut c = agentvcs_merge::commit(&b, &o, &t, &resolution)?;
+    // the merged manifest first: when its id is already one of the sides, the
+    // first annotation stored wins (ADR-0005) and this one carries parent_ids
+    for m in [&c.merged, &b, &o, &t] {
+        store.put_manifest(m)?;
+    }
+    let merged = c.merged.manifest_id.clone();
+    let gate = match inv.flag("suite") {
+        None => Value::Null,
+        Some(suite) => {
+            let env = [
+                (
+                    "AGENTVCS_MERGE_ID",
+                    c.record["merge_id"].as_str().unwrap_or_default().to_owned(),
+                ),
+                ("AGENTVCS_FROM_MANIFEST", o.manifest_id.clone()),
+                ("AGENTVCS_TO_MANIFEST", merged.clone()),
+                ("AGENTVCS_MANIFEST", merged.clone()),
+                ("AGENTVCS_MANIFEST_FILE", manifest_file(&store, &merged)),
+                (
+                    "AGENTVCS_STORE",
+                    store.root().to_string_lossy().into_owned(),
+                ),
+            ];
+            run_suite(ctx, &store, suite, &env)?
+        }
+    };
+    c.record["gate"] = gate.clone();
+    // a rejected merge is history too: the record is stored whatever the gate says
+    let record = store.put_json(&c.record)?;
+    let code = if gate["passed"] == false { 1 } else { 0 };
+    Ok((
+        code,
+        json!({"ok": true, "merge_id": c.record["merge_id"], "merged": merged,
+               "record": record, "gate": gate}),
+    ))
 }

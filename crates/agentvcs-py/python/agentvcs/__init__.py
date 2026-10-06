@@ -30,6 +30,8 @@ from ._core import (
     current_run_or_none,
     current_step,
     error_code,
+    merge_commit,
+    merge_prepare,
     open_store,
     resolve_manifest,
     resume,
@@ -52,6 +54,6 @@ def hash_json(value) -> str:
 __all__ = [
     "AgentvcsError", "Manifest", "NoActiveRun", "PatchEvent", "Run", "StepContext",
     "StepRace", "cli", "current_run", "current_run_or_none", "current_step",
-    "error_code", "hash_json", "open_store", "resolve_manifest", "resume", "run",
+    "error_code", "hash_json", "merge_commit", "merge_prepare", "open_store", "resolve_manifest", "resume", "run",
     "step", "PROTOCOL", "CORE_VERSION", "__version__",
 ]
