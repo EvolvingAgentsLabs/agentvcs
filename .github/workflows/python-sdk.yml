@@ -1,0 +1,55 @@
+name: Python SDK
+
+on:
+  push:
+    branches: [main, "phase*/**"]
+  pull_request:
+
+jobs:
+  sdk:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14        # arm64
+            python: "3.12"
+          - os: ubuntu-latest   # x86_64
+            python: "3.12"
+          - os: ubuntu-latest   # abi3 floor
+            python: "3.10"
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Tools
+        run: pip install "maturin>=1.7,<2" "pytest>=8" anthropic blake3
+      - name: Build the wheel
+        working-directory: crates/agentvcs-py
+        run: maturin build --release --out ../../dist
+      - name: Install the wheel (not the source tree)
+        run: pip install dist/*.whl
+      - name: SDK tests + toy pipeline (fake backend, both arms)
+        working-directory: crates/agentvcs-py
+        run: python -m pytest -q tests ../../examples/toy_pipeline/tests
+      - name: Conformance through `python -m agentvcs` (83 golden cases)
+        run: python conformance/run.py --cli "python -m agentvcs"
+      - name: Toy pipeline with the release binary as the supervisor's CLI
+        run: |
+          cargo build --release -p agentvcs-cli
+          python examples/toy_pipeline/run_pipeline.py --backend fake \
+            --cli "$PWD/target/release/agentvcs" --workdir "$RUNNER_TEMP/toy"
+      - uses: actions/upload-artifact@v4
+        if: matrix.python == '3.12'
+        with:
+          name: wheel-${{ matrix.os }}
+          path: dist/*.whl
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: toy-result-${{ matrix.os }}-${{ matrix.python }}
+          path: ${{ runner.temp }}/toy/result.json
+          if-no-files-found: ignore

@@ -249,10 +249,19 @@ impl Store {
     /// (a stale writer would fork the chain); it is advanced on success.
     pub fn append(&self, state: &mut RunState, kind: &str, body: Value) -> Result<Value> {
         let p = self.run_path(&state.run_id)?;
-        let on_disk = if p.exists() {
-            Some(self.run_state(&state.run_id)?)
-        } else {
+        // Build (and check) the entry first: a refused entry must not leave an
+        // empty ledger file behind.
+        let mut next = state.clone();
+        let (entry, mut line) = next.append(kind, body)?;
+        // Advisory exclusive lock around compare-and-append, so a harness recording
+        // steps and a supervisor applying a patch from another process cannot both
+        // append the same `seq` (ADR-0007 §4). Released when `f` is dropped.
+        let mut f = OpenOptions::new().create(true).append(true).open(&p)?;
+        f.lock()?;
+        let on_disk = if f.metadata()?.len() == 0 {
             None
+        } else {
+            Some(self.run_state(&state.run_id)?)
         };
         let disk_seq = on_disk.as_ref().map_or(0, |s| s.next_seq);
         let disk_hash = on_disk.as_ref().and_then(|s| s.last_hash.clone());
@@ -265,10 +274,7 @@ impl Store {
                 ),
             ));
         }
-        let mut next = state.clone();
-        let (entry, mut line) = next.append(kind, body)?;
         line.push('\n');
-        let mut f = OpenOptions::new().create(true).append(true).open(&p)?;
         f.write_all(line.as_bytes())?;
         if std::env::var_os("AGENTVCS_FSYNC").is_some() {
             f.sync_data()?;

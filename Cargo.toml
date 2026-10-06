@@ -8,13 +8,22 @@ members = [
     "crates/agentvcs-mcp",
     "crates/agentvcs-py",
 ]
+# agentvcs-py is built by maturin (it links libpython in a plain cargo build);
+# `cargo build` / `cargo build --release` skip it. `--workspace` still checks it.
+default-members = [
+    "crates/agentvcs-core",
+    "crates/agentvcs-diff",
+    "crates/agentvcs-query",
+    "crates/agentvcs-cli",
+    "crates/agentvcs-mcp",
+]
 
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
 repository = "https://github.com/EvolvingAgentsLabs/agentvcs"
-rust-version = "1.80"
+rust-version = "1.89"
 
 [workspace.dependencies]
 agentvcs-core = { path = "crates/agentvcs-core" }

@@ -104,4 +104,4 @@ reported as `kind_changed`, even with equal content.
 - Duplicate keys in input JSON: last wins (as Python's `json`).
 - Ledger appends are not fsynced unless `AGENTVCS_FSYNC` is set; single writer per
   run is assumed (a stale writer is refused, concurrent writers are not locked —
-  `LATER.md`).
+  `LATER.md`). *Superseded by ADR-0007 §4: appends now take an advisory lock.*

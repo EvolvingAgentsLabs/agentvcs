@@ -1,6 +1,6 @@
 [package]
 name = "agentvcs-py"
-description = "Python binding (PyO3) for the agentvcs core — skeleton for Phase 2"
+description = "Python SDK native module (PyO3) for the agentvcs core — built with maturin, see ADR-0007"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -8,9 +8,9 @@ repository.workspace = true
 publish = false
 
 [lib]
-name = "agentvcs_py"
+name = "agentvcs_native"
 crate-type = ["cdylib"]
-# no Rust unit tests here: the binding is exercised from Python (`maturin develop`)
+# no Rust unit tests here: the binding is exercised from Python (pytest in tests/)
 test = false
 doctest = false
 
@@ -21,5 +21,7 @@ serde_json.workspace = true
 pyo3 = "0.29"
 
 [features]
-# maturin turns this on (pyproject.toml); plain `cargo build` links libpython
-extension-module = ["pyo3/extension-module"]
+# maturin turns these on (pyproject.toml): no libpython link, one abi3 wheel
+# for every CPython >= 3.10. A plain `cargo build` of this crate links libpython,
+# which is why it is not a default workspace member (README, "Python SDK").
+extension-module = ["pyo3/extension-module", "pyo3/abi3-py310"]
