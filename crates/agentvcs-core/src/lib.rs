@@ -5,6 +5,8 @@ pub mod hash;
 pub mod json;
 pub mod manifest;
 pub mod schema;
+#[doc(hidden)]
+pub mod testutil;
 
 pub use error::{Error, Result};
 

@@ -2,6 +2,8 @@
 resolver = "2"
 members = [
     "crates/agentvcs-core",
+    "crates/agentvcs-diff",
+    "crates/agentvcs-query",
 ]
 
 [workspace.package]
