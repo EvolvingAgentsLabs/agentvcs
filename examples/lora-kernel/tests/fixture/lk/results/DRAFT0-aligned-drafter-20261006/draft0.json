@@ -1,0 +1,30 @@
+{
+ "drafter": "google/gemma-4-12B-it-assistant",
+ "target_lora": "adapters/wiki12b-walks-s0",
+ "train": {
+  "r": 16,
+  "targets": [
+   "q_proj",
+   "o_proj",
+   "gate_proj",
+   "up_proj",
+   "down_proj",
+   "pre_projection"
+  ]
+ },
+ "alpha": {
+  "stock": {
+   "domain": 0.6574
+  },
+  "aligned": {
+   "domain": 0.9644,
+   "general": 0.7063
+  }
+ },
+ "projected_speedup_k1": {
+  "domain": {
+   "stock": 1.322,
+   "aligned": 1.567
+  }
+ }
+}

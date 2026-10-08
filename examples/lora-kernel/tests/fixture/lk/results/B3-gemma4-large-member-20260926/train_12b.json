@@ -1,0 +1,9 @@
+{
+ "members": {
+  "withlib-s0": {
+   "adapter": "adapters/wiki12b-walks-s0",
+   "adapter_sha256": "e1ead56ee62df65e350edeedef1f1ef8a1d81fe5d7eb218ceba78b5eec240647"
+  }
+ },
+ "base": "google/gemma-4-12B-it"
+}

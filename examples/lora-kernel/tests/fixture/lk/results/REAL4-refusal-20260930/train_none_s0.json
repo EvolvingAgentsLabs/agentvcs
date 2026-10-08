@@ -1,0 +1,9 @@
+{
+ "members": {
+  "withlib-s0": {
+   "adapter": "adapters/real-none-s0",
+   "adapter_sha256": "8f0bc29e4323770d7e6ebaf7c8521f3297d1dfba50bca8b52bdced5014281707"
+  }
+ },
+ "base": "google/gemma-4-E4B-it"
+}

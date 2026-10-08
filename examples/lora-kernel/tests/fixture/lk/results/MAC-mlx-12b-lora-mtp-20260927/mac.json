@@ -1,0 +1,10 @@
+{
+ "summary": {
+  "base/general": {
+   "speedup": 1.25
+  },
+  "wiki12b/domain": {
+   "speedup": 0.92
+  }
+ }
+}

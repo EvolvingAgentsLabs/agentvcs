@@ -32,5 +32,5 @@ VIRTUAL_ENV="$venv" PATH="$venv/bin:$PATH" \
   "$venv/bin/maturin" develop --release ${target_args[@]+"${target_args[@]}"}
 
 if [ "${1:-}" = test ]; then
-  "$venv/bin/python" -m pytest -q tests ../../examples/toy_pipeline/tests
+  "$venv/bin/python" -m pytest -q tests ../../examples/toy_pipeline/tests ../../examples/lora-kernel/tests
 fi

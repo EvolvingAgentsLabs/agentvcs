@@ -1,0 +1,13 @@
+{
+ "summary": {
+  "mtp/base/general": {
+   "speedup": 0.57
+  },
+  "mtp_k1/base/general": {
+   "speedup": 0.72
+  },
+  "mtp_k2/base/general": {
+   "speedup": 0.56
+  }
+ }
+}

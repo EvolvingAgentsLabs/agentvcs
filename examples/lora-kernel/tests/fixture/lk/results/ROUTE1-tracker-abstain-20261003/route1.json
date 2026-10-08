@@ -1,0 +1,13 @@
+{
+ "reading": {
+  "arms": {
+   "s1-harness": {
+    "abstained_out": "0/30"
+   },
+   "out-harness": {
+    "abstained_out": "27/30"
+   }
+  },
+  "dependent_lost": 0
+ }
+}
