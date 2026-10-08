@@ -151,7 +151,51 @@ Nothing new: it is a patch from the run's active manifest (normally `ours`) to `
 gated and applied as any other (spec/PROTOCOL.md §3.3). Its `rationale` should cite the merge record
 (`merge:<record>`), so `blame` attributes what the merge changed to the patch that brought it in.
 
-## 6. What v0.2 leaves out
+## 6. Resolving with Claude Code — `merge resolve`
+
+agentvcs has no model of its own. When a merge needs judgment, it delegates to **Claude Code** — the
+only LLM agentvcs uses — and keeps every guarantee on its side: the agent proposes, the runtime
+verifies, commits and records. (The local models agentvcs versions are the system it controls, never
+part of agentvcs.)
+
+```
+agentvcs merge resolve --base <m> --ours <m> --theirs <m>
+                       [--ours-run r] [--theirs-run r] [--metric m]... [--suite s]
+                       [--model <claude model>] [--budget-usd <x>] [--max-turns <n>] [--claude <path>]
+                       [--dry-run] --json
+```
+
+1. **Prepare** exactly as §2. If there are no conflicts, commit mechanically (§4) without invoking any
+   agent (`resolver: null`).
+2. **Workspace.** A fresh temporary directory holding only `prepare.json`, `base.json`, `ours.json`,
+   `theirs.json` and, when runs are given, `BRANCHES.md` (each side's patch rationales, in ledger order).
+3. **Tools.** The agent gets exactly two MCP tools from `agentvcs mcp --merge-session <dir>`, bound to this
+   merge: `prepare` (no arguments; the prepare output) and `commit` (argument: the resolution object of
+   §3). `commit` validates (§4 checks) and **stages** the resolution; nothing is committed to the store
+   while the agent runs.
+4. **Invocation** (the isolation recipe validated by experiment M0, where an allow-list alone let a
+   `Bash` call through): `claude -p --output-format stream-json --verbose --restricted
+   --strict-mcp-config --disable-slash-commands --no-session-persistence --permission-mode dontAsk
+   --permission-prompts none --tools Read --allowedTools Read,mcp__agentvcs__prepare,mcp__agentvcs__commit
+   --mcp-config <file> --append-system-prompt <built-in resolver prompt> [--model] [--max-budget-usd]
+   [--max-turns]`, working directory = the workspace, task on stdin. No Bash, no Write, no network tools;
+   Read is confined to the workspace by `--restricted`.
+5. **Audit before commit.** After the session ends the runtime reads the transcript and refuses the
+   staged resolution if the agent called any tool outside the three allowed ones, or a `Read` outside
+   the workspace — even if the call was denied (`E_RESOLVER_ESCAPED`, exit 5). Otherwise it commits the
+   staged resolution as §4 (with `--suite`, gated).
+6. **Record.** The merge record gains a `resolver` object (absent for `merge commit`, so v0.2 record
+   hashes are unchanged):
+   `{"agent": "claude-code", "version": "<claude --version>", "model": "…", "cost_usd": x, "turns": n,
+   "transcript": "b3:…"}` — the transcript is stored as a blob. The resolution's `author` is
+   `{"type": "agent", "id": "claude-code"}`.
+
+Errors: `E_RESOLVER_NOT_FOUND` (no `claude` on PATH or at `--claude`; exit 4), `E_RESOLVER_NO_COMMIT`
+(the session ended without a valid staged resolution; exit 1, nothing committed),
+`E_RESOLVER_ESCAPED` (exit 5). `--dry-run` writes the workspace and prints the exact command without
+running it.
+
+## 7. What v0.2 leaves out
 
 - Merging ledgers or runs; octopus merges (more than two sides).
 - Field-level auto-merge inside a dimension (two sides edit different fields of the same `sampling`):
