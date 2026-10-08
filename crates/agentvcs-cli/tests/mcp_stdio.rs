@@ -48,7 +48,7 @@ fn scripted_stdio_session() {
         .iter()
         .map(|t| t["name"].as_str().unwrap())
         .collect();
-    assert_eq!(names.len(), 20, "{names:?}");
+    assert_eq!(names.len(), 21, "{names:?}");
     for n in [
         "init",
         "snapshot",

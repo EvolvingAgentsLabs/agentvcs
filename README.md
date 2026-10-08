@@ -74,6 +74,33 @@ attributes what the merge changed. Same commands over MCP (`merge_prepare`,
 `merge_commit`) and in the SDK (`avcs.merge_prepare`, `avcs.merge_commit`).
 Decisions: [ADR-0008](https://github.com/EvolvingAgentsLabs/agentvcs/blob/main/docs/adr/0008-merge.md).
 
+#### Resolve a merge with Claude Code
+
+agentvcs has no model of its own: when a merge needs judgment, `merge resolve`
+hands the conflicts to [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
+and keeps every guarantee on its side ([spec/MERGE.md §6](https://github.com/EvolvingAgentsLabs/agentvcs/blob/main/spec/MERGE.md#6-resolving-with-claude-code--merge-resolve)).
+
+```bash
+agentvcs merge resolve --base b3:… --ours b3:… --theirs theirs.json \
+    --ours-run r1 --metric f1 --suite suite.yaml \
+    --model claude-opus-5-5 --budget-usd 1 --max-turns 20 --json
+agentvcs merge resolve … --dry-run --json      # write the workspace, print the claude command
+```
+
+No conflicts: it commits mechanically and never starts the agent. Otherwise
+Claude Code runs headless in a fresh temporary workspace that holds only
+`prepare.json`, the three manifests and `BRANCHES.md`, with `Read` and two MCP
+tools bound to this merge (`agentvcs mcp --merge-session <dir>`: `prepare`, and
+`commit`, which validates and *stages* the resolution). After the session agentvcs
+audits the transcript — any other tool, or a `Read` outside the workspace, even a
+denied one, is `E_RESOLVER_ESCAPED` (exit 5) and nothing is committed — then
+commits the staged resolution exactly as `merge commit` does and adds a `resolver`
+object to the merge record (Claude Code version, model, cost, turns, and the
+transcript as a blob). Over MCP it is the `merge_resolve` tool; in the SDK,
+`avcs.merge_resolve(...)`. Inside an interactive Claude Code session, the
+[`agentvcs-merge` skill](https://github.com/EvolvingAgentsLabs/agentvcs/blob/main/.claude/skills/agentvcs-merge/SKILL.md)
+covers both ways to ask for a merge.
+
 ### Python SDK (v0.1, Phase 2)
 
 `crates/agentvcs-py` is the Python package `agentvcs` — a thin PyO3 binding over

@@ -209,6 +209,12 @@ fn agentvcs_native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("PROTOCOL", agentvcs_core::PROTOCOL)?;
     m.add("VERSION", env!("CARGO_PKG_VERSION"))?;
     m.add_class::<NativeStore>()?;
+    // `merge resolve` starts `agentvcs mcp --merge-session` for the agent; in-process,
+    // the running executable is the interpreter, so the command is `<python> -m agentvcs`
+    let exe: String = m.py().import("sys")?.getattr("executable")?.extract()?;
+    if !exe.is_empty() {
+        agentvcs_cli::resolve::set_self_command(vec![exe, "-m".into(), "agentvcs".into()]);
+    }
     for f in [
         wrap_pyfunction!(cli, m)?,
         wrap_pyfunction!(main, m)?,

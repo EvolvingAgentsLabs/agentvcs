@@ -29,7 +29,8 @@ Commands marked **(conf)** have golden cases in `conformance/` for v0.1.
 | `verify <run\|bundle>` **(conf)** | `LEDGER.md` |
 | `merge prepare --base <m> --ours <m> --theirs <m> [--ours-run r] [--theirs-run r] [--metric m]...` **(conf, v0.2)** | `spec/MERGE.md §2` — mechanical results, conflicts with evidence |
 | `merge commit --base <m> --ours <m> --theirs <m> --resolution <file> [--suite s]` **(conf, v0.2)** | `spec/MERGE.md §4` — `{merge_id, merged, record, gate}` |
-| `mcp` | MCP server over stdio exposing the commands above with the same JSON |
+| `merge resolve --base <m> --ours <m> --theirs <m> [--ours-run r] [--theirs-run r] [--metric m]... [--suite s] [--model] [--budget-usd] [--max-turns] [--claude] [--dry-run]` (v0.2) | `spec/MERGE.md §6` — Claude Code resolves the conflicts; the runtime audits, commits, records `resolver` |
+| `mcp [--merge-session <dir>]` | MCP server over stdio exposing the commands above with the same JSON; with `--merge-session`, only `prepare` and `commit` bound to that merge (§6) |
 
 `hash` is not in the revival plan's command table. It is added because
 canonicalization must be testable on its own, before any object exists.

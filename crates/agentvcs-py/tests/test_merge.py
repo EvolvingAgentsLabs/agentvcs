@@ -1,6 +1,7 @@
 """merge_prepare / merge_commit: thin wrappers over the CLI (spec/MERGE.md, v0.2 draft)."""
 
 import json
+import os
 
 import pytest
 
@@ -83,3 +84,38 @@ def test_commit_errors_carry_the_protocol_code(store):
     with pytest.raises(avcs.AgentvcsError) as e:
         avcs.merge_commit(base, ours, theirs, res, store=store)
     assert e.value.code == "E_MERGE_STALE"
+
+
+FAKE_CLAUDE = os.path.join(os.path.dirname(__file__), "..", "..", "agentvcs-cli", "tests", "fake_claude", "claude")
+
+
+def test_resolve_dry_run_returns_the_command(store):
+    base, ours, theirs, _ = diverged(store)
+    out = avcs.merge_resolve(base, ours, theirs, ours_run="r", claude=FAKE_CLAUDE, max_turns=5, dry_run=True,
+                             store=store)
+    assert out["dry_run"] is True and out["conflicts"] == 1
+    assert out["command"][0] == os.path.abspath(FAKE_CLAUDE)
+    assert out["command"][-2:] == ["--max-turns", "5"]
+    assert sorted(os.listdir(out["workspace"])) == [
+        "BRANCHES.md", "base.json", "ours.json", "prepare.json", "theirs.json"]
+
+
+def test_resolve_with_a_fake_claude_records_the_resolver(store, monkeypatch):
+    base, ours, theirs, _ = diverged(store)
+    monkeypatch.setenv("FAKE_CLAUDE_MODE", "resolve")
+    out = avcs.merge_resolve(base, ours, theirs, ours_run="r", metrics=["f1"], claude=FAKE_CLAUDE,
+                             model="claude-opus-5-5", store=store)
+    assert out["ok"] and out["resolver"]["agent"] == "claude-code"
+    assert out["resolver"]["model"] == "claude-opus-5-5"
+    s = avcs.open_store(store, init=False)
+    record = json.loads(s.get_object(out["record"]))
+    assert record["resolver"] == out["resolver"]
+    assert b"mcp__agentvcs__commit" in s.get_object(out["resolver"]["transcript"])
+
+
+def test_resolve_refuses_an_escape(store, monkeypatch):
+    base, ours, theirs, _ = diverged(store)
+    monkeypatch.setenv("FAKE_CLAUDE_MODE", "bash")
+    with pytest.raises(avcs.AgentvcsError) as e:
+        avcs.merge_resolve(base, ours, theirs, claude=FAKE_CLAUDE, store=store)
+    assert e.value.code == "E_RESOLVER_ESCAPED"

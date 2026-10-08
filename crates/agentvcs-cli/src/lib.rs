@@ -3,6 +3,7 @@
 
 pub mod commands;
 pub mod mcp;
+pub mod resolve;
 pub mod spec;
 
 use agentvcs_core::Error;
@@ -222,7 +223,17 @@ pub fn main_with(args: &[String], cwd: PathBuf) -> i32 {
             Some(d) => cwd.join(d),
             None => cwd,
         };
-        return mcp::serve_stdio(base);
+        return match &rest[1..] {
+            [] => mcp::serve_stdio(base),
+            [flag, d] if flag == "--merge-session" => mcp::serve_merge_session(base.join(d)),
+            [flag] if flag.starts_with("--merge-session=") => {
+                mcp::serve_merge_session(base.join(&flag["--merge-session=".len()..]))
+            }
+            _ => {
+                let e = Error::new("E_USAGE", "usage: agentvcs mcp [--merge-session <dir>]");
+                print_out(e.exit_code(), &error_json(&e), true)
+            }
+        };
     }
     let stdin = match spec::lookup(&rest) {
         Some(c) if c.stdin => {

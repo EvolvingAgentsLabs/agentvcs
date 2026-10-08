@@ -154,3 +154,51 @@ pub fn serve_stdio(cwd: PathBuf) -> i32 {
         Err(_) => 4,
     }
 }
+
+/// The two tools of a merge session (spec/MERGE.md §6 step 3).
+pub fn session_tools() -> Vec<Tool> {
+    vec![
+        Tool {
+            name: "prepare".into(),
+            description: "The output of `agentvcs merge prepare` for this merge (the same content as \
+                          prepare.json): merge_id, mechanical results, and every conflict with its three \
+                          versions, both diffs against base and the runs' evidence."
+                .into(),
+            input_schema: json!({"type": "object", "properties": {}, "additionalProperties": false}),
+        },
+        Tool {
+            name: "commit".into(),
+            description: "Validate a merge resolution (spec/MERGE.md §3-§4) and stage it. Returns \
+                          {\"ok\": true, \"staged\": true, ...} when it is valid: the merge is then done, and \
+                          agentvcs commits it after the session. On an error, fix the resolution and call \
+                          again. The author is recorded as claude-code."
+                .into(),
+            input_schema: json!({"type": "object", "properties": {
+                "resolution": {"type": "object", "description": "the merge_resolution object"}},
+                "required": ["resolution"], "additionalProperties": false}),
+        },
+    ]
+}
+
+/// `agentvcs mcp --merge-session <dir>`: only `prepare` and `commit`, bound to the
+/// merge in `<dir>/session.json`. `commit` stages; it never writes the store.
+pub fn serve_merge_session(dir: PathBuf) -> i32 {
+    let session = match crate::resolve::Session::load(&dir) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("agentvcs mcp --merge-session: {e}");
+            return e.exit_code();
+        }
+    };
+    let mut server = Server {
+        name: "agentvcs".into(),
+        version: env!("CARGO_PKG_VERSION").into(),
+        tools: session_tools(),
+        call: |name: &str, args: &Value| session.call(name, args),
+    };
+    let stdin = std::io::stdin();
+    match server.serve(stdin.lock(), std::io::stdout().lock()) {
+        Ok(()) => 0,
+        Err(_) => 4,
+    }
+}

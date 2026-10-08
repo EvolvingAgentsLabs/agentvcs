@@ -266,6 +266,27 @@ pub const COMMANDS: &[Cmd] = &[
         help: "Check a merge resolution, store the merged manifest (parent_ids [ours, theirs]) and the merge record, optionally gate it (spec/MERGE.md §4, v0.2 draft).",
         stdin: false,
     },
+    Cmd {
+        words: &["merge", "resolve"],
+        tool: "merge_resolve",
+        positionals: &[],
+        flags: &[
+            f("base", true, true, "common ancestor: manifest id in the store, or a manifest file"),
+            f("ours", true, true, "our side: manifest id or file"),
+            f("theirs", true, true, "their side: manifest id or file"),
+            f("ours-run", true, false, "run id or audit bundle file whose patches are our evidence"),
+            f("theirs-run", true, false, "run id or audit bundle file whose patches are their evidence"),
+            many("metric", "metric whose blame delta each evidence patch carries (repeatable)"),
+            f("suite", true, false, "gate the merged manifest with this suite, as `gate run` does (exit 1 when it does not pass)"),
+            f("model", true, false, "Claude model for the resolver (claude --model)"),
+            f("budget-usd", true, false, "spending cap for the resolver session (claude --max-budget-usd)"),
+            f("max-turns", true, false, "turn cap for the resolver session (claude --max-turns)"),
+            f("claude", true, false, "the claude executable (default: `claude` on PATH)"),
+            f("dry-run", false, false, "write the workspace and print the exact command without running it"),
+        ],
+        help: "Resolve a merge's conflicts with Claude Code: prepare, hand the conflicts to an isolated headless session (Read + the merge's prepare/commit tools), audit its transcript, then commit the staged resolution and record the resolver (spec/MERGE.md §6, v0.2 draft).",
+        stdin: false,
+    },
 ];
 
 /// Find the command named by the leading words of `args`.

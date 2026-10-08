@@ -30,14 +30,14 @@ impl Ctx {
         }
     }
 
-    fn store(&self) -> Result<Store> {
+    pub(crate) fn store(&self) -> Result<Store> {
         Store::open(&self.cwd)
     }
 }
 
-type Out = Result<(i32, Value)>;
+pub(crate) type Out = Result<(i32, Value)>;
 
-fn okv(v: Value) -> Out {
+pub(crate) fn okv(v: Value) -> Out {
     Ok((0, v))
 }
 
@@ -63,6 +63,7 @@ pub fn dispatch(inv: &Invocation, ctx: &Ctx) -> Out {
         "verify" => verify(inv, ctx),
         "merge_prepare" => merge_prepare(inv, ctx),
         "merge_commit" => merge_commit(inv, ctx),
+        "merge_resolve" => crate::resolve::merge_resolve(inv, ctx),
         other => Err(Error::new("E_USAGE", format!("unknown command {other}"))),
     }
 }
@@ -149,7 +150,7 @@ fn manifest_into_store(ctx: &Ctx, store: &Store, what: &str) -> Result<Manifest>
 }
 
 /// An audit bundle: a file path, or a run id in the store.
-fn load_bundle(ctx: &Ctx, target: &str) -> Result<Value> {
+pub(crate) fn load_bundle(ctx: &Ctx, target: &str) -> Result<Value> {
     if ctx.path(target).is_file() {
         return Ok(parse_bytes(&read_file(ctx, target)?)?);
     }
@@ -773,7 +774,11 @@ fn export_audit(inv: &Invocation, ctx: &Ctx) -> Out {
 
 // ---------------------------------------------------------------- merge (v0.2 draft)
 
-fn merge_sides(inv: &Invocation, ctx: &Ctx, store: Option<&Store>) -> Result<[Manifest; 3]> {
+pub(crate) fn merge_sides(
+    inv: &Invocation,
+    ctx: &Ctx,
+    store: Option<&Store>,
+) -> Result<[Manifest; 3]> {
     let get = |f: &str| load_manifest(ctx, store, inv.flag(f).unwrap_or_default());
     Ok([get("base")?, get("ours")?, get("theirs")?])
 }
@@ -795,16 +800,32 @@ fn merge_prepare(inv: &Invocation, ctx: &Ctx) -> Out {
 
 fn merge_commit(inv: &Invocation, ctx: &Ctx) -> Out {
     let store = ctx.store()?;
-    let [b, o, t] = merge_sides(inv, ctx, Some(&store))?;
+    let sides = merge_sides(inv, ctx, Some(&store))?;
     let resolution = load_doc(ctx, inv.flag("resolution").unwrap_or_default())?;
-    let mut c = agentvcs_merge::commit(&b, &o, &t, &resolution)?;
+    commit_merge(ctx, &store, &sides, &resolution, inv.flag("suite"), None)
+}
+
+/// `merge commit` from a resolution value (spec/MERGE.md §4), shared with
+/// `merge resolve` (§6). `resolver` is `None` for `merge commit`: the record then
+/// has no `resolver` field at all, so v0.2 record hashes are unchanged; `merge
+/// resolve` passes `Some(null)` (no conflicts) or `Some(resolver object)`, which
+/// is also echoed in the output.
+pub(crate) fn commit_merge(
+    ctx: &Ctx,
+    store: &Store,
+    [b, o, t]: &[Manifest; 3],
+    resolution: &Value,
+    suite: Option<&str>,
+    resolver: Option<Value>,
+) -> Out {
+    let mut c = agentvcs_merge::commit(b, o, t, resolution)?;
     // the merged manifest first: when its id is already one of the sides, the
     // first annotation stored wins (ADR-0005) and this one carries parent_ids
-    for m in [&c.merged, &b, &o, &t] {
+    for m in [&c.merged, b, o, t] {
         store.put_manifest(m)?;
     }
     let merged = c.merged.manifest_id.clone();
-    let gate = match inv.flag("suite") {
+    let gate = match suite {
         None => Value::Null,
         Some(suite) => {
             let env = [
@@ -815,22 +836,26 @@ fn merge_commit(inv: &Invocation, ctx: &Ctx) -> Out {
                 ("AGENTVCS_FROM_MANIFEST", o.manifest_id.clone()),
                 ("AGENTVCS_TO_MANIFEST", merged.clone()),
                 ("AGENTVCS_MANIFEST", merged.clone()),
-                ("AGENTVCS_MANIFEST_FILE", manifest_file(&store, &merged)),
+                ("AGENTVCS_MANIFEST_FILE", manifest_file(store, &merged)),
                 (
                     "AGENTVCS_STORE",
                     store.root().to_string_lossy().into_owned(),
                 ),
             ];
-            run_suite(ctx, &store, suite, &env)?
+            run_suite(ctx, store, suite, &env)?
         }
     };
     c.record["gate"] = gate.clone();
+    if let Some(r) = &resolver {
+        c.record["resolver"] = r.clone();
+    }
     // a rejected merge is history too: the record is stored whatever the gate says
     let record = store.put_json(&c.record)?;
     let code = if gate["passed"] == false { 1 } else { 0 };
-    Ok((
-        code,
-        json!({"ok": true, "merge_id": c.record["merge_id"], "merged": merged,
-               "record": record, "gate": gate}),
-    ))
+    let mut out = json!({"ok": true, "merge_id": c.record["merge_id"], "merged": merged,
+                         "record": record, "gate": gate});
+    if let Some(r) = resolver {
+        out["resolver"] = r;
+    }
+    Ok((code, out))
 }

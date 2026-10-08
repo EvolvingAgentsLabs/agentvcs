@@ -27,8 +27,14 @@ impl Error {
 pub fn exit_code_for(code: &str) -> i32 {
     match code {
         "E_USAGE" | "E_EXISTS" => 2,
-        "E_NO_STORE" | "E_NOT_FOUND" | "E_IO" | "E_RUN_EXISTS" | "E_INDEX" => 4,
-        "E_PATCH_UNGATED" | "E_NOT_GATED" => 5,
+        "E_RESOLVER_NO_COMMIT" => 1,
+        "E_NO_STORE"
+        | "E_NOT_FOUND"
+        | "E_IO"
+        | "E_RUN_EXISTS"
+        | "E_INDEX"
+        | "E_RESOLVER_NOT_FOUND" => 4,
+        "E_PATCH_UNGATED" | "E_NOT_GATED" | "E_RESOLVER_ESCAPED" => 5,
         _ => 3,
     }
 }
