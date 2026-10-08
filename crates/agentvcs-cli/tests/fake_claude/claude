@@ -1,0 +1,149 @@
+#!/usr/bin/env python3
+"""A fake `claude` for the `merge resolve` tests (stdlib only). It never calls a model.
+
+It speaks Claude Code's headless stream-json on stdout, starts the MCP server named in
+`--mcp-config` exactly as Claude Code would, and drives it with `prepare` and `commit`.
+What it does is chosen by FAKE_CLAUDE_MODE (inherited through agentvcs):
+
+  resolve           prepare, Read prepare.json (inside the workspace), commit `take: ours`
+  invalid-then-ok   commit an invalid resolution first, then a valid one
+  nocommit          prepare only; never commits
+  bash              a Bash tool_use (denied by the harness), then a valid commit
+  read-outside-denied    Read of a file outside the workspace, denied; then a valid commit
+  read-outside-executed  Read of a file outside the workspace, executed; then a valid commit
+  read-dotdot       Read of `../session/session.json` (relative escape), denied; then commit
+  other-mcp         a call to an MCP tool of another server, then a valid commit
+
+With FAKE_CLAUDE_LOG set, it writes {argv, cwd, stdin} there as JSON. `--version` prints a version.
+"""
+import json
+import os
+import subprocess
+import sys
+
+VERSION = "2.1.292 (Claude Code)"
+
+
+def out(ev):
+    sys.stdout.write(json.dumps(ev) + "\n")
+    sys.stdout.flush()
+
+
+def arg(argv, name):
+    return argv[argv.index(name) + 1] if name in argv else None
+
+
+class Mcp:
+    def __init__(self, cfg_path):
+        cfg = json.load(open(cfg_path))
+        (self.name, srv), = cfg["mcpServers"].items()
+        env = dict(os.environ, **srv.get("env", {}))
+        self.p = subprocess.Popen([srv["command"], *srv.get("args", [])], stdin=subprocess.PIPE,
+                                  stdout=subprocess.PIPE, text=True, env=env)
+        self.id = 0
+        self.rpc("initialize", {"protocolVersion": "2025-06-18", "capabilities": {},
+                                "clientInfo": {"name": "fake-claude", "version": "0"}})
+        self.tools = [t["name"] for t in self.rpc("tools/list", {})["result"]["tools"]]
+
+    def rpc(self, method, params):
+        self.id += 1
+        self.p.stdin.write(json.dumps({"jsonrpc": "2.0", "id": self.id, "method": method,
+                                       "params": params}) + "\n")
+        self.p.stdin.flush()
+        return json.loads(self.p.stdout.readline())
+
+    def close(self):
+        self.p.stdin.close()
+        self.p.wait()
+
+
+class Session:
+    def __init__(self, mcp):
+        self.mcp = mcp
+        self.n = 0
+        self.turns = 0
+
+    def tool(self, name, inp, result_content, is_error=False):
+        self.n += 1
+        self.turns += 1
+        tid = f"toolu_{self.n:04d}"
+        out({"type": "assistant", "message": {"role": "assistant", "content": [
+            {"type": "tool_use", "id": tid, "name": name, "input": inp}]}})
+        out({"type": "user", "message": {"role": "user", "content": [
+            {"type": "tool_result", "tool_use_id": tid, "content": result_content, "is_error": is_error}]}})
+
+    def mcp_call(self, tool, args):
+        r = self.mcp.rpc("tools/call", {"name": tool, "arguments": args})["result"]
+        self.tool(f"mcp__{self.mcp.name}__{tool}", args, r["content"], r.get("isError", False))
+        return json.loads(r["content"][0]["text"])
+
+    def read(self, path, executed, cwd):
+        if executed:
+            try:
+                text = open(path if os.path.isabs(path) else os.path.join(cwd, path)).read()
+            except OSError as e:
+                text = str(e)
+            self.tool("Read", {"file_path": path}, text)
+        else:
+            self.tool("Read", {"file_path": path},
+                      f"{path} is outside {cwd}; --restricted confines the file tools to the working directory.",
+                      True)
+
+
+def resolution(prep, take="ours"):
+    return {"protocol": "agentvcs/0.1", "type": "merge_resolution", "merge_id": prep["merge_id"],
+            "resolutions": {c["dimension"]: {"take": take} for c in prep["conflicts"]},
+            "rationale": "fake agent: took ours for every conflict",
+            "author": {"type": "agent", "id": "fake"}}
+
+
+def main():
+    argv = sys.argv[1:]
+    if argv == ["--version"]:
+        print(VERSION)
+        return 0
+    stdin = sys.stdin.read()
+    cwd = os.getcwd()
+    if os.environ.get("FAKE_CLAUDE_LOG"):
+        branches = os.path.join(cwd, "BRANCHES.md")
+        json.dump({"argv": argv, "cwd": cwd, "stdin": stdin, "files": sorted(os.listdir(cwd)),
+                   "branches": open(branches).read() if os.path.exists(branches) else None},
+                  open(os.environ["FAKE_CLAUDE_LOG"], "w"))
+    mode = os.environ.get("FAKE_CLAUDE_MODE", "resolve")
+    mcp = Mcp(arg(argv, "--mcp-config"))
+    out({"type": "system", "subtype": "init", "cwd": cwd, "model": arg(argv, "--model") or "fake-model",
+         "tools": ["Read"] + [f"mcp__{mcp.name}__{t}" for t in mcp.tools], "claude_code_version": VERSION})
+    s = Session(mcp)
+    prep = s.mcp_call("prepare", {})
+    outside = os.environ.get("FAKE_CLAUDE_OUTSIDE", "/etc/hosts")
+    if mode == "resolve":
+        s.read(os.path.join(cwd, "prepare.json"), True, cwd)
+        s.read("BRANCHES.md", True, cwd)
+    elif mode == "bash":
+        s.tool("Bash", {"command": "ls /"}, "Permission to use Bash has been denied.", True)
+    elif mode == "read-outside-denied":
+        s.read(outside, False, cwd)
+    elif mode == "read-outside-executed":
+        s.read(outside, True, cwd)
+    elif mode == "read-dotdot":
+        s.read("../session/session.json", False, cwd)
+    elif mode == "other-mcp":
+        s.tool("mcp__other__exfiltrate", {}, "No such tool available: mcp__other__exfiltrate", True)
+    if mode == "invalid-then-ok":
+        bad = resolution(prep)
+        bad["resolutions"] = {}
+        r = s.mcp_call("commit", {"resolution": bad})
+        assert not r["ok"], r
+    if mode != "nocommit":
+        r = s.mcp_call("commit", {"resolution": resolution(prep)})
+        assert r["ok"], r
+    mcp.close()
+    out({"type": "assistant", "message": {"role": "assistant", "content": [
+        {"type": "text", "text": "Took ours for every conflict."}]}})
+    out({"type": "result", "subtype": "success", "is_error": False, "num_turns": s.turns + 1,
+         "total_cost_usd": 0.0421, "result": "Took ours for every conflict.", "fake_agent": True})
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

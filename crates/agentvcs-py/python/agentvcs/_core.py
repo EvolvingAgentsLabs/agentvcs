@@ -610,6 +610,49 @@ def merge_commit(
     return _cli_ok(args, os.fspath(store))
 
 
+def merge_resolve(
+    base: PathOrId,
+    ours: PathOrId,
+    theirs: PathOrId,
+    *,
+    ours_run: Optional[PathOrId] = None,
+    theirs_run: Optional[PathOrId] = None,
+    metrics: Sequence[str] = (),
+    suite: Optional[Union[str, "os.PathLike[str]"]] = None,
+    model: Optional[str] = None,
+    budget_usd: Optional[float] = None,
+    max_turns: Optional[int] = None,
+    claude: Optional[Union[str, "os.PathLike[str]"]] = None,
+    dry_run: bool = False,
+    store: Union[str, os.PathLike] = ".",
+) -> dict:
+    """``agentvcs merge resolve`` (spec/MERGE.md §6, v0.2 draft): Claude Code
+    resolves the conflicts in an isolated session; the runtime audits the
+    transcript, commits the staged resolution and records ``resolver``. Raises
+    :class:`AgentvcsError` with ``E_RESOLVER_NOT_FOUND``, ``E_RESOLVER_NO_COMMIT``
+    or ``E_RESOLVER_ESCAPED``; a failed gate is not an exception (as
+    :func:`merge_commit`). ``dry_run`` writes the workspace and returns the command."""
+    args = ["merge", "resolve", "--base", _manifest_arg(base), "--ours", _manifest_arg(ours),
+            "--theirs", _manifest_arg(theirs)]
+    for flag, r in (("--ours-run", ours_run), ("--theirs-run", theirs_run)):
+        if r is not None:
+            s = os.fspath(r)
+            args += [flag, os.path.abspath(s) if os.path.exists(s) else s]
+    for m in metrics:
+        args += ["--metric", m]
+    if suite is not None:
+        args += ["--suite", os.path.abspath(os.fspath(suite))]
+    for flag, v in (("--model", model), ("--budget-usd", budget_usd), ("--max-turns", max_turns)):
+        if v is not None:
+            args += [flag, str(v)]
+    if claude is not None:
+        c = os.fspath(claude)
+        args += ["--claude", os.path.abspath(c) if os.sep in c else c]
+    if dry_run:
+        args.append("--dry-run")
+    return _cli_ok(args, os.fspath(store))
+
+
 def open_store(store: Union[str, os.PathLike, "_native.NativeStore"] = ".", init: bool = True):
     if isinstance(store, _native.NativeStore):
         return store
