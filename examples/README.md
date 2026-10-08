@@ -23,6 +23,7 @@ this" to "version a real agent in your stack".
 | Example | What it shows | Run |
 | --- | --- | --- |
 | [`toy_pipeline/`](toy_pipeline/) | Three agents driven by a manifest; a supervisor **process** patches the extraction prompt mid-run through the CLI, the harness hot-reloads via `on_patch`, and `agentvcs blame` attributes the recall gain to that patch. A `--no-reload` control gets zero credit. | `python run_pipeline.py --backend fake` |
+| [`lora-kernel/`](lora-kernel/) | **LK0:** the real harness of [lora-kernel](https://github.com/EvolvingAgentsLabs/lora-kernel)'s Mac/edge stack as a typed manifest; nine measured changes imported from its results files as gated patches; two branches (keep the expert + aligned drafter vs. drop it for speed) that conflict; `merge resolve` hands the conflict to Claude Code and a static gate checks the result. No local model runs. | `bash demo.sh --dry-run` |
 
 ## Zero-friction trace capture (passive providers)
 

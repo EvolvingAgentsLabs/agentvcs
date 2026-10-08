@@ -1,0 +1,6 @@
+{
+ "member": {
+  "adapter": "adapters/tracker-wf-s1",
+  "adapter_sha256": "33a8d32b060214ab4c1069d43d7bb6996a8c96c7e96c9121ac123737b553993a"
+ }
+}

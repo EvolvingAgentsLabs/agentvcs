@@ -1,0 +1,28 @@
+{
+ "dictionary_foreign_misrouted": "294/600",
+ "foreign_misrouted": "0/600",
+ "per_set": {
+  "factored": {
+   "E3": {
+    "abstained": 120,
+    "n": 120
+   },
+   "E4": {
+    "abstained": 120,
+    "n": 120
+   },
+   "I3": {
+    "abstained": 120,
+    "n": 120
+   },
+   "C3": {
+    "abstained": 120,
+    "n": 120
+   },
+   "D3": {
+    "abstained": 120,
+    "n": 120
+   }
+  }
+ }
+}

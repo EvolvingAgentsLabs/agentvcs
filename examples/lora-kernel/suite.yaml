@@ -1,0 +1,11 @@
+# Static gate for the merged lora-kernel edge/Mac manifest (no model). `merge commit --suite` and
+# `merge resolve --suite` run the command with AGENTVCS_MANIFEST_FILE = the merged manifest.
+# demo.sh exports LK_EXAMPLE (this directory) and PYTHON (an interpreter with the agentvcs SDK).
+name: lk-edge-static
+command: '"${PYTHON:-python3}" "${LK_EXAMPLE:?set LK_EXAMPLE to examples/lora-kernel}/check_manifest.py"'
+thresholds:
+  wellformed: {op: "==", value: 1}
+  adapters_hashed: {op: "==", value: 1}
+  drafter_consistent: {op: "==", value: 1}
+  k_in_measured_range: {op: "==", value: 1}
+  greedy: {op: "==", value: 1}

@@ -1,0 +1,13 @@
+{
+ "summary": {
+  "wiki12b/domain/mtp_b2": {
+   "speedup": 1.08
+  },
+  "wiki12b/domain/mtp_b3": {
+   "speedup": 1.04
+  },
+  "wiki12b/domain/mtp_b4": {
+   "speedup": 0.88
+  }
+ }
+}

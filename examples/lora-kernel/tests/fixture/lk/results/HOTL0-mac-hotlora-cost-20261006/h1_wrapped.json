@@ -1,0 +1,10 @@
+{
+ "summary": {
+  "wiki12b/general/mtp_b2": {
+   "speedup": 1.23
+  },
+  "base/general/mtp_b3": {
+   "speedup": 1.43
+  }
+ }
+}

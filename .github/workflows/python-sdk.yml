@@ -32,9 +32,9 @@ jobs:
         run: maturin build --release --out ../../dist
       - name: Install the wheel (not the source tree)
         run: pip install dist/*.whl
-      - name: SDK tests + toy pipeline (fake backend, both arms)
+      - name: SDK tests + toy pipeline (fake backend, both arms) + LK0 (fixture, fake claude)
         working-directory: crates/agentvcs-py
-        run: python -m pytest -q tests ../../examples/toy_pipeline/tests
+        run: python -m pytest -q tests ../../examples/toy_pipeline/tests ../../examples/lora-kernel/tests
       - name: Conformance through `python -m agentvcs` (103 golden cases)
         run: python conformance/run.py --cli "python -m agentvcs"
       - name: Toy pipeline with the release binary as the supervisor's CLI
