@@ -6,7 +6,7 @@
 
 [![CI](https://github.com/EvolvingAgentsLabs/agentvcs/actions/workflows/ci.yml/badge.svg)](https://github.com/EvolvingAgentsLabs/agentvcs/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.10%20%E2%80%93%203.13-blue.svg)
-![Tests](https://img.shields.io/badge/tests-212%20passing-brightgreen.svg)
+![Tests](https://img.shields.io/badge/tests-220%20passing-brightgreen.svg)
 ![Dependencies](https://img.shields.io/badge/runtime%20deps-0-blue.svg)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
@@ -15,6 +15,41 @@
 > The open-source **"git for agents"**: version an agent's **code, skills, goals, models,
 > traces & sub-agent swarm together** — and merge its **autonomous evolution back into
 > your releases, intelligently.**
+
+## Status — 2026-10-08
+
+[ran] = observed by executing it; [read] = from this repo's files.
+
+**Works [ran]**
+- Protocol conformance: **103/103** against a release build of the Rust CLI (hash 15, manifest 13, diff 16,
+  verify 31, blame 8, merge 20) [ran, 2026-10-08]. The `Rust`, `Python SDK` and `CI` workflows are green on `main`.
+- Rust core, CLI and MCP server: `snapshot`, `run`, `step record`, `patch propose/apply`, `gate run`,
+  `export audit`, `verify`, `blame`, `diff`, `merge prepare/commit/resolve` — covered by the conformance cases and CI.
+- `merge resolve` (spec/MERGE.md §6): isolated `claude -p` with `Read` + two MCP tools, transcript audit
+  (`E_RESOLVER_ESCAPED`), `resolver` recorded — tested end to end in CI with a **fake** `claude`.
+- Gate F2 on a real model: `examples/toy_pipeline`, Qwen2.5-1.5B on llama.cpp, 2700 docs — paired gate gain
+  **+0.444**, blame **+0.442** attributed to exactly the one patch applied mid-run, `verify` clean
+  ([RUN_REAL.md](https://github.com/EvolvingAgentsLabs/agentvcs/blob/main/examples/toy_pipeline/RUN_REAL.md)) [ran, 2026-10-06].
+- `examples/lora-kernel` (LK0): import → nine imported, gated patches → conflicting branches → `merge resolve`;
+  tests and `demo.sh --dry-run` run in CI on a fixture (fake `claude`).
+- Legacy pure-Python package: 220 tests pass [ran, 2026-10-08].
+
+**Measured, does not hold (yet)**
+- `step record` through the CLI: p99 5.7–7.8 ms against a 2 ms target; the in-process library/SDK path meets it
+  ([BENCHMARKS.md](https://github.com/EvolvingAgentsLabs/agentvcs/blob/main/docs/BENCHMARKS.md)) [ran, 2026-10-06].
+- Gate F2's first real-model run, with an absolute gate (`recall ≥ 0.9` on 12 docs), failed at 0.889; the paired
+  gate that passed was adopted *after* that result, logged as a change of instrument [read, RUN_REAL.md].
+- The `--no-reload` control arm has run only on the fake backend (delta 0), not on the real model [read].
+
+**Not implemented**
+- PyPI: `pip install agentvcs` does not exist (pypi.org returns 404) [ran]; build the SDK from source.
+- A real Claude Code `merge resolve` session is not exercised by any test or recorded run in this repo [read].
+- `bisect --exec` probe and its golden cases; a `blob put` CLI verb; remotes/sync; async SDK API; the move of
+  the Python implementation to `legacy/` ([LATER.md](https://github.com/EvolvingAgentsLabs/agentvcs/blob/main/LATER.md)) [read].
+- Merge v0.2 leaves out ledger/run merges, octopus merges and field-level auto-merge (spec/MERGE.md §7) [read].
+
+**Next** — this repo commits to no dated step. Pending per README and ADR-0007 §2: move the Python package to
+`legacy/` and publish the SDK wheel. Everything in LATER.md stays unplanned until it moves into the plan.
 
 ## Rust core (v0.1, in progress)
 
@@ -415,7 +450,7 @@ concern, not part of this open-source core.
 **Before you trust it:** the bundled demo reconciler is a deterministic bullet-union stub —
 honest in its docstring, but not intelligent; the LLM reconciler is a separate piece. Test
 coverage is lopsided: the optional cryptographic layer has 20 tests while the core object
-store has 5. 212 tests pass across Python 3.10–3.13.
+store has 5. 220 tests pass (legacy Python suite; CI runs it on Python 3.10–3.13).
 
 ## License
 
