@@ -57,6 +57,22 @@ The revival rebuilds agentvcs around a frozen protocol ([`spec/`](https://github
 as a Rust core, CLI and MCP server (ADR-0001). The Python implementation documented
 below stays the released one until the plan moves it to `legacy/`.
 
+How a run is versioned, end to end — every arrow is one CLI verb (the same over MCP and the SDK):
+
+```mermaid
+flowchart LR
+  M["manifest.json"] -->|snapshot| MID["manifest b3:…"]
+  MID -->|run start| L[("run ledger<br/>hash-chained")]
+  H["harness / agent"] -->|step record| L
+  H -->|patch propose| P["patch<br/>from → to + rationale"]
+  P -->|gate run| G{"suite<br/>passed?"}
+  G -->|"yes · patch apply"| L
+  G -->|"no · apply refuses<br/>E_PATCH_UNGATED, exit 5"| H
+  L -->|export audit| B["audit bundle"]
+  B -->|verify| V["chain valid?"]
+  B -->|"blame --metric"| BL["metric delta<br/>per applied patch"]
+```
+
 ```bash
 cargo build --release                       # target/release/agentvcs
 python3 conformance/run.py --cli "$PWD/target/release/agentvcs"   # 103/103
@@ -135,6 +151,27 @@ transcript as a blob). Over MCP it is the `merge_resolve` tool; in the SDK,
 `avcs.merge_resolve(...)`. Inside an interactive Claude Code session, the
 [`agentvcs-merge` skill](https://github.com/EvolvingAgentsLabs/agentvcs/blob/main/.claude/skills/agentvcs-merge/SKILL.md)
 covers both ways to ask for a merge.
+
+```mermaid
+flowchart TD
+  PR["merge prepare<br/>auto results + conflicts with evidence"] --> C{"conflicts?"}
+  C -->|none| MC["merge commit, mechanically<br/>resolver: null"]
+  C -->|yes| W["fresh workspace<br/>prepare.json · base/ours/theirs.json · BRANCHES.md"]
+  W --> CC["claude -p, headless<br/>Read + MCP prepare / commit<br/>commit only stages"]
+  CC --> AU{"transcript audit<br/>any other tool, or a Read<br/>outside the workspace?"}
+  AU -->|yes| E["E_RESOLVER_ESCAPED, exit 5<br/>nothing committed"]
+  AU -->|no| RC["merge commit the staged resolution<br/>+ resolver record and transcript blob"]
+  MC --> GT["--suite: gate the merged manifest<br/>record stored either way"]
+  RC --> GT
+```
+
+<!-- IMAGE PLACEHOLDER — see docs/img/IMAGES.md
+<p align="center">
+  <img src="https://raw.githubusercontent.com/EvolvingAgentsLabs/agentvcs/main/docs/img/lk0-merge-dry-run.gif" alt="Terminal recording of examples/lora-kernel/demo.sh --dry-run on its CI fixture: two branches diverge from a fork manifest, merge prepare merges one dimension mechanically and hands over two modify/modify conflicts, each with the patches, gates and blame deltas behind both sides, and merge resolve writes the resolver's workspace without invoking Claude Code." width="100%">
+</p>
+
+*LK0 on its CI fixture, `--dry-run`: the conflicts arrive with their evidence; Claude Code is not invoked.*
+-->
 
 ### Python SDK (v0.1, Phase 2)
 

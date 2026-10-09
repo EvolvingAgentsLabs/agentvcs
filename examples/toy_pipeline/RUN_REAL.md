@@ -142,6 +142,12 @@ patch or none; delta ≤ 0; `verify` fails.
 - **`verify`:** valid, 8103 entries, no violations.
 - Falsifiers: none met.
 
+<!-- IMAGE PLACEHOLDER — see docs/img/IMAGES.md
+<img src="../../docs/img/f2-blame-recall.png" alt="Line chart of extract.recall over 8100 ledger steps as a rolling mean of 50 documents: flat near 0.43 until a dashed line at step 2051 where the gated patch is applied, then near 0.87 to the end. Two horizontal bars mark blame's segment means, 0.431 (n = 684) and 0.873 (n = 2016); the title reads one attribution, delta +0.442." width="100%">
+
+*Blame over the exported bundle: one boundary, at the step the patch was applied, and one attribution naming it.*
+-->
+
 **Read with:** the gate was changed after the first run's result (logged above, owner sign-off). The
 gain clears the new threshold by 0.34, so the verdict does not hinge on that choice. The `--no-reload`
 control arm was not run on the real model; on the fake backend it shows delta 0 at the same boundary
