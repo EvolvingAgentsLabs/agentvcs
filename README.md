@@ -1,13 +1,8 @@
 # agentvcs
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/EvolvingAgentsLabs/agentvcs/main/docs/img/agentvcs.jpg" alt="Two branches diverge and merge, sealed once the eval passes" width="100%">
+  <img src="https://raw.githubusercontent.com/EvolvingAgentsLabs/agentvcs/main/docs/img/hero.png" alt="A run drawn as a line of steps; midway a harness card is swapped for a new version that has passed a gate check; after the swap the steps change colour, and a blame arrow runs from the changed metric back to the one patch. Above, two tracks split at a fork and rejoin at a merge point, where a small resolver card settles the one conflict." width="100%">
 </p>
-<!-- IMAGE PLACEHOLDER — see docs/img/IMAGES.md. Once docs/img/hero.png is on main, delete these comment lines and the <p> block above.
-<p align="center">
-  <img src="https://raw.githubusercontent.com/EvolvingAgentsLabs/agentvcs/main/docs/img/hero.png" alt="A run drawn as a line of steps; midway a harness card is swapped for a new version that has passed a gate check; after the swap the steps change colour, and a blame arrow runs from the changed metric back to the one patch. Above, a second line diverges from the same fork and rejoins at a merge point where a small resolver card settles the one conflict." width="100%">
-</p>
--->
 
 [![CI](https://github.com/EvolvingAgentsLabs/agentvcs/actions/workflows/ci.yml/badge.svg)](https://github.com/EvolvingAgentsLabs/agentvcs/actions/workflows/ci.yml)
 ![Core](https://img.shields.io/badge/core-Rust-orange.svg)
