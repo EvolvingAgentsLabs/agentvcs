@@ -74,7 +74,8 @@ Sleep 9s
 
 Checked on 2026-10-09: `vhs validate` passes on the tape, and the typed pipeline prints exactly sections 3–5 (two
 conflicts, `auto: spec.drafter_adapter=ours`, `conflicts: 2`). The GIF itself was not rendered here, because `ttyd`
-could not start in the sandbox.
+could not start in the sandbox. **Rendered and placed 2026-10-11** with VHS 0.11.0 from this tape, unchanged
+(15.9 s, 1380 × 940).
 
 **Alt text:** Terminal recording of examples/lora-kernel/demo.sh --dry-run on its CI fixture: two branches diverge
 from a fork manifest, merge prepare merges one dimension mechanically and hands over two modify/modify conflicts,
@@ -143,7 +144,9 @@ PY
 /tmp/avcs-img/bin/python /tmp/avcs-img/f2.py examples/toy_pipeline/runs/f2-rerun-2026-10-06 docs/img/f2-blame-recall.png
 ```
 
-The recipe was rendered once on 2026-10-09 to check it. The PNG is not committed.
+The recipe was rendered once on 2026-10-09 to check it. **Rendered and placed 2026-10-11** with this script,
+unchanged; segment means 0.431 (n = 684) → 0.873 (n = 2016), delta +0.442, gate +0.444 and step 2051 were asserted
+against `result.json` and `RUN_REAL.md`, and both means recomputed from the per-step values, before saving.
 
 **Alt text:** Line chart of extract.recall over 8100 ledger steps as a rolling mean of 50 documents: flat near 0.43
 until a dashed line at step 2051 where the gated patch is applied, then near 0.87 to the end. Two horizontal bars mark

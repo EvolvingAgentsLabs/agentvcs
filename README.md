@@ -165,13 +165,11 @@ flowchart TD
   RC --> GT
 ```
 
-<!-- IMAGE PLACEHOLDER — see docs/img/IMAGES.md
 <p align="center">
   <img src="https://raw.githubusercontent.com/EvolvingAgentsLabs/agentvcs/main/docs/img/lk0-merge-dry-run.gif" alt="Terminal recording of examples/lora-kernel/demo.sh --dry-run on its CI fixture: two branches diverge from a fork manifest, merge prepare merges one dimension mechanically and hands over two modify/modify conflicts, each with the patches, gates and blame deltas behind both sides, and merge resolve writes the resolver's workspace without invoking Claude Code." width="100%">
 </p>
 
 *LK0 on its CI fixture, `--dry-run`: the conflicts arrive with their evidence; Claude Code is not invoked.*
--->
 
 ### Python SDK (v0.1, Phase 2)
 
