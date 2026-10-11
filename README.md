@@ -1,20 +1,21 @@
 # agentvcs
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/EvolvingAgentsLabs/agentvcs/main/docs/img/agentvcs.jpg" alt="Two branches diverge and merge, sealed once the eval passes" width="100%">
+  <img src="https://raw.githubusercontent.com/EvolvingAgentsLabs/agentvcs/main/docs/img/hero.png" alt="A run drawn as a line of steps; midway a harness card is swapped for a new version that has passed a gate check; after the swap the steps change colour, and a blame arrow runs from the changed metric back to the one patch. Above, two tracks split at a fork and rejoin at a merge point, where a small resolver card settles the one conflict." width="100%">
 </p>
 
 [![CI](https://github.com/EvolvingAgentsLabs/agentvcs/actions/workflows/ci.yml/badge.svg)](https://github.com/EvolvingAgentsLabs/agentvcs/actions/workflows/ci.yml)
-![Python](https://img.shields.io/badge/python-3.10%20%E2%80%93%203.13-blue.svg)
-![Tests](https://img.shields.io/badge/tests-220%20passing-brightgreen.svg)
-![Dependencies](https://img.shields.io/badge/runtime%20deps-0-blue.svg)
+![Core](https://img.shields.io/badge/core-Rust-orange.svg)
+![Conformance](https://img.shields.io/badge/conformance-103%2F103-brightgreen.svg)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-**Version control for software that *evolves while it runs*.**
+**Version control for agent harnesses that change while they run.**
 
-> The open-source **"git for agents"**: version an agent's **code, skills, goals, models,
-> traces & sub-agent swarm together** — and merge its **autonomous evolution back into
-> your releases, intelligently.**
+> Every step of a run is stamped with the exact harness version that produced it — prompts, models,
+> sampling, tools, adapters, router. A patch is **gated** before it applies, `blame` attributes a change in a
+> metric to the patch that brought it, and two harnesses that diverged are **merged** dimension by
+> dimension: each real conflict goes to **Claude Code — agentvcs's only LLM** — with the evidence behind
+> both sides, and agentvcs checks the resolution before recording it. Rust core, CLI, MCP server, Python SDK.
 
 ## Status — 2026-10-08
 
@@ -50,6 +51,22 @@
 
 **Next** — this repo commits to no dated step. Pending per README and ADR-0007 §2: move the Python package to
 `legacy/` and publish the SDK wheel. Everything in LATER.md stays unplanned until it moves into the plan.
+
+## Part of EvolvingAgentsLabs
+
+agentvcs is one of three active projects of [EvolvingAgentsLabs](https://evolvingagentslabs.github.io); how they
+connect is drawn on the [website](https://evolvingagentslabs.github.io/#connections).
+
+- **[lora-kernel](https://github.com/EvolvingAgentsLabs/lora-kernel)** serves small local models as trained
+  specialists, with a router that abstains to a frontier model. **Built:**
+  [`examples/lora-kernel`](https://github.com/EvolvingAgentsLabs/agentvcs/tree/main/examples/lora-kernel) (LK0)
+  imports its serving configuration as a harness manifest and its measured changes as gated patches, then merges two
+  conflicting branches through `merge resolve`. Imported, not live: nothing is re-run, the branches are constructed
+  for the demo, and lora-kernel's models are the controlled system, never part of agentvcs.
+- **[gene-evidence](https://github.com/EvolvingAgentsLabs/gene-evidence)** writes auditable evidence reports for
+  gene predictions, every sentence citing a node of a versioned evidence graph; no model in its stage 1. **Next, not
+  built:** each evidence run versioned as an agentvcs run, so a database release or a rule change is a patch and
+  `blame` traces a change in the report to it. Today it records its versions in its own files.
 
 ## Rust core (v0.1, in progress)
 
@@ -215,6 +232,13 @@ toolchain: reinstall rustup from an arm64 shell, or
 stable-aarch64-apple-darwin`. `cargo build` at the root skips the binding
 (it is not a default workspace member); `cargo clippy/test --workspace` still
 cover it.
+
+## Legacy: the pure-Python implementation
+
+> **Every section from here to *Scope* documents the pure-Python package (2026-06/07)**, which stays the released
+> one until it moves to `legacy/` (see Status). Its model — one commit carrying code, goal, models, trace and
+> swarm; `freeze` into a crystal; `merge --reconcile` — predates the Rust protocol above and is not what
+> `spec/` specifies. Its 220 tests pass; its numbers are its own.
 
 ## The problem: your agent evolves, git never sees it
 
