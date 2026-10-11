@@ -143,7 +143,9 @@ PY
 /tmp/avcs-img/bin/python /tmp/avcs-img/f2.py examples/toy_pipeline/runs/f2-rerun-2026-10-06 docs/img/f2-blame-recall.png
 ```
 
-The recipe was rendered once on 2026-10-09 to check it. The PNG is not committed.
+The recipe was rendered once on 2026-10-09 to check it. **Rendered and placed 2026-10-11** with this script,
+unchanged; segment means 0.431 (n = 684) → 0.873 (n = 2016), delta +0.442, gate +0.444 and step 2051 were asserted
+against `result.json` and `RUN_REAL.md`, and both means recomputed from the per-step values, before saving.
 
 **Alt text:** Line chart of extract.recall over 8100 ledger steps as a rolling mean of 50 documents: flat near 0.43
 until a dashed line at step 2051 where the gated patch is applied, then near 0.87 to the end. Two horizontal bars mark
