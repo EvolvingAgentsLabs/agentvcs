@@ -74,7 +74,8 @@ Sleep 9s
 
 Checked on 2026-10-09: `vhs validate` passes on the tape, and the typed pipeline prints exactly sections 3–5 (two
 conflicts, `auto: spec.drafter_adapter=ours`, `conflicts: 2`). The GIF itself was not rendered here, because `ttyd`
-could not start in the sandbox.
+could not start in the sandbox. **Rendered and placed 2026-10-11** with VHS 0.11.0 from this tape, unchanged
+(15.9 s, 1380 × 940).
 
 **Alt text:** Terminal recording of examples/lora-kernel/demo.sh --dry-run on its CI fixture: two branches diverge
 from a fork manifest, merge prepare merges one dimension mechanically and hands over two modify/modify conflicts,
