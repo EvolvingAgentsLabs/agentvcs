@@ -17,6 +17,15 @@
 > dimension: each real conflict goes to **Claude Code — agentvcs's only LLM** — with the evidence behind
 > both sides, and agentvcs checks the resolution before recording it. Rust core, CLI, MCP server, Python SDK.
 
+**Why it matters.** Agent harnesses no longer hold still while they run: a prompt is edited, a model or an
+adapter swapped, a tool added — mid-run, and often by more than one person or agent. When a result moves, a
+team then needs to know which change moved it; when two copies of a harness diverge, it needs to merge them on
+the evidence behind each side, not on whoever wrote last. If that holds, a harness change becomes something a
+team can review and attribute like a code change, and a merge of two improvements keeps both where the
+evidence supports both. Built: stamping, gating, `blame` and dimension-by-dimension merge, under 103/103
+conformance cases and one real-model run (gate F2, below). Not yet: a real Claude Code resolution session in
+any test or recorded run, and any team running it on its own harness.
+
 ## Status — 2026-10-08
 
 [ran] = observed by executing it; [read] = from this repo's files.
