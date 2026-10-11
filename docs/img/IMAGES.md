@@ -18,6 +18,7 @@ the VHS settings of `examples/recording/*.tape` (Dracula, 15 pt, 1380 × 940).
 |---|---|---|---|---|
 | `lk0-merge-dry-run.gif` | 1380 × 940 | GIF (VHS) | `README.md`, "Resolve a merge with Claude Code" | terminal recording |
 | `f2-blame-recall.png` | 1600 × 720 (the script writes it) | PNG | `examples/toy_pipeline/RUN_REAL.md`, "Rerun result" | chart from a committed run |
+| `hero.png` | 1600 × 640 | PNG | `README.md`, top (replaces `agentvcs.jpg`) | drawn illustration — wanted, prompt below (2026-10-11) |
 
 ---
 
@@ -157,3 +158,46 @@ is referenced relatively (`../../docs/img/f2-blame-recall.png`), so it shows on 
 
 **To place it:** commit the PNG to `docs/img/`. In `RUN_REAL.md`, delete the line
 `<!-- IMAGE PLACEHOLDER — see docs/img/IMAGES.md` above the `<img …>` and the line `-->` after the caption.
+
+---
+
+## `hero.png` — wanted (2026-10-11)
+
+**Path:** `docs/img/hero.png` · **size** 1600 × 640 (5 : 2) · **format** PNG, under ~300 KB
+
+**Why.** The current hero, `agentvcs.jpg`, shows two abstract branches meeting at a diamond. Its alt text, "sealed
+once the eval passes", is the legacy Python `freeze`. It shows a merge, but not what the project is today: a run
+whose steps carry the harness version that produced them, a gated patch, `blame` tracing a change in a metric to one
+patch, and a merge whose conflict a resolver settles.
+
+**Where.** `README.md`, top. The new `<img>` sits under the current hero, inside an HTML comment marked
+`IMAGE PLACEHOLDER — see docs/img/IMAGES.md`. Once `hero.png` is on `main`, delete the comment lines **and** the old
+`<p align="center">…agentvcs.jpg…</p>` block above it. `agentvcs.jpg` stays in the repository, because the website's
+July 2026 write-up uses its own copy.
+
+**Style.** Match the existing hero: flat, minimal vector line art on a warm off-white ground (#F3F2EE), near-black
+strokes (#16181D), one indigo accent (#2F3E8F) and one muted orange (#C8643B) for "after the change". It is a
+diagram, so it carries no people, no logos, no legible text and no numbers.
+
+**Prompt (ready to paste):**
+
+```
+A wide 5:2 flat minimal vector illustration on a plain warm off-white background (#F3F2EE), thin uniform near-black
+strokes (#16181D), lots of empty space, technical-diagram calm, no shading, no gradients, no texture.
+
+Lower half: a long horizontal line runs from left to right, threaded with about eighteen small hollow circles
+evenly spaced — the steps of one run. The first nine circles are outlined in near-black; at the midpoint a small
+upright rectangular card (a harness version) sits just above the line, and beside it a second card of the same
+size slides in to replace it, marked with a small check mark inside a tiny square (a gate that passed). Every
+circle after the swap is filled with muted orange (#C8643B). Below the line, a thin indigo (#2F3E8F) curved arrow
+starts under the orange circles and points back to the new card: one change, traced to one patch.
+
+Upper half: from a small fork point above the left part of the line, two thin parallel tracks of small hollow
+circles run right, one slightly above the other, and converge into a single indigo diamond on the right (the merge).
+Just before the diamond, between the two tracks, a small rounded card with a simple speech-bubble outline (no
+text) touches both tracks — the resolver settling one conflict. After the diamond a single thick line continues to
+the right edge.
+
+Strictly no legible text, letters or numbers, no logos, no people or hands, no robots, no brains, no glow, no 3D,
+no photographic look, no git-branch icon clichés beyond the lines described.
+```
