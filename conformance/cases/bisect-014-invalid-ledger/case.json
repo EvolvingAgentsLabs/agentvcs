@@ -1,0 +1,25 @@
+{
+  "id": "bisect-014-invalid-ledger",
+  "group": "bisect",
+  "description": "bisect refuses a ledger that does not verify",
+  "source": "generated",
+  "argv": [
+    "bisect",
+    "bundle.json",
+    "--metric",
+    "f1",
+    "--bad",
+    "<0.5",
+    "--exec",
+    "python3 probe.py"
+  ],
+  "expect": {
+    "exit": 3,
+    "json": {
+      "ok": false,
+      "error": {
+        "code": "E_INVALID_LEDGER"
+      }
+    }
+  }
+}

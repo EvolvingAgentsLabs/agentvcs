@@ -215,9 +215,11 @@ open run and is valid.
 
 ## 5. What v0.1 leaves out
 
-- `bisect` re-executes from checkpoints through harness hooks; its CLI shape is in
-  `cli/COMMANDS.md`, but it has no golden cases in v0.1 because its result depends
-  on the harness. Its cases arrive with the toy pipeline (Gate F2).
+- `bisect` re-executes from checkpoints through a probe the harness supplies, so its
+  result depends on the harness. Its golden cases (2026-10-14) pin what does not: the
+  candidates, the search, the probe's environment and output, and the failures —
+  each case ships a table-driven `probe.py`. A real probe is the toy pipeline's
+  (`examples/toy_pipeline/probe.py`).
 - Merges of manifests (more than one parent) are representable but have no merge
   semantics yet.
 - Remotes, signatures, multi-user stores: `LATER.md`.

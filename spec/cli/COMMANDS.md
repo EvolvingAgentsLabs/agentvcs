@@ -23,7 +23,7 @@ Commands marked **(conf)** have golden cases in `conformance/` for v0.1.
 | `resume <run> --from-step <n> --manifest <id>` | `{"ok", "run_id", "parent", "checkpoint_ref"}` — creates the child run; the harness restores via its hook |
 | `log <run>` | `{"ok", "entries": [...]}` |
 | `blame <run\|bundle> --metric <m>` **(conf)** | `BLAME.md` |
-| `bisect <run> --metric <m> --bad <cond> --exec <cmd>` | `{"ok", "first_bad_patch", "probes": [...]}` — no goldens in v0.1 |
+| `bisect <run\|bundle> --metric <m> --bad <cond> --exec <cmd>` **(conf)** | `{"ok", "first_bad_patch", "probes": [...], "from_step", "checkpoint_ref"[, "reason"]}` — the probe runs as `sh -c <cmd>` with `AGENTVCS_RUN`, `AGENTVCS_MANIFEST`, `AGENTVCS_MANIFEST_FILE`, `AGENTVCS_FROM_STEP`, `AGENTVCS_CHECKPOINT_REF`, `AGENTVCS_METRIC`, `AGENTVCS_STORE` and prints a number or an object holding the metric (top level or under `metrics`); a non-zero exit or no number is `E_GATE_COMMAND` |
 | `freeze <manifest_id>` | `{"ok", "manifest_id", "frozen": true}` — requires a passed gate naming it |
 | `export audit <run> [-o file]` | writes an audit bundle (`PROTOCOL.md §4`) |
 | `verify <run\|bundle>` **(conf)** | `LEDGER.md` |

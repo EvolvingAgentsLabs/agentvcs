@@ -1,0 +1,25 @@
+{
+  "id": "bisect-013-no-patches",
+  "group": "bisect",
+  "description": "a run with no patches has nothing to bisect",
+  "source": "generated",
+  "argv": [
+    "bisect",
+    "bundle.json",
+    "--metric",
+    "f1",
+    "--bad",
+    "<0.5",
+    "--exec",
+    "python3 probe.py"
+  ],
+  "expect": {
+    "exit": 4,
+    "json": {
+      "ok": false,
+      "error": {
+        "code": "E_NOT_FOUND"
+      }
+    }
+  }
+}

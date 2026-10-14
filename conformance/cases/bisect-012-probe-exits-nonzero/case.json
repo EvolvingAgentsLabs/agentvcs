@@ -1,0 +1,25 @@
+{
+  "id": "bisect-012-probe-exits-nonzero",
+  "group": "bisect",
+  "description": "a probe that exits non-zero fails the bisect",
+  "source": "generated",
+  "argv": [
+    "bisect",
+    "bundle.json",
+    "--metric",
+    "f1",
+    "--bad",
+    "<0.5",
+    "--exec",
+    "python3 probe.py"
+  ],
+  "expect": {
+    "exit": 3,
+    "json": {
+      "ok": false,
+      "error": {
+        "code": "E_GATE_COMMAND"
+      }
+    }
+  }
+}

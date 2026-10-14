@@ -6,7 +6,7 @@
 
 [![CI](https://github.com/EvolvingAgentsLabs/agentvcs/actions/workflows/ci.yml/badge.svg)](https://github.com/EvolvingAgentsLabs/agentvcs/actions/workflows/ci.yml)
 ![Core](https://img.shields.io/badge/core-Rust-orange.svg)
-![Conformance](https://img.shields.io/badge/conformance-103%2F103-brightgreen.svg)
+![Conformance](https://img.shields.io/badge/conformance-117%2F117-brightgreen.svg)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
 **Version control for agent harnesses that change while they run.**
@@ -22,7 +22,7 @@ adapter swapped, a tool added — mid-run, and often by more than one person or 
 team then needs to know which change moved it; when two copies of a harness diverge, it needs to merge them on
 the evidence behind each side, not on whoever wrote last. If that holds, a harness change becomes something a
 team can review and attribute like a code change, and a merge of two improvements keeps both where the
-evidence supports both. Built: stamping, gating, `blame` and dimension-by-dimension merge, under 103/103
+evidence supports both. Built: stamping, gating, `blame`, `bisect` and dimension-by-dimension merge, under 117/117
 conformance cases and one real-model run (gate F2, below). Not yet: a real Claude Code resolution session in
 any test or recorded run, and any team running it on its own harness.
 
@@ -31,15 +31,19 @@ any test or recorded run, and any team running it on its own harness.
 [ran] = observed by executing it; [read] = from this repo's files.
 
 **Works [ran]**
-- Protocol conformance: **103/103** against a release build of the Rust CLI (hash 15, manifest 13, diff 16,
-  verify 31, blame 8, merge 20) [ran, 2026-10-08]. The `Rust`, `Python SDK` and `CI` workflows are green on `main`.
+- Protocol conformance: **117/117** against a release build of the Rust CLI (hash 15, manifest 13, diff 16,
+  verify 31, blame 8, bisect 14, merge 20) [ran, 2026-10-14; `conformance/results/rust-2026-10-14.md`]. The `Rust`, `Python SDK` and `CI` workflows are green on `main`.
 - Rust core, CLI and MCP server: `snapshot`, `run`, `step record`, `patch propose/apply`, `gate run`,
-  `export audit`, `verify`, `blame`, `diff`, `merge prepare/commit/resolve` — covered by the conformance cases and CI.
+  `export audit`, `verify`, `blame`, `bisect`, `diff`, `merge prepare/commit/resolve` — covered by the conformance cases and CI.
 - `merge resolve` (spec/MERGE.md §6): isolated `claude -p` with `Read` + two MCP tools, transcript audit
   (`E_RESOLVER_ESCAPED`), `resolver` recorded — tested end to end in CI with a **fake** `claude`.
 - Gate F2 on a real model: `examples/toy_pipeline`, Qwen2.5-1.5B on llama.cpp, 2700 docs — paired gate gain
   **+0.444**, blame **+0.442** attributed to exactly the one patch applied mid-run, `verify` clean
   ([RUN_REAL.md](https://github.com/EvolvingAgentsLabs/agentvcs/blob/main/examples/toy_pipeline/RUN_REAL.md)) [ran, 2026-10-06].
+- `bisect` with a real probe: on a toy run where a regression landed back to back with a harmless patch,
+  `blame` can only credit the pair (−0.333); `bisect` re-executes each candidate from the run's checkpoint on the
+  same documents and names the regression in 4 probes; the control run has nothing to find
+  (`examples/toy_pipeline/regression.py`, fake backend, in CI) [ran, 2026-10-14].
 - `examples/lora-kernel` (LK0): import → nine imported, gated patches → conflicting branches → `merge resolve`;
   tests and `demo.sh --dry-run` run in CI on a fixture (fake `claude`).
 - Legacy pure-Python package: 220 tests pass [ran, 2026-10-08].
@@ -54,7 +58,7 @@ any test or recorded run, and any team running it on its own harness.
 **Not implemented**
 - PyPI: `pip install agentvcs` does not exist (pypi.org returns 404) [ran]; build the SDK from source.
 - A real Claude Code `merge resolve` session is not exercised by any test or recorded run in this repo [read].
-- `bisect --exec` probe and its golden cases; a `blob put` CLI verb; remotes/sync; async SDK API; the move of
+- A `blob put` CLI verb; remotes/sync; async SDK API; the move of
   the Python implementation to `legacy/` ([LATER.md](https://github.com/EvolvingAgentsLabs/agentvcs/blob/main/LATER.md)) [read].
 - Merge v0.2 leaves out ledger/run merges, octopus merges and field-level auto-merge (spec/MERGE.md §7) [read].
 
@@ -101,7 +105,7 @@ flowchart LR
 
 ```bash
 cargo build --release                       # target/release/agentvcs
-python3 conformance/run.py --cli "$PWD/target/release/agentvcs"   # 103/103
+python3 conformance/run.py --cli "$PWD/target/release/agentvcs"   # 117/117
 cargo test --workspace
 ```
 
@@ -222,7 +226,7 @@ with avcs.run("manifest.json", store=".") as run:          # run_start ... run_e
 ```
 
 `python -m agentvcs` (and the `agentvcs` console script of the wheel) is the Rust
-CLI in-process; it passes the same 103/103 conformance cases. Model wrappers for
+CLI in-process; it passes the same 117/117 conformance cases. Model wrappers for
 OpenAI-compatible servers (llama.cpp, vLLM, Ollama) and Claude live in
 `agentvcs.integrations`; the end-to-end example is
 [`examples/toy_pipeline`](https://github.com/EvolvingAgentsLabs/agentvcs/blob/main/examples/toy_pipeline/README.md).

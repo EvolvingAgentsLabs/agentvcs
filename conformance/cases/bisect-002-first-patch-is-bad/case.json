@@ -1,0 +1,48 @@
+{
+  "id": "bisect-002-first-patch-is-bad",
+  "group": "bisect",
+  "description": "the very first patch breaks it: found with three probes",
+  "source": "generated",
+  "argv": [
+    "bisect",
+    "bundle.json",
+    "--metric",
+    "f1",
+    "--bad",
+    "<0.5",
+    "--exec",
+    "python3 probe.py"
+  ],
+  "expect": {
+    "exit": 0,
+    "json": {
+      "ok": true,
+      "first_bad_patch": "b3:5abd17aae4e0e1002db6d19ff1bd2174f2300b598bdac607d95744e34e8ae49d",
+      "probes": [
+        {
+          "candidate": 0,
+          "patch_id": null,
+          "manifest_id": "b3:c2cbbb2956e53dc3ab707d2d11b66a9b9f25010ee382b6ed08e25d0a2cb9d023",
+          "metric": 0.9,
+          "bad": false
+        },
+        {
+          "candidate": 3,
+          "patch_id": "b3:d4a8558dd0190579074e8fcc4a7b0fc9fbce78f4813a2a5647e5772f60edb5ee",
+          "manifest_id": "b3:ed6da2b1546b6b7a1dad81a99dd9cbf6c3b7709e50a155f2e05c0f25c27bd133",
+          "metric": 0.2,
+          "bad": true
+        },
+        {
+          "candidate": 1,
+          "patch_id": "b3:5abd17aae4e0e1002db6d19ff1bd2174f2300b598bdac607d95744e34e8ae49d",
+          "manifest_id": "b3:460db309ecd68bda3d06faac9d3974db1327935546de701ac5c385ceb43a77c8",
+          "metric": 0.2,
+          "bad": true
+        }
+      ],
+      "from_step": 2,
+      "checkpoint_ref": "ckpt/1"
+    }
+  }
+}

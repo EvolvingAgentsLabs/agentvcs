@@ -1,0 +1,55 @@
+{
+  "id": "bisect-008-bare-number",
+  "group": "bisect",
+  "description": "the probe prints a bare number",
+  "source": "generated",
+  "argv": [
+    "bisect",
+    "bundle.json",
+    "--metric",
+    "f1",
+    "--bad",
+    "<0.5",
+    "--exec",
+    "python3 probe.py"
+  ],
+  "expect": {
+    "exit": 0,
+    "json": {
+      "ok": true,
+      "first_bad_patch": "b3:f0f4c43af982dd5e2f31aaf6921edeebca2018426fb1adf2f6de8642aab97c99",
+      "probes": [
+        {
+          "candidate": 0,
+          "patch_id": null,
+          "manifest_id": "b3:c2cbbb2956e53dc3ab707d2d11b66a9b9f25010ee382b6ed08e25d0a2cb9d023",
+          "metric": 0.9,
+          "bad": false
+        },
+        {
+          "candidate": 6,
+          "patch_id": "b3:3ca44d4d0820f28f7e4c4b9489daceac36b955c9a37ffc573d7ae82fa23ae5e7",
+          "manifest_id": "b3:b2d98e2a74128116fdd6a74bc6e367316194ebfc497d3d657d82fbefda9016ee",
+          "metric": 0.2,
+          "bad": true
+        },
+        {
+          "candidate": 3,
+          "patch_id": "b3:d4a8558dd0190579074e8fcc4a7b0fc9fbce78f4813a2a5647e5772f60edb5ee",
+          "manifest_id": "b3:ed6da2b1546b6b7a1dad81a99dd9cbf6c3b7709e50a155f2e05c0f25c27bd133",
+          "metric": 0.91,
+          "bad": false
+        },
+        {
+          "candidate": 4,
+          "patch_id": "b3:f0f4c43af982dd5e2f31aaf6921edeebca2018426fb1adf2f6de8642aab97c99",
+          "manifest_id": "b3:a0ddd7d70ce38a3e1751b29df11265770934a04ad434952bd4b640fb844e49d4",
+          "metric": 0.3,
+          "bad": true
+        }
+      ],
+      "from_step": 2,
+      "checkpoint_ref": "ckpt/1"
+    }
+  }
+}

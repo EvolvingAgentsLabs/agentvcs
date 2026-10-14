@@ -437,6 +437,143 @@ b = L().step(2, metric=0.5).end().bundle(); b["ledger"][1]["body"]["metrics"]["f
 blame_case("blame-008-invalid-ledger", "blame refuses a ledger that does not verify", b, exit_=3)
 
 
+# ====================================================================== bisect
+# Seven manifests differing in one config value; the probe is a table from manifest id to the metric a
+# re-execution would report, and it checks the whole environment contract before answering — so a CLI
+# that hands the probe the wrong run, step, checkpoint, metric or manifest file fails the case.
+BM = [filled(variant(FULL, [(("run.config", "content", "value", "batch"), i)])) for i in range(7)]
+BMAN = {m["manifest_id"]: m for m in BM}
+
+
+class BL(L):
+    """L over BM's manifests (the semantic diff verify checks is computed against them)."""
+
+    def patch(self, to, g="ok", rollback_of=None, rationale="tune batch"):
+        global MAN
+        saved, MAN = MAN, BMAN
+        try:
+            return super().patch(to, g, rollback_of, rationale)
+        finally:
+            MAN = saved
+
+
+PROBE = """import json, os, sys
+
+TABLE = {table}
+EXPECT = {expect}
+FORM = {form!r}
+
+
+def main():
+    env = os.environ
+    for k, v in EXPECT.items():
+        if env.get(k) != v:
+            print(f"{{k}}={{env.get(k)!r}}, expected {{v!r}}", file=sys.stderr)
+            return 7
+    mid = env["AGENTVCS_MANIFEST"]
+    with open(env["AGENTVCS_MANIFEST_FILE"], encoding="utf-8") as f:
+        if json.load(f).get("manifest_id") != mid:
+            print("AGENTVCS_MANIFEST_FILE is not the candidate", file=sys.stderr)
+            return 8
+    x = TABLE[mid]
+    if FORM == "none":
+        print(json.dumps({{"note": "no metric here"}}))
+    elif FORM == "text":
+        print("metric is", x)
+    elif FORM == "fail":
+        return 1
+    else:
+        print(json.dumps(x if FORM == "bare" else {{"metrics": {{"f1": x}}}} if FORM == "metrics" else {{"f1": x}}))
+    return 0
+
+
+sys.exit(main())
+"""
+
+
+def bisect_run(metrics_by_manifest, patches_to, rollback_at=None):
+    """One step per manifest, then a patch to each of `patches_to` (indices into BM); each step reports the
+    metric its manifest has in the table, so blame and bisect read the same story."""
+    l = BL(BM[0])
+    l.step(2, metric=metrics_by_manifest[0])
+    ids = []
+    for j, t in enumerate(patches_to):
+        rb = ids[rollback_at[1]] if rollback_at and rollback_at[0] == j else None
+        ids.append(l.patch(BM[t], g=None if rb else "ok", rollback_of=rb))
+        l.step(2, metric=metrics_by_manifest[t])
+    return l.end(), ids
+
+
+def bisect_case(cid, desc, b, table, bad, expect_first, form="metrics", exit_=0, expect_code=None):
+    plan = ref.bisect_plan(b) if ref.verify(b)["valid"] else None
+    expect_env = {"AGENTVCS_RUN": RUN, "AGENTVCS_METRIC": "f1"}
+    if plan:
+        expect_env.update({"AGENTVCS_FROM_STEP": str(plan["from_step"]),
+                           "AGENTVCS_CHECKPOINT_REF": plan["checkpoint_ref"] or ""})
+    op = next(o for o in ("<=", ">=", "==", "!=", "<", ">") if bad.startswith(o))
+
+    def probe(mid):
+        if form in ("none", "text", "fail"):
+            raise ValueError("E_GATE_COMMAND")
+        return table[mid]
+    r = ref.bisect(b, op, float(bad[len(op):]), probe)
+    if exit_:
+        assert not r["ok"] and r["error"]["code"] == expect_code, (cid, r)
+    else:
+        assert r["ok"] and r["first_bad_patch"] == expect_first, (cid, r)
+    probe_py = PROBE.format(table=json.dumps(table, indent=1), expect=json.dumps(expect_env, indent=1), form=form)
+    case(cid, "bisect", desc, ["bisect", "bundle.json", "--metric", "f1", "--bad", bad, "--exec", "python3 probe.py"],
+         {"bundle.json": jtext(b), "probe.py": probe_py},
+         {"exit": exit_, "json": r})
+
+
+def tbl(vals):
+    return {BM[i]["manifest_id"]: v for i, v in enumerate(vals)}
+
+
+# six patches M0 -> M1 ... -> M6; the metric collapses from M4 on (the planted regression)
+T = tbl([0.9, 0.9, 0.88, 0.91, 0.3, 0.25, 0.2])
+l, ids = bisect_run([0.9, 0.9, 0.88, 0.91, 0.3, 0.25, 0.2], [1, 2, 3, 4, 5, 6])
+b = l.bundle(BMAN)
+bisect_case("bisect-001-regression-at-patch-4-of-6", "the patch to M4 is the first under which f1 < 0.5",
+            b, T, "<0.5", ids[3])
+bisect_case("bisect-002-first-patch-is-bad", "the very first patch breaks it: found with three probes",
+            bisect_run([0.9, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2], [1, 2, 3])[0].bundle(BMAN),
+            tbl([0.9, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2]), "<0.5",
+            bisect_run([0.9, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2], [1, 2, 3])[1][0])
+bisect_case("bisect-003-last-patch-is-bad", "only the last patch breaks it",
+            bisect_run([0.9, 0.9, 0.9, 0.2, 0.2, 0.2, 0.2], [1, 2, 3])[0].bundle(BMAN),
+            tbl([0.9, 0.9, 0.9, 0.2, 0.2, 0.2, 0.2]), "<0.5",
+            bisect_run([0.9, 0.9, 0.9, 0.2, 0.2, 0.2, 0.2], [1, 2, 3])[1][2])
+_v = [0.2] * 7
+bisect_case("bisect-004-already-bad-at-start", "the run_start manifest is already bad: no patch to blame",
+            bisect_run(_v, [1, 2])[0].bundle(BMAN), tbl(_v), "<0.5", None)
+_v = [0.9] * 7
+bisect_case("bisect-005-never-bad", "the last manifest is not bad: nothing to find",
+            bisect_run(_v, [1, 2])[0].bundle(BMAN), tbl(_v), "<0.5", None)
+# M0 -> M1 (bad) -> rollback to M0: the last candidate is M0 again, cached, and not bad
+_v = [0.9, 0.2, 0.9, 0.9, 0.9, 0.9, 0.9]
+bisect_case("bisect-006-regression-rolled-back", "a regression rolled back leaves the last manifest good",
+            bisect_run(_v, [1, 0], rollback_at=(1, 0))[0].bundle(BMAN), tbl(_v), "<0.5", None)
+_v = [0.1, 0.1, 0.1, 0.6, 0.6, 0.6, 0.6]
+bisect_case("bisect-007-higher-is-bad", "--bad >0.5 on a metric that should stay low (e.g. an error rate)",
+            bisect_run(_v, [1, 2, 3, 4])[0].bundle(BMAN), tbl(_v), ">0.5",
+            bisect_run(_v, [1, 2, 3, 4])[1][2])
+bisect_case("bisect-008-bare-number", "the probe prints a bare number", b, T, "<0.5", ids[3], form="bare")
+bisect_case("bisect-009-top-level-metric", "the probe prints {\"f1\": x}", b, T, "<0.5", ids[3], form="flat")
+bisect_case("bisect-010-probe-prints-no-metric", "an object without the metric is a probe failure",
+            b, T, "<0.5", None, form="none", exit_=3, expect_code="E_GATE_COMMAND")
+bisect_case("bisect-011-probe-prints-text", "output that is not JSON is a probe failure",
+            b, T, "<0.5", None, form="text", exit_=3, expect_code="E_GATE_COMMAND")
+bisect_case("bisect-012-probe-exits-nonzero", "a probe that exits non-zero fails the bisect",
+            b, T, "<0.5", None, form="fail", exit_=3, expect_code="E_GATE_COMMAND")
+bisect_case("bisect-013-no-patches", "a run with no patches has nothing to bisect",
+            BL(BM[0]).step(3, metric=0.9).end().bundle(BMAN), T, "<0.5", None, exit_=4, expect_code="E_NOT_FOUND")
+_bad = l.bundle(BMAN); _bad = json.loads(json.dumps(_bad)); _bad["ledger"][1]["body"]["metrics"]["f1"] = 0.01
+bisect_case("bisect-014-invalid-ledger", "bisect refuses a ledger that does not verify",
+            _bad, T, "<0.5", None, exit_=3, expect_code="E_INVALID_LEDGER")
+
+
 # ======================================================================= merge (v0.2 draft)
 def mvar(edits):
     return variant(FULL, edits)

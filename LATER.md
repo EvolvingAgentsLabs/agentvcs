@@ -10,7 +10,6 @@ Nothing here is implemented until it moves into the plan.
 - **FSL licence for the supervisor** — evaluate by ADR later.
 - **LangSmith / Langfuse / W&B integrations** — consumers of the ledger, not v0.1.
 - **Version skew 0.3.0 (pyproject) vs 0.4.0 (`__version__`)** — moot once Rust replaces the package; fix only if a Python release happens first.
-- **Bisect golden cases** — need the toy pipeline's hooks (Gate F2). The Phase 2 toy pipeline records `checkpoint_ref`s but does not yet implement a `bisect --exec` probe.
 - **Legacy distribution rename** — at the `legacy/` move, rename the root distribution to `agentvcs-legacy` and point `release.yml` at the SDK wheel (ADR-0007 §2).
 - **Async SDK API** — `async with avcs.run(...)`; not needed by the toy pipeline.
 - **`blob put` command** — steps reference blobs by hash; the store has `put_blob` but no CLI verb yet (the Phase 2 SDK calls `put_blob` natively; a CLI-only harness still needs the verb).

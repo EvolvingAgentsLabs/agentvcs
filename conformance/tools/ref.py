@@ -465,3 +465,69 @@ def merge_commit(base, ours, theirs, resolution):
               "merged": merged["manifest_id"], "auto": prep["auto"], "resolution": r, "gate": None}
     return 0, {"ok": True, "merge_id": prep["merge_id"], "merged": merged["manifest_id"],
                "record": h(record), "gate": None}
+
+
+# ---------------------------------------------------------------- bisect (spec/cli/COMMANDS.md)
+
+def bisect_plan(bundle: dict):
+    """Candidates M0..Mk (the run_start manifest, then each patch's to_manifest in ledger order), the step a
+    re-execution starts from (the first patch's applied_at_step) and the checkpoint of the step before it."""
+    led = bundle["ledger"]
+    cands = [(None, led[0]["body"]["manifest_id"])]
+    ckpt, from_step = {}, None
+    for e in led:
+        b = e["body"]
+        if e["kind"] == "step":
+            ckpt[b["step_index"]] = b.get("checkpoint_ref")
+        elif e["kind"] == "patch":
+            if from_step is None:
+                from_step = b["applied_at_step"]
+            cands.append((b["patch_id"], b["to_manifest"]))
+    if from_step is None:
+        return None
+    return {"from_step": from_step, "checkpoint_ref": ckpt.get(from_step - 1) if from_step else None,
+            "candidates": cands}
+
+
+def is_bad(op: str, value: float, x: float) -> bool:
+    return {"<": x < value, "<=": x <= value, ">": x > value, ">=": x >= value,
+            "==": x == value, "!=": x != value}[op]
+
+
+def bisect(bundle: dict, op: str, value: float, probe) -> dict:
+    """Binary search for the first candidate whose metric is bad, assuming M0 good, Mk bad and monotonic.
+    `probe(manifest_id) -> float`, or raises ValueError(code). Results are cached by manifest."""
+    if not verify(bundle)["valid"]:
+        return {"ok": False, "error": {"code": "E_INVALID_LEDGER"}}
+    plan = bisect_plan(bundle)
+    if plan is None:
+        return {"ok": False, "error": {"code": "E_NOT_FOUND"}}
+    cands, probes, cache = plan["candidates"], [], {}
+    try:
+        def bad(i):
+            pid, mid = cands[i]
+            if mid not in cache:
+                cache[mid] = probe(mid)
+            b = is_bad(op, value, cache[mid])
+            probes.append({"candidate": i, "patch_id": pid, "manifest_id": mid, "metric": cache[mid], "bad": b})
+            return b
+
+        out = {"ok": True, "first_bad_patch": None, "probes": probes}
+        k = len(cands) - 1
+        if bad(0):
+            out["reason"] = "the run_start manifest is already bad"
+        elif not bad(k):
+            out["reason"] = "the last manifest is not bad"
+        else:
+            lo, hi = 0, k
+            while hi - lo > 1:
+                mid = (lo + hi) // 2
+                if bad(mid):
+                    hi = mid
+                else:
+                    lo = mid
+            out["first_bad_patch"] = cands[hi][0]
+    except ValueError as ex:
+        return {"ok": False, "error": {"code": str(ex)}}
+    out["from_step"], out["checkpoint_ref"] = plan["from_step"], plan["checkpoint_ref"]
+    return out

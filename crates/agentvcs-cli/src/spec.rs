@@ -199,7 +199,7 @@ pub const COMMANDS: &[Cmd] = &[
     Cmd {
         words: &["bisect"],
         tool: "bisect",
-        positionals: &[("run", "run id")],
+        positionals: &[("run", "run id, or audit bundle file")],
         flags: &[
             f("metric", true, true, "metric name"),
             f("bad", true, true, "when the metric is bad, e.g. '<0.5'"),

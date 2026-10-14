@@ -673,12 +673,18 @@ fn verify(inv: &Invocation, ctx: &Ctx) -> Out {
 }
 
 fn bisect_cmd(inv: &Invocation, ctx: &Ctx) -> Out {
-    let store = ctx.store()?;
-    let run = &inv.pos[0];
     let metric = inv.flag("metric").unwrap_or_default();
     let cond = BadCond::parse(inv.flag("bad").unwrap_or_default())?;
     let cmd = inv.flag("exec").unwrap_or_default();
-    let bundle = store.bundle(run)?;
+    // A run in the store, or an audit bundle file (as verify and blame take): the bundle carries
+    // every manifest the ledger names, so a probe can re-execute a run exported from elsewhere.
+    let bundle = load_bundle(ctx, &inv.pos[0])?;
+    let run = &bundle["run_id"].as_str().unwrap_or_default().to_owned();
+    let store_root = ctx
+        .store()
+        .map(|s| s.root().to_string_lossy().into_owned())
+        .unwrap_or_default();
+    let scratch = std::env::temp_dir().join(format!("agentvcs-bisect-{}", std::process::id()));
     let r = agentvcs_query::verify(&bundle);
     if !r.valid {
         return Err(Error::new(
@@ -688,10 +694,13 @@ fn bisect_cmd(inv: &Invocation, ctx: &Ctx) -> Out {
     }
     let plan = bisect::plan(run, bundle["ledger"].as_array().expect("verified"))?;
     let out = bisect::search(&plan, &cond, |mid| {
-        let file = store
-            .root()
-            .join("manifests")
-            .join(format!("{}.json", agentvcs_core::hash::hex_of(mid)));
+        // AGENTVCS_MANIFEST_FILE: the candidate as the bundle holds it (normalized, with its id)
+        let manifest = bundle["manifests"].get(mid).ok_or_else(|| {
+            Error::new("E_NOT_FOUND", format!("the bundle holds no manifest {mid}"))
+        })?;
+        std::fs::create_dir_all(&scratch)?;
+        let file = scratch.join(format!("{}.json", agentvcs_core::hash::hex_of(mid)));
+        std::fs::write(&file, serde_json::to_vec_pretty(manifest).expect("json"))?;
         let env = [
             ("AGENTVCS_RUN", run.clone()),
             ("AGENTVCS_MANIFEST", mid.to_owned()),
@@ -705,10 +714,7 @@ fn bisect_cmd(inv: &Invocation, ctx: &Ctx) -> Out {
                 plan.checkpoint_ref.clone().unwrap_or_default(),
             ),
             ("AGENTVCS_METRIC", metric.to_owned()),
-            (
-                "AGENTVCS_STORE",
-                store.root().to_string_lossy().into_owned(),
-            ),
+            ("AGENTVCS_STORE", store_root.clone()),
         ];
         let stdout = shell(cmd, &ctx.cwd, &env)?;
         let v = parse_bytes(&stdout)
@@ -721,8 +727,9 @@ fn bisect_cmd(inv: &Invocation, ctx: &Ctx) -> Out {
                     format!("--exec printed no number for {metric}"),
                 )
             })
-    })?;
-    let mut v = out.to_value();
+    });
+    let _ = std::fs::remove_dir_all(&scratch);
+    let mut v = out?.to_value();
     v["from_step"] = plan.from_step.into();
     v["checkpoint_ref"] = plan.checkpoint_ref.clone().into();
     okv(v)
