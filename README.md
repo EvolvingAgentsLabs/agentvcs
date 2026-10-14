@@ -67,8 +67,14 @@ any test or recorded run, and any team running it on its own harness.
 
 ## Part of EvolvingAgentsLabs
 
-agentvcs is one of three active projects of [EvolvingAgentsLabs](https://evolvingagentslabs.github.io); how they
-connect is drawn on the [website](https://evolvingagentslabs.github.io/#connections).
+agentvcs is one of the projects of [EvolvingAgentsLabs](https://evolvingagentslabs.github.io), whose centre is the
+**[director](https://github.com/EvolvingAgentsLabs/evolving-agents/tree/main/packages/director)** in evolving-agents; how they connect is drawn on the
+[website](https://evolvingagentslabs.github.io/#connections).
+
+- **[director](https://github.com/EvolvingAgentsLabs/evolving-agents/tree/main/packages/director)** plans by walking a team's operational memory and learns from each task.
+  **Built:** every memory edit it keeps is an agentvcs patch — proposed, gated (it lints clean and a person
+  accepted it) and applied in a store of its own; on its learning experiment, `blame` credited the patch with the
+  whole +0.781 gain on its held-out probes.
 
 - **[lora-kernel](https://github.com/EvolvingAgentsLabs/lora-kernel)** serves small local models as trained
   specialists, with a router that abstains to a frontier model. **Built:**
