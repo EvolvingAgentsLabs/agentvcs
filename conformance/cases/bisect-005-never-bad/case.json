@@ -1,0 +1,42 @@
+{
+  "id": "bisect-005-never-bad",
+  "group": "bisect",
+  "description": "the last manifest is not bad: nothing to find",
+  "source": "generated",
+  "argv": [
+    "bisect",
+    "bundle.json",
+    "--metric",
+    "f1",
+    "--bad",
+    "<0.5",
+    "--exec",
+    "python3 probe.py"
+  ],
+  "expect": {
+    "exit": 0,
+    "json": {
+      "ok": true,
+      "first_bad_patch": null,
+      "probes": [
+        {
+          "candidate": 0,
+          "patch_id": null,
+          "manifest_id": "b3:c2cbbb2956e53dc3ab707d2d11b66a9b9f25010ee382b6ed08e25d0a2cb9d023",
+          "metric": 0.9,
+          "bad": false
+        },
+        {
+          "candidate": 2,
+          "patch_id": "b3:f027d860f635cbc9b5eabd5489e70120a93d5c3f144fb9c7a9bfc75fc1897f82",
+          "manifest_id": "b3:4e466361435092735eac2c6e7147ecf93cfba29b42effd0c6a9311d628d97570",
+          "metric": 0.9,
+          "bad": false
+        }
+      ],
+      "reason": "the last manifest is not bad",
+      "from_step": 2,
+      "checkpoint_ref": "ckpt/1"
+    }
+  }
+}

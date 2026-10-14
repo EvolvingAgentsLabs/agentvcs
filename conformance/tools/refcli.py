@@ -50,6 +50,47 @@ def manifest(m):
     return ref.normalize_manifest(m)
 
 
+def bisect(args):
+    """Runs the probe exactly as the contract says (spec/cli/COMMANDS.md): `sh -c <exec>` in the cwd, the
+    candidate in AGENTVCS_* variables, stdout one JSON value — a number, or an object holding the metric
+    (top level or under `metrics`)."""
+    import os
+    import subprocess
+    import tempfile
+
+    def opt(name):
+        return args[args.index(name) + 1]
+    b, err = load(args[1])
+    if err:
+        return fail(err, 3)
+    bad = opt("--bad")
+    op = next(o for o in ("<=", ">=", "==", "!=", "<", ">") if bad.startswith(o))
+    metric, cmd = opt("--metric"), opt("--exec")
+    plan = ref.bisect_plan(b) or {"from_step": 0, "checkpoint_ref": None}
+    scratch = tempfile.mkdtemp(prefix="refcli-bisect-")
+
+    def probe(mid):
+        f = Path(scratch) / (mid.split(":", 1)[1] + ".json")
+        f.write_text(json.dumps(b["manifests"][mid]), encoding="utf-8")
+        env = {**os.environ, "AGENTVCS_RUN": b["run_id"], "AGENTVCS_MANIFEST": mid, "AGENTVCS_MANIFEST_FILE": str(f),
+               "AGENTVCS_FROM_STEP": str(plan["from_step"]), "AGENTVCS_CHECKPOINT_REF": plan["checkpoint_ref"] or "",
+               "AGENTVCS_METRIC": metric, "AGENTVCS_STORE": str(Path(".agentvcs").resolve())}
+        p = subprocess.run(["sh", "-c", cmd], env=env, capture_output=True, stdin=subprocess.DEVNULL)
+        if p.returncode != 0:
+            raise ValueError("E_GATE_COMMAND")
+        try:
+            v = json.loads(p.stdout)
+        except ValueError:
+            raise ValueError("E_GATE_COMMAND")
+        if isinstance(v, dict):
+            v = (v["metrics"] if isinstance(v.get("metrics"), dict) else v).get(metric)
+        if isinstance(v, bool) or not isinstance(v, (int, float)):
+            raise ValueError("E_GATE_COMMAND")
+        return float(v)
+    r = ref.bisect(b, op, float(bad[len(op):]), probe)
+    return out(r, 0 if r["ok"] else {"E_NOT_FOUND": 4}.get(r["error"]["code"], 3))
+
+
 def main(argv):
     args = [a for a in argv if a != "--json"]
     cmd = args[0] if args else ""
@@ -89,6 +130,8 @@ def main(argv):
         b, err = load(args[1])
         r = ref.blame(b, args[args.index("--metric") + 1])
         return out(r, 0 if r["ok"] else 3)
+    if cmd == "bisect":
+        return bisect(args)
     if cmd == "merge":
         def opt(name):
             return args[args.index(name) + 1] if name in args else None

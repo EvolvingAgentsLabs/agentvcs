@@ -1,0 +1,25 @@
+{
+  "id": "bisect-010-probe-prints-no-metric",
+  "group": "bisect",
+  "description": "an object without the metric is a probe failure",
+  "source": "generated",
+  "argv": [
+    "bisect",
+    "bundle.json",
+    "--metric",
+    "f1",
+    "--bad",
+    "<0.5",
+    "--exec",
+    "python3 probe.py"
+  ],
+  "expect": {
+    "exit": 3,
+    "json": {
+      "ok": false,
+      "error": {
+        "code": "E_GATE_COMMAND"
+      }
+    }
+  }
+}

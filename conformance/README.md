@@ -1,7 +1,7 @@
 # Conformance suite — agentvcs protocol v0.1
 
-103 golden cases that pin every observable behaviour of the protocol: canonical
-hashing, manifest ids, semantic diff, ledger verification and blame.
+117 golden cases that pin every observable behaviour of the protocol: canonical
+hashing, manifest ids, semantic diff, ledger verification, blame, bisect and merge.
 
 ```bash
 python conformance/run.py --cli "agentvcs"                 # stdlib only
@@ -15,6 +15,7 @@ python conformance/run.py --cli "agentvcs" --group verify --out results.jsonl
 | diff | 16 | `spec/SEMANTIC_DIFF.md` |
 | verify | 31 | `spec/LEDGER.md` — 6 valid ledgers, 25 broken one way each |
 | blame | 8 | `spec/BLAME.md` |
+| bisect | 14 | `spec/cli/COMMANDS.md` — the search, the probe's environment and output, the failures (`probe.py` per case) |
 | merge | 20 | `spec/MERGE.md` (v0.2 draft) — 12 prepare, 8 commit |
 
 Each case is a directory: `case.json` (`argv`, expected exit code, expected JSON
@@ -35,3 +36,4 @@ that regeneration is byte-identical to what is committed.
 - [`results/legacy-python-0.4.0.md`](results/legacy-python-0.4.0.md) — 0/83, as predicted.
 - [`results/rust-0.1.0.md`](results/rust-0.1.0.md) — 83/83.
 - [`results/rust-merge-v0.2.md`](results/rust-merge-v0.2.md) — 102/102 (with merge, v0.2 draft).
+- [`results/rust-2026-10-14.md`](results/rust-2026-10-14.md) — 117/117 (with bisect).

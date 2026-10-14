@@ -172,3 +172,18 @@ def recall(extraction: Optional[dict], gold: dict) -> float:
     """Fraction of the gold fields extracted with the right value."""
     ex = extraction or {}
     return sum(1 for f in FIELDS if _norm(ex.get(f)) == _norm(gold[f]) and gold[f]) / len(FIELDS)
+
+
+# ------------------------------------------------------------------ edits for the bisect example
+
+def edited(manifest: dict, name: str, dim: str, path: tuple, value) -> dict:
+    """A copy of `manifest` with one content field of one dimension set (and the stale hashes dropped)."""
+    m = copy.deepcopy(manifest)
+    m["name"], m["parent_ids"] = name, []
+    cur = m["dimensions"][dim]["content"]
+    for p in path[:-1]:
+        cur = cur[p]
+    cur[path[-1]] = value
+    m["dimensions"][dim].pop("content_hash", None)
+    m.pop("manifest_id", None)
+    return m

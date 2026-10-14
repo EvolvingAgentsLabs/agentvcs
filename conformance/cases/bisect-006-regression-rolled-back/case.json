@@ -1,0 +1,42 @@
+{
+  "id": "bisect-006-regression-rolled-back",
+  "group": "bisect",
+  "description": "a regression rolled back leaves the last manifest good",
+  "source": "generated",
+  "argv": [
+    "bisect",
+    "bundle.json",
+    "--metric",
+    "f1",
+    "--bad",
+    "<0.5",
+    "--exec",
+    "python3 probe.py"
+  ],
+  "expect": {
+    "exit": 0,
+    "json": {
+      "ok": true,
+      "first_bad_patch": null,
+      "probes": [
+        {
+          "candidate": 0,
+          "patch_id": null,
+          "manifest_id": "b3:c2cbbb2956e53dc3ab707d2d11b66a9b9f25010ee382b6ed08e25d0a2cb9d023",
+          "metric": 0.9,
+          "bad": false
+        },
+        {
+          "candidate": 2,
+          "patch_id": "b3:325b1807f70bfca24cba7c307299b122c7ee305fce6025eaeaea3749f73713a1",
+          "manifest_id": "b3:c2cbbb2956e53dc3ab707d2d11b66a9b9f25010ee382b6ed08e25d0a2cb9d023",
+          "metric": 0.9,
+          "bad": false
+        }
+      ],
+      "reason": "the last manifest is not bad",
+      "from_step": 2,
+      "checkpoint_ref": "ckpt/1"
+    }
+  }
+}

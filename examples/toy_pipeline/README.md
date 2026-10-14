@@ -40,6 +40,26 @@ step numbers vary between runs; the segment means and the attribution do not.
 The harness's `stats.reruns` counts steps that a patch overtook mid-step and that
 were re-executed under the new manifest (ADR-0007 §3).
 
+## bisect: which patch broke it
+
+`regression.py` builds a second run with a planted regression: four gated patches, the third renames the
+extractor's `party` field to `supplier` (recall 1.0 → 0.667), and the fourth, harmless, lands right after it with
+no step between. The gate is a smoke suite that never runs the extractor — how a regression gets past a gate.
+`probe.py` is a real `bisect --exec` probe: it restores the run's position in the document stream from
+`AGENTVCS_CHECKPOINT_REF` (`doc:<next>`) and re-executes the extractor under the candidate manifest.
+
+```bash
+crates/agentvcs-py/.venv/bin/python examples/toy_pipeline/regression.py --workdir /tmp/reg
+agentvcs blame  /tmp/reg/reg.audit.json --metric extract.recall --json
+agentvcs bisect /tmp/reg/reg.audit.json --metric extract.recall --bad '<0.9' \
+    --exec 'crates/agentvcs-py/.venv/bin/python examples/toy_pipeline/probe.py' --json
+```
+
+[ran, 2026-10-14, fake backend] blame credits the drop (−0.333) to the pair jointly; bisect probes M0 (1.0),
+M4 (0.667), M2 (1.0), M3 (0.667) and names the third patch. `--no-regression` (the control: the third patch edits
+the extractor's system line instead) finds nothing — the answer comes from the manifest, not from the probe or
+the documents. Both are asserted in `tests/test_bisect_probe.py`.
+
 ## The control arm
 
 `--no-reload` makes the harness pin the manifest it started with and ignore
